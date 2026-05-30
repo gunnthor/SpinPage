@@ -21,7 +21,7 @@
                 radial-gradient(ellipse 60% 30% at 90% 80%, rgba(30,80,140,0.05) 0%, transparent 50%);
         }
 
-        #fireCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+        #fireCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; filter: blur(7px) brightness(1.15); }
 
         header, .container, .draft-section { position: relative; z-index: 1; }
 
@@ -649,7 +649,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.7</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.8</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -1142,24 +1142,30 @@
     function fireLoop() {
         const W=fireCanvas.width, H=fireCanvas.height;
         fctx.clearRect(0,0,W,H);
-        const base = Math.max(1, Math.floor(W/16));
-        for (let i=0;i<base;i++) { if (Math.random()<0.55) spawnFlame(Math.random()*W); }
-        if (Math.random()<0.7) {
-            spawnFlame(Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
-            spawnFlame(W-Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
+
+        // Spawn fewer particles while the main wheel is spinning
+        if (fireParticles.length < 350) {
+            const base = Math.max(1, Math.floor(W / (isSpinning ? 32 : 16)));
+            for (let i=0;i<base;i++) { if (Math.random()<0.55) spawnFlame(Math.random()*W); }
+            if (!isSpinning && Math.random()<0.7) {
+                spawnFlame(Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
+                spawnFlame(W-Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
+            }
         }
+
+        // Solid fill + globalAlpha — CSS blur on the canvas handles the glow
         fireParticles = fireParticles.filter(p => {
             p.life++; p.x+=p.vx+Math.sin(p.life*0.13)*0.9; p.y+=p.vy; p.vy*=0.99; p.size*=0.981;
             if (p.life>p.maxLife||p.size<0.5) return false;
-            const t=p.life/p.maxLife, {r,g,b}=fireColor(t), alpha=Math.pow(1-t,1.6)*0.78;
-            const grad=fctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size);
-            grad.addColorStop(0,    `rgba(${r},${g},${b},${alpha})`);
-            grad.addColorStop(0.45, `rgba(${r},${Math.round(g*0.4)},0,${(alpha*0.65).toFixed(2)})`);
-            grad.addColorStop(1,    `rgba(${Math.round(r*0.2)},0,0,0)`);
-            fctx.beginPath(); fctx.arc(p.x,p.y,p.size,0,Math.PI*2);
-            fctx.fillStyle=grad; fctx.fill();
+            const t=p.life/p.maxLife, {r,g,b}=fireColor(t);
+            const alpha=Math.pow(1-t,1.6)*0.9;
+            fctx.globalAlpha = alpha;
+            fctx.fillStyle = `rgb(${r},${g},${b})`;
+            fctx.beginPath(); fctx.arc(p.x,p.y,p.size,0,Math.PI*2); fctx.fill();
             return true;
         });
+        fctx.globalAlpha = 1;
+
         requestAnimationFrame(fireLoop);
     }
 
@@ -1283,15 +1289,18 @@
             const start=rotation-Math.PI/2+i*arc, end=start+arc, mid=(start+end)/2;
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
             ctx.fillStyle=sliceColor(i); ctx.fill();
-            const shine=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
-            shine.addColorStop(0,'rgba(255,255,255,0.10)'); shine.addColorStop(0.55,'rgba(255,255,255,0.03)'); shine.addColorStop(1,'rgba(0,0,0,0.25)');
-            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
-            ctx.fillStyle=shine; ctx.fill();
+            if (!isSpinning) {
+                const shine=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+                shine.addColorStop(0,'rgba(255,255,255,0.10)'); shine.addColorStop(0.55,'rgba(255,255,255,0.03)'); shine.addColorStop(1,'rgba(0,0,0,0.25)');
+                ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
+                ctx.fillStyle=shine; ctx.fill();
+            }
             ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
             const fs=names.length>14?9:names.length>9?11:names.length>5?13:15;
             ctx.font=`bold ${fs}px Segoe UI,system-ui,sans-serif`;
             ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=5;
+            ctx.fillStyle='rgba(255,255,255,0.95)';
+            if (!isSpinning) { ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=5; }
             let label=names[i];
             const maxW=R*0.52;
             while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
