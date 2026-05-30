@@ -1027,7 +1027,7 @@
             return 0.615 + eIO3(u)*0.205;  // rockets back to speed
         } else {
             const u=(t-0.71)/0.29;
-            return 0.82 + eOut4(u)*0.18;
+            return 0.82 + (1-Math.pow(1-u,7))*0.18;
         }
     }
 
@@ -1058,9 +1058,9 @@
         const plotTwist = plotTwistsEnabled && Math.random() < 0.20;
 
         // Plot twist needs more spins to accommodate the fake-stop + boost phases
-        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*8);
+        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*5);
         const totalRot   = extraSpins*2*Math.PI + delta;
-        const duration   = plotTwist ? 5800 + Math.random()*1500 : 2800 + Math.random()*3400;
+        const duration   = plotTwist ? 7000 + Math.random()*2000 : 6500 + Math.random()*2500;
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
@@ -1070,7 +1070,9 @@
 
         let boostTriggered = false;
 
-        function easeOut(t) { return 1-Math.pow(1-t,4); }
+        // Degree-7 ease-out: rockets fast, then spends the last ~35% of time
+        // barely moving — wheel visibly creeps to a stop section by section
+        function easeOut(t) { return 1-Math.pow(1-t,7); }
 
         function frame(now) {
             const t = Math.min((now-startTime)/duration, 1);
