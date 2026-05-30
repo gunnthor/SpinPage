@@ -285,6 +285,38 @@
             font-size: 0.62rem; color: #6a6858; margin-top: 0.18rem; letter-spacing: 0.02em;
         }
 
+        /* ── Illegal stamp ── */
+
+        .illegal-stamp {
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-20deg) scale(0);
+            z-index: 10; pointer-events: none; opacity: 0;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 3.8rem; font-weight: 900; letter-spacing: 0.18em;
+            color: #c0392b;
+            border: 5px solid #c0392b;
+            outline: 2px solid #c0392b; outline-offset: 5px;
+            padding: 0.18em 0.45em; border-radius: 5px;
+            background: rgba(192,57,43,0.06);
+            box-shadow: inset 0 0 0 2px rgba(192,57,43,0.2), 0 0 40px rgba(192,57,43,0.35);
+            text-shadow: 3px 3px 0 rgba(192,57,43,0.12);
+        }
+
+        @keyframes stampIn {
+            0%   { transform: translate(-50%,-50%) rotate(-20deg) scale(2.8); opacity: 0; }
+            65%  { transform: translate(-50%,-50%) rotate(-20deg) scale(0.93); opacity: 0.92; }
+            80%  { transform: translate(-50%,-50%) rotate(-20deg) scale(1.04); opacity: 0.9; }
+            100% { transform: translate(-50%,-50%) rotate(-20deg) scale(1); opacity: 0.9; }
+        }
+
+        @keyframes stampOut {
+            from { opacity: 0.9; }
+            to   { opacity: 0; }
+        }
+
+        .illegal-stamp.show { animation: stampIn 0.38s cubic-bezier(0.25,0.46,0.45,0.94) forwards; }
+        .illegal-stamp.out  { animation: stampOut 0.45s ease forwards; }
+
         /* ── Wheel shake ── */
 
         @keyframes wheelShake {
@@ -636,6 +668,7 @@
     <div class="wheel-panel">
         <div class="wheel-wrap" id="wheelWrap">
             <canvas id="wheel" width="480" height="480"></canvas>
+            <div class="illegal-stamp" id="illegalStamp">ILLEGAL</div>
         </div>
         <div class="btn-row">
             <button class="spin-btn" id="spinBtn" disabled>SPIN</button>
@@ -649,7 +682,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.8</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.9</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -909,6 +942,46 @@
         osc.start(); osc.stop(audioCtx.currentTime + 0.08);
     }
 
+    function playStampSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        // Deep thud
+        const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(110, now);
+        osc.frequency.exponentialRampToValueAtTime(38, now + 0.22);
+        g.gain.setValueAtTime(1.3, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.38);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(now); osc.stop(now + 0.42);
+        // Impact crack
+        const bufLen = Math.floor(audioCtx.sampleRate * 0.07);
+        const buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i=0;i<bufLen;i++) data[i] = Math.random()*2-1;
+        const noise = audioCtx.createBufferSource(), ng = audioCtx.createGain(), nf = audioCtx.createBiquadFilter();
+        noise.buffer = buf; nf.type = 'lowpass'; nf.frequency.value = 600;
+        ng.gain.setValueAtTime(0.7, now); ng.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+        noise.start(now); noise.stop(now + 0.08);
+    }
+
+    function showIllegalStamp() {
+        const stamp = document.getElementById('illegalStamp');
+        stamp.classList.remove('out');
+        stamp.classList.add('show');
+        playStampSound();
+        setTimeout(() => {
+            stamp.classList.remove('show');
+            stamp.classList.add('out');
+            setTimeout(() => {
+                stamp.classList.remove('out');
+                isSpinning = false;
+                updateButtons();
+            }, 480);
+        }, 2600);
+    }
+
     function playBoostSound() {
         if (!audioCtx) return;
         // Rising whoosh
@@ -1143,15 +1216,7 @@
         const W=fireCanvas.width, H=fireCanvas.height;
         fctx.clearRect(0,0,W,H);
 
-        // Spawn fewer particles while the main wheel is spinning
-        if (fireParticles.length < 350) {
-            const base = Math.max(1, Math.floor(W / (isSpinning ? 32 : 16)));
-            for (let i=0;i<base;i++) { if (Math.random()<0.55) spawnFlame(Math.random()*W); }
-            if (!isSpinning && Math.random()<0.7) {
-                spawnFlame(Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
-                spawnFlame(W-Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
-            }
-        }
+        // Idle flames removed — fire only spawns via triggerBoost()
 
         // Solid fill + globalAlpha — CSS blur on the canvas handles the glow
         fireParticles = fireParticles.filter(p => {
@@ -1383,7 +1448,8 @@
         let delta = targetNorm - currentNorm;
         if (delta<0) delta += 2*Math.PI;
 
-        const plotTwist = plotTwistsEnabled && Math.random() < 0.20;
+        const isIllegal = Math.random() < 0.05;
+        const plotTwist = !isIllegal && plotTwistsEnabled && Math.random() < 0.20;
 
         // Plot twist needs more spins to accommodate the fake-stop + boost phases
         const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*5);
@@ -1427,7 +1493,7 @@
                 requestAnimationFrame(frame);
             } else {
                 rotation = endRot; redraw();
-                onSpinEnd(winnerIdx);
+                if (isIllegal) { showIllegalStamp(); } else { onSpinEnd(winnerIdx); }
             }
         }
 
