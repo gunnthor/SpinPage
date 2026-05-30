@@ -364,6 +364,71 @@
 
         .draft-pick-num { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #4a4030; }
         .draft-name     { font-size: 0.92rem; font-weight: 700; color: #e8dfc8; word-break: break-word; }
+
+        /* ══════════════════════════════════════
+           Responsive — mobile
+        ══════════════════════════════════════ */
+
+        @media (max-width: 700px) {
+
+            header { padding: 1.2rem 1rem 0.5rem; }
+
+            h1 { font-size: 2rem; letter-spacing: 0.08em; }
+
+            .container {
+                flex-direction: column;
+                align-items: center;
+                padding: 0.5rem 1rem 2rem;
+                gap: 1.5rem;
+            }
+
+            /* Wheel first on mobile so it's visible above the fold */
+            .wheel-panel { order: 1; width: 100%; }
+            .name-panel  { order: 2; width: 100%; }
+
+            .wheel-wrap {
+                width: min(calc(100vw - 2rem), 480px);
+                height: min(calc(100vw - 2rem), 480px);
+                margin: 0 auto;
+            }
+
+            /* Scale the canvas element to fill the responsive wrapper;
+               internal drawing resolution stays 480×480 */
+            canvas#wheel {
+                width: 100% !important;
+                height: 100% !important;
+            }
+
+            .btn-row, .btn-row-secondary {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .spin-btn  { padding: 0.85rem 2.4rem; font-size: 0.95rem; }
+            .auto-btn  { padding: 0.85rem 1.2rem; }
+
+            .display-row { justify-content: center; }
+
+            .options-panel { width: 100%; }
+
+            .name-list { max-height: 220px; }
+
+            .draft-section { padding: 0 1rem 2.5rem; }
+
+            .draft-header { flex-wrap: wrap; gap: 0.5rem; }
+
+            .winner-card { padding: 2rem 1.8rem; margin: 1rem; }
+
+            .winner-name { font-size: 2.2rem; }
+        }
+
+        @media (max-width: 400px) {
+            h1 { font-size: 1.6rem; }
+
+            .spin-btn { padding: 0.8rem 1.8rem; }
+
+            .btn-row-secondary { gap: 0.5rem; }
+        }
     </style>
 </head>
 <body>
