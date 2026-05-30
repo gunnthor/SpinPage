@@ -155,14 +155,14 @@
 
         .auto-btn {
             padding: 0.9rem 1.5rem; border-radius: 50px;
-            background: #09090f; border: 1px solid #1e1a30;
-            color: #4a4030; font-size: 0.72rem; font-weight: 700;
+            background: #131220; border: 1px solid #3a3555;
+            color: #9a9080; font-size: 0.72rem; font-weight: 700;
             letter-spacing: 0.14em; text-transform: uppercase;
             cursor: pointer; transition: all 0.25s;
         }
 
-        .auto-btn:hover:not(:disabled) { border-color: #d4af37; color: #d4af37; }
-        .auto-btn:disabled             { opacity: 0.3; cursor: not-allowed; }
+        .auto-btn:hover:not(:disabled) { border-color: #d4af37; color: #d4af37; background: #1a1828; }
+        .auto-btn:disabled             { opacity: 0.35; cursor: not-allowed; }
 
         .auto-btn.on {
             color: #f5e070; background: rgba(212,175,55,0.1);
@@ -176,20 +176,20 @@
 
         .undo-btn, .reset-btn {
             padding: 0.55rem 1.1rem; border-radius: 50px;
-            background: #09090f; border: 1px solid #1e1a30;
+            background: #131220; border: 1px solid #3a3555;
             font-size: 0.68rem; font-weight: 700;
             letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
         }
 
-        .undo-btn  { color: #4a4030; }
-        .reset-btn { color: #4a4030; }
-        .undo-btn:hover:not(:disabled)  { border-color: #d4af37; color: #d4af37; }
-        .reset-btn:hover:not(:disabled) { border-color: #c0392b; color: #c0392b; }
-        .undo-btn:disabled, .reset-btn:disabled { opacity: 0.28; cursor: not-allowed; }
+        .undo-btn  { color: #9a9080; }
+        .reset-btn { color: #9a9080; }
+        .undo-btn:hover:not(:disabled)  { border-color: #d4af37; color: #d4af37; background: #1a1828; }
+        .reset-btn:hover:not(:disabled) { border-color: #c0392b; color: #c0392b; background: #1a1828; }
+        .undo-btn:disabled, .reset-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
         .display-row {
             display: flex; align-items: center; gap: 0.7rem;
-            font-size: 0.65rem; color: #3a3050; letter-spacing: 0.08em; text-transform: uppercase;
+            font-size: 0.65rem; color: #7a7060; letter-spacing: 0.08em; text-transform: uppercase;
         }
 
         .display-row input[type=range] {
@@ -241,12 +241,12 @@
 
         .options-btn {
             padding: 0.55rem 1.1rem; border-radius: 50px;
-            background: #09090f; border: 1px solid #1e1a30;
-            color: #4a4030; font-size: 0.68rem; font-weight: 700;
+            background: #131220; border: 1px solid #3a3555;
+            color: #9a9080; font-size: 0.68rem; font-weight: 700;
             letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
         }
 
-        .options-btn:hover, .options-btn.open { border-color: #d4af37; color: #d4af37; }
+        .options-btn:hover, .options-btn.open { border-color: #d4af37; color: #d4af37; background: #1a1828; }
 
         .options-panel {
             width: 100%; max-height: 0; overflow: hidden;
@@ -282,7 +282,7 @@
         }
 
         .option-desc {
-            font-size: 0.62rem; color: #3a3050; margin-top: 0.18rem; letter-spacing: 0.02em;
+            font-size: 0.62rem; color: #6a6858; margin-top: 0.18rem; letter-spacing: 0.02em;
         }
 
         /* ── Wheel shake ── */
@@ -336,13 +336,13 @@
         .draft-rule    { flex: 1; height: 1px; background: linear-gradient(to right, #2a2040, transparent); }
 
         .draft-copy, .draft-restore, .draft-clear {
-            background: none; border: 1px solid #1e1a30; border-radius: 6px;
-            font-size: 0.68rem; letter-spacing: 0.06em; padding: 0.22rem 0.65rem; cursor: pointer; transition: border-color 0.15s, color 0.15s;
+            background: #131220; border: 1px solid #3a3555; border-radius: 6px;
+            font-size: 0.68rem; letter-spacing: 0.06em; padding: 0.22rem 0.65rem; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
         }
 
-        .draft-copy    { color: #3a3050; }
-        .draft-restore { color: #3a3050; }
-        .draft-clear   { color: #2e2840; }
+        .draft-copy    { color: #8a8070; }
+        .draft-restore { color: #8a8070; }
+        .draft-clear   { color: #8a8070; }
         .draft-copy:hover    { border-color: #d4af37; color: #d4af37; }
         .draft-restore:hover { border-color: #1e8449; color: #1e8449; }
         .draft-clear:hover   { border-color: #c0392b; color: #c0392b; }
@@ -362,7 +362,7 @@
             to   { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .draft-pick-num { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #4a4030; }
+        .draft-pick-num { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7a7060; }
         .draft-name     { font-size: 0.92rem; font-weight: 700; color: #e8dfc8; word-break: break-word; }
 
         /* ══════════════════════════════════════
@@ -467,7 +467,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.0</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.1</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Plot Twists</div>
