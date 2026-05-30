@@ -470,6 +470,44 @@
 
         .splash-close:hover { filter: brightness(1.15); transform: translateY(-2px); }
 
+        /* ── No one is safe wheel ── */
+
+        .nois-overlay {
+            position: fixed; inset: 0;
+            background: rgba(28, 0, 0, 0.94);
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 1rem;
+            z-index: 1800; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+        }
+
+        .nois-overlay.show { opacity: 1; pointer-events: all; }
+
+        .nois-title {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 2.6rem; font-weight: 900;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            background: linear-gradient(to bottom, #ff8080, #c0392b, #7b1c1c);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: nois-flicker 1.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes nois-flicker {
+            from { filter: brightness(1)   drop-shadow(0 0 8px rgba(192,57,43,0.4)); }
+            to   { filter: brightness(1.35) drop-shadow(0 0 20px rgba(255,80,80,0.7)); }
+        }
+
+        .nois-wrap {
+            filter: drop-shadow(0 0 28px rgba(192,57,43,0.45)) drop-shadow(0 16px 36px rgba(0,0,0,0.8));
+        }
+
+        .nois-result {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1.4rem; font-weight: 700; letter-spacing: 0.06em;
+            color: #ff6b6b; min-height: 2rem; text-align: center;
+            text-shadow: 0 0 24px rgba(255,107,107,0.7);
+        }
+
         /* ── Draft ── */
 
         .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
@@ -611,7 +649,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.6</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.7</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -665,6 +703,14 @@
         <div class="splash-list" id="splashList"></div>
         <button class="splash-close" id="splashClose">CLOSE</button>
     </div>
+</div>
+
+<div class="nois-overlay" id="noisOverlay">
+    <div class="nois-title">No one is safe</div>
+    <div class="nois-wrap">
+        <canvas id="noisWheel" width="380" height="380"></canvas>
+    </div>
+    <div class="nois-result" id="noisResult"></div>
 </div>
 
 <div class="devil-popup" id="devilPopup">
@@ -1382,6 +1428,135 @@
     /* ══════════════════════════════════════
        Boost FX
     ══════════════════════════════════════ */
+
+    /* ── No one is safe wheel ── */
+    const noisCanvas = document.getElementById('noisWheel');
+    const noisCtx    = noisCanvas.getContext('2d');
+    const NSW = noisCanvas.width, NCX = NSW/2, NCY = NSW/2, NR = NCX - 12;
+    let   noisRotation = 0;
+
+    function drawNoisWheel(arr, rot) {
+        noisCtx.clearRect(0, 0, NSW, NSW);
+        if (!arr.length) return;
+        const arc = (2*Math.PI)/arr.length;
+
+        for (let i=0;i<arr.length;i++) {
+            const start=rot-Math.PI/2+i*arc, end=start+arc, mid=(start+end)/2;
+            noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
+            noisCtx.arc(NCX,NCY,NR,start,end); noisCtx.closePath();
+            noisCtx.fillStyle=arr[i].color; noisCtx.fill();
+
+            const shine=noisCtx.createRadialGradient(NCX,NCY,0,NCX,NCY,NR);
+            shine.addColorStop(0,'rgba(255,255,255,0.08)'); shine.addColorStop(1,'rgba(0,0,0,0.3)');
+            noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
+            noisCtx.arc(NCX,NCY,NR,start,end); noisCtx.closePath();
+            noisCtx.fillStyle=shine; noisCtx.fill();
+
+            noisCtx.save(); noisCtx.translate(NCX,NCY); noisCtx.rotate(mid);
+            const fs=arr.length>12?9:arr.length>7?11:13;
+            noisCtx.font=`bold ${fs}px Segoe UI,system-ui,sans-serif`;
+            noisCtx.textAlign='center'; noisCtx.textBaseline='middle';
+            noisCtx.fillStyle='rgba(255,255,255,0.95)';
+            noisCtx.shadowColor='rgba(0,0,0,0.9)'; noisCtx.shadowBlur=5;
+            let label=arr[i].name, maxW=NR*0.52;
+            while(noisCtx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
+            if(label!==arr[i].name) label+='…';
+            noisCtx.fillText(label,NR*0.62,0); noisCtx.restore();
+        }
+
+        for (let i=0;i<arr.length;i++) {
+            const angle=rot-Math.PI/2+i*arc;
+            noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
+            noisCtx.lineTo(NCX+Math.cos(angle)*NR, NCY+Math.sin(angle)*NR);
+            noisCtx.strokeStyle='rgba(192,57,43,0.5)'; noisCtx.lineWidth=1.5; noisCtx.stroke();
+        }
+
+        noisCtx.beginPath(); noisCtx.arc(NCX,NCY,NR,0,2*Math.PI);
+        noisCtx.strokeStyle='rgba(192,57,43,0.65)'; noisCtx.lineWidth=4; noisCtx.stroke();
+
+        const hub=noisCtx.createRadialGradient(NCX,NCY,0,NCX,NCY,20);
+        hub.addColorStop(0,'#ff6b6b'); hub.addColorStop(0.45,'#c0392b'); hub.addColorStop(1,'#7b1c1c');
+        noisCtx.beginPath(); noisCtx.arc(NCX,NCY,20,0,2*Math.PI);
+        noisCtx.fillStyle=hub; noisCtx.fill();
+        noisCtx.strokeStyle='rgba(255,107,107,0.4)'; noisCtx.lineWidth=1.5; noisCtx.stroke();
+
+        const px=NCX, py=20, hw=15;
+        noisCtx.shadowColor='rgba(192,57,43,0.9)'; noisCtx.shadowBlur=18;
+        const pg=noisCtx.createLinearGradient(px-hw,0,px+hw,0);
+        pg.addColorStop(0,'#7b1c1c'); pg.addColorStop(0.5,'#ff6b6b'); pg.addColorStop(1,'#7b1c1c');
+        noisCtx.beginPath(); noisCtx.moveTo(px-hw,3); noisCtx.lineTo(px+hw,3); noisCtx.lineTo(px,py);
+        noisCtx.closePath(); noisCtx.fillStyle=pg; noisCtx.fill(); noisCtx.shadowBlur=0;
+        noisCtx.beginPath(); noisCtx.arc(px,py,4.5,0,2*Math.PI);
+        noisCtx.fillStyle='#fff'; noisCtx.shadowColor='rgba(255,255,255,0.9)'; noisCtx.shadowBlur=6;
+        noisCtx.fill(); noisCtx.shadowBlur=0;
+    }
+
+    function showNoisWheel(onDone) {
+        if (!draftOrder.length) { onDone&&onDone(); return; }
+
+        const overlay    = document.getElementById('noisOverlay');
+        const resultEl   = document.getElementById('noisResult');
+        const candidates = draftOrder.map(p=>({name:p.name, color:p.color}));
+
+        noisRotation = 0;
+        resultEl.textContent = '';
+        drawNoisWheel(candidates, noisRotation);
+        overlay.classList.add('show');
+
+        setTimeout(() => {
+            const victimIdx  = Math.floor(Math.random()*candidates.length);
+            const arc        = (2*Math.PI)/candidates.length;
+            const landingPos = 0.01 + Math.random()*0.98;
+            const victimMid  = (victimIdx + landingPos)*arc;
+            const targetNorm = ((2*Math.PI - victimMid%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+            const curNorm    = ((noisRotation%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
+            let delta = targetNorm - curNorm;
+            if (delta<0) delta += 2*Math.PI;
+
+            const extraSpins = 5 + Math.floor(Math.random()*4);
+            const totalRot   = extraSpins*2*Math.PI + delta;
+            const duration   = 4200 + Math.random()*2000;
+            const startRot   = noisRotation, endRot = noisRotation+totalRot;
+            const startTime  = performance.now();
+            let noisLastTick = Math.floor(noisRotation/arc);
+
+            function easeOut(t) { return 1-Math.pow(1-t,7); }
+
+            function frame(now) {
+                const t = Math.min((now-startTime)/duration, 1);
+                noisRotation = startRot + (endRot-startRot)*easeOut(t);
+                drawNoisWheel(candidates, noisRotation);
+
+                const sIdx = Math.floor(noisRotation/arc);
+                if (sIdx!==noisLastTick) {
+                    for(let i=0;i<Math.min(Math.abs(sIdx-noisLastTick),2);i++) playTick();
+                    noisLastTick=sIdx;
+                }
+
+                if (t<1) { requestAnimationFrame(frame); return; }
+
+                noisRotation = endRot;
+                drawNoisWheel(candidates, noisRotation);
+                const victim = candidates[victimIdx];
+                resultEl.textContent = `${victim.name} is UNDRAFTED!`;
+
+                setTimeout(() => {
+                    const di=draftOrder.findIndex(p=>p.name===victim.name);
+                    if (di>=0) draftOrder.splice(di,1);
+                    const ui=undoStack.findIndex(p=>p.name===victim.name);
+                    if (ui>=0) undoStack.splice(ui,1);
+                    names.push(victim.name);
+
+                    overlay.classList.remove('show');
+                    renderList(); renderDraft(); redraw(); saveState(); updateButtons();
+                    onDone&&onDone();
+                }, 2600);
+            }
+
+            requestAnimationFrame(frame);
+        }, 900);
+    }
+
     /* ── Draft complete splash ── */
     const splashOverlay = document.getElementById('splashOverlay');
     const splashList    = document.getElementById('splashList');
@@ -1486,8 +1661,19 @@
                 const hasNames=names.length>0;
                 if (!hasNames&&autoSpin) setAutoSpin(false);
                 renderList(); renderDraft(); redraw(); saveState();
-                if (!hasNames) { showSplash(); return; }
-                if (autoSpin&&hasNames) setTimeout(spin,1400);
+                // 20% chance of "No one is safe" — needs at least 1 drafted player
+                const triggerNois = draftOrder.length >= 1 && Math.random() < 0.20;
+
+                if (triggerNois) {
+                    setTimeout(() => showNoisWheel(() => {
+                        // After undraft: resume auto-spin if on and names remain
+                        if (autoSpin && names.length > 0) setTimeout(spin, 1400);
+                    }), 700);
+                } else if (!hasNames) {
+                    showSplash();
+                } else if (autoSpin && hasNames) {
+                    setTimeout(spin, 1400);
+                }
             },380);
         }, displayDuration);
     }
