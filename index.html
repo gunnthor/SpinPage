@@ -386,7 +386,7 @@
         .winner-label  { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: #4a4030; margin-bottom: 0.6rem; }
         .winner-suits  { font-size: 1.4rem; letter-spacing: 0.35em; color: #d4af37; margin-bottom: 0.6rem; opacity: 0.7; }
         .winner-name   { font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 3.2rem; font-weight: 700; word-break: break-word; margin-bottom: 1.2rem; text-shadow: 0 0 40px currentColor; }
-        .winner-sub    { font-size: 0.7rem; color: #2e2840; letter-spacing: 0.06em; }
+        .winner-sub    { font-size: 0.78rem; color: #7a7868; letter-spacing: 0.06em; font-style: italic; }
 
         /* ── Draft ── */
 
@@ -529,7 +529,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.3</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.4</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -586,7 +586,7 @@
         <div class="winner-label">Winner</div>
         <div class="winner-suits">♠ ♥ ♦ ♣</div>
         <div class="winner-name" id="winnerName"></div>
-        <div class="winner-sub">Removing from the table…</div>
+        <div class="winner-sub" id="winnerSub"></div>
     </div>
 </div>
 
@@ -610,6 +610,30 @@
     const displayValEl  = document.getElementById('displayVal');
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerNameEl  = document.getElementById('winnerName');
+    const winnerSubEl   = document.getElementById('winnerSub');
+
+    const CONGRATS = [
+        'The wheel has spoken.',
+        'Fate has decided.',
+        'No escaping it now!',
+        'The stars aligned.',
+        'Fortune smiles upon you.',
+        'Step right up!',
+        'The universe chose wisely.',
+        'What are the odds?',
+        'The wheel never lies.',
+        'Destiny strikes again.',
+        'Called it!',
+        'Born lucky!',
+        'Your moment has arrived.',
+        'Absolutely iconic.',
+        'The crowd goes wild!',
+        'You\'re the chosen one.',
+        'Congratulations, champ!',
+        'There it is!',
+        'The dice have been cast.',
+        'No take-backs!',
+    ];
     const winnerCard    = document.getElementById('winnerCard');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
@@ -1231,6 +1255,7 @@
     function onSpinEnd(winnerIdx) {
         const c=sliceColor(winnerIdx), name=names[winnerIdx];
         winnerNameEl.textContent=name; winnerNameEl.style.color=c;
+        winnerSubEl.textContent = CONGRATS[Math.floor(Math.random()*CONGRATS.length)];
         winnerCard.style.setProperty('--win-color',c);
         winnerCard.style.setProperty('--win-glow',c+'28');
         winnerOverlay.classList.add('show');
