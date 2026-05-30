@@ -300,6 +300,68 @@
 
         .wheel-wrap.shaking { animation: wheelShake 0.55s ease-in-out; }
 
+        /* ── Devil popup ── */
+
+        .devil-popup {
+            position: fixed;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%) translateY(400px) scale(0.2);
+            z-index: 1500;
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+        }
+
+        .devil-emoji {
+            font-size: 8rem;
+            line-height: 1;
+            display: block;
+            filter:
+                drop-shadow(0 0 18px rgba(255, 40, 0, 0.95))
+                drop-shadow(0 0 40px rgba(255, 100, 0, 0.7))
+                drop-shadow(0 0 70px rgba(200, 30, 0, 0.5));
+        }
+
+        .devil-label {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1.3rem;
+            font-weight: 900;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            margin-top: 0.4rem;
+            background: linear-gradient(to bottom, #ff6b6b, #d4af37);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        @keyframes devilIn {
+            0%   { transform: translateX(-50%) translateY(400px) scale(0.2) rotate(-25deg); opacity: 0; }
+            55%  { transform: translateX(-50%) translateY(-28px) scale(1.18) rotate(7deg);  opacity: 1; }
+            70%  { transform: translateX(-50%) translateY(14px)  scale(0.94) rotate(-4deg); opacity: 1; }
+            80%  { transform: translateX(-50%) translateY(-10px) scale(1.06) rotate(2deg);  opacity: 1; }
+            88%  { transform: translateX(-50%) translateY(4px)   scale(0.98) rotate(-1deg); opacity: 1; }
+            100% { transform: translateX(-50%) translateY(0)     scale(1)    rotate(0deg);  opacity: 1; }
+        }
+
+        @keyframes devilWiggle {
+            0%, 100% { transform: translateX(-50%) rotate(-4deg) scale(1);   }
+            25%       { transform: translateX(-50%) rotate(4deg)  scale(1.03); }
+            50%       { transform: translateX(-50%) rotate(-3deg) scale(1);   }
+            75%       { transform: translateX(-50%) rotate(3deg)  scale(1.02); }
+        }
+
+        @keyframes devilOut {
+            0%   { transform: translateX(-50%) translateY(0)     scale(1)    rotate(0deg);  opacity: 1; }
+            25%  { transform: translateX(-50%) translateY(-22px) scale(1.12) rotate(-6deg); opacity: 1; }
+            100% { transform: translateX(-50%) translateY(420px) scale(0.3)  rotate(18deg); opacity: 0; }
+        }
+
+        .devil-popup.in     { animation: devilIn     0.65s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .devil-popup.wiggle { animation: devilWiggle 0.5s  ease-in-out infinite; }
+        .devil-popup.out    { animation: devilOut    0.45s ease-in forwards; }
+
         /* ── Winner overlay ── */
 
         .winner-overlay {
@@ -467,7 +529,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.1</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.2</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Plot Twists</div>
@@ -509,6 +571,11 @@
     </div>
     <div class="draft-grid" id="draftGrid"></div>
 </section>
+
+<div class="devil-popup" id="devilPopup">
+    <span class="devil-emoji">😈</span>
+    <div class="devil-label">Plot Twist!</div>
+</div>
 
 <div class="winner-overlay" id="winnerOverlay">
     <div class="winner-card" id="winnerCard">
@@ -1110,7 +1177,24 @@
     /* ══════════════════════════════════════
        Boost FX
     ══════════════════════════════════════ */
+    function showDevil() {
+        const el = document.getElementById('devilPopup');
+        el.classList.remove('in', 'wiggle', 'out');
+        void el.offsetWidth;
+        el.classList.add('in');
+        setTimeout(() => {
+            el.classList.remove('in');
+            el.classList.add('wiggle');
+            setTimeout(() => {
+                el.classList.remove('wiggle');
+                el.classList.add('out');
+                setTimeout(() => el.classList.remove('out'), 500);
+            }, 1800);
+        }, 650);
+    }
+
     function triggerBoost() {
+        showDevil();
         playBoostSound();
         flashScreen();
         shakeWheel();
