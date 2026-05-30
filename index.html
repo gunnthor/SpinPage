@@ -21,118 +21,71 @@
                 radial-gradient(ellipse 60% 30% at 90% 80%, rgba(30,80,140,0.05) 0%, transparent 50%);
         }
 
+        #fireCanvas { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+        header, .container, .draft-section { position: relative; z-index: 1; }
+
         /* ── Header ── */
 
-        header {
-            padding: 2rem 2rem 0.8rem;
-            text-align: center;
-        }
+        header { padding: 2rem 2rem 0.8rem; text-align: center; }
 
         h1 {
             font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
-            font-size: 3rem;
-            font-weight: 900;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
+            font-size: 3rem; font-weight: 900;
+            letter-spacing: 0.15em; text-transform: uppercase;
             background: linear-gradient(to bottom, #f8ee80, #d4af37, #8b6914, #d4af37, #f8ee80);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
 
-        .subtitle {
-            font-size: 0.62rem;
-            letter-spacing: 0.35em;
-            text-transform: uppercase;
-            color: #4a4030;
-            margin-top: 0.3rem;
-        }
+        .subtitle { font-size: 0.62rem; letter-spacing: 0.35em; text-transform: uppercase; color: #4a4030; margin-top: 0.3rem; }
 
         /* ── Layout ── */
 
         .container {
-            display: flex;
-            gap: 2.5rem;
+            display: flex; gap: 2.5rem;
             padding: 1rem 2rem 2.5rem;
-            width: 100%;
-            max-width: 1080px;
-            align-items: flex-start;
-            justify-content: center;
+            width: 100%; max-width: 1080px;
+            align-items: flex-start; justify-content: center;
         }
 
         /* ── Name panel ── */
 
         .name-panel {
-            width: 255px;
-            flex-shrink: 0;
+            width: 255px; flex-shrink: 0;
             background: linear-gradient(160deg, #0d0d1a, #090910);
-            border-radius: 14px;
-            padding: 1.5rem;
+            border-radius: 14px; padding: 1.5rem;
             border: 1px solid #1e1a30;
-            box-shadow:
-                0 0 40px rgba(0,0,0,0.6),
-                inset 0 1px 0 rgba(212,175,55,0.08);
-            display: flex;
-            flex-direction: column;
-            gap: 1.1rem;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.08);
+            display: flex; flex-direction: column; gap: 1.1rem;
         }
 
         .panel-title {
-            font-size: 0.62rem;
-            font-weight: 700;
-            color: #d4af37;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
+            font-size: 0.62rem; font-weight: 700; color: #d4af37;
+            letter-spacing: 0.22em; text-transform: uppercase;
+            display: flex; align-items: center; gap: 0.6rem;
         }
 
-        .panel-title::before,
-        .panel-title::after {
-            content: '';
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(to right, transparent, #2a2040);
-        }
-        .panel-title::after { background: linear-gradient(to left, transparent, #2a2040); }
+        .panel-title::before, .panel-title::after { content: ''; flex: 1; height: 1px; }
+        .panel-title::before { background: linear-gradient(to right, transparent, #2a2040); }
+        .panel-title::after  { background: linear-gradient(to left,  transparent, #2a2040); }
 
         .add-row { display: flex; gap: 0.45rem; }
 
         .add-row input {
-            flex: 1;
-            padding: 0.6rem 0.9rem;
-            background: #09090f;
-            border: 1px solid #1e1a30;
-            border-radius: 8px;
-            color: #e8dfc8;
-            font-size: 0.9rem;
-            outline: none;
+            flex: 1; padding: 0.6rem 0.9rem;
+            background: #09090f; border: 1px solid #1e1a30; border-radius: 8px;
+            color: #e8dfc8; font-size: 0.9rem; outline: none;
             transition: border-color 0.2s, box-shadow 0.2s;
         }
 
-        .add-row input:focus {
-            border-color: #d4af37;
-            box-shadow: 0 0 0 2px rgba(212,175,55,0.12);
-        }
-
+        .add-row input:focus { border-color: #d4af37; box-shadow: 0 0 0 2px rgba(212,175,55,0.12); }
         .add-row input::placeholder { color: #2e2840; }
 
         .add-btn {
-            width: 36px;
-            height: 36px;
-            flex-shrink: 0;
-            border: none;
-            border-radius: 8px;
+            width: 36px; height: 36px; flex-shrink: 0; border: none; border-radius: 8px;
             background: linear-gradient(145deg, #d4af37, #8b6914);
-            color: #060608;
-            font-size: 1.5rem;
-            font-weight: 900;
-            line-height: 1;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: #060608; font-size: 1.5rem; font-weight: 900; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
             transition: filter 0.2s, transform 0.1s;
         }
 
@@ -140,13 +93,8 @@
         .add-btn:active { transform: scale(0.9); }
 
         .name-list {
-            list-style: none;
-            display: flex;
-            flex-direction: column;
-            gap: 0.35rem;
-            max-height: 430px;
-            overflow-y: auto;
-            padding-right: 2px;
+            list-style: none; display: flex; flex-direction: column;
+            gap: 0.35rem; max-height: 430px; overflow-y: auto; padding-right: 2px;
         }
 
         .name-list::-webkit-scrollbar { width: 3px; }
@@ -154,16 +102,11 @@
         .name-list::-webkit-scrollbar-thumb { background: #2a2040; border-radius: 4px; }
 
         .name-item {
-            display: flex;
-            align-items: center;
-            gap: 0.6rem;
+            display: flex; align-items: center; gap: 0.6rem;
             padding: 0.5rem 0.75rem;
-            background: #09090f;
-            border: 1px solid #16141f;
+            background: #09090f; border: 1px solid #16141f;
             border-left: 3px solid var(--accent, #d4af37);
-            border-radius: 7px;
-            font-size: 0.88rem;
-            animation: slideIn 0.18s ease;
+            border-radius: 7px; font-size: 0.88rem; animation: slideIn 0.18s ease;
         }
 
         @keyframes slideIn {
@@ -171,279 +114,246 @@
             to   { opacity: 1; transform: translateX(0); }
         }
 
-        .name-text {
-            flex: 1;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            color: #b8af98;
-        }
+        .name-text { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #b8af98; }
 
         .remove-btn {
-            background: none;
-            border: none;
-            color: #2e2840;
-            cursor: pointer;
-            font-size: 1.1rem;
-            padding: 0 2px;
-            line-height: 1;
-            flex-shrink: 0;
-            transition: color 0.15s;
+            background: none; border: none; color: #2e2840;
+            cursor: pointer; font-size: 1.1rem; padding: 0 2px;
+            line-height: 1; flex-shrink: 0; transition: color 0.15s;
         }
-
         .remove-btn:hover { color: #c0392b; }
 
-        .empty-msg {
-            color: #2e2840;
-            font-size: 0.82rem;
-            font-style: italic;
-            text-align: center;
-            padding: 0.8rem 0;
-        }
+        .empty-msg { color: #2e2840; font-size: 0.82rem; font-style: italic; text-align: center; padding: 0.8rem 0; }
 
         /* ── Wheel panel ── */
 
-        .wheel-panel {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 1.5rem;
-        }
+        .wheel-panel { display: flex; flex-direction: column; align-items: center; gap: 1.2rem; }
 
         .wheel-wrap {
-            position: relative;
-            width: 480px;
-            height: 480px;
-            filter: drop-shadow(0 0 28px rgba(212,175,55,0.15))
-                    drop-shadow(0 20px 40px rgba(0,0,0,0.7));
+            position: relative; width: 480px; height: 480px;
+            filter: drop-shadow(0 0 28px rgba(212,175,55,0.15)) drop-shadow(0 20px 40px rgba(0,0,0,0.7));
         }
 
         canvas { display: block; }
 
-        .btn-row {
-            display: flex;
-            align-items: center;
-            gap: 0.9rem;
-        }
+        .btn-row           { display: flex; align-items: center; gap: 0.9rem; }
+        .btn-row-secondary { display: flex; align-items: center; gap: 0.7rem; }
 
         .spin-btn {
-            padding: 0.9rem 3.2rem;
-            border: none;
-            border-radius: 50px;
+            padding: 0.9rem 3.2rem; border: none; border-radius: 50px;
             background: linear-gradient(145deg, #c0392b, #96281b);
-            color: #fff;
-            font-size: 1.05rem;
-            font-weight: 800;
-            letter-spacing: 0.18em;
-            text-transform: uppercase;
-            cursor: pointer;
+            color: #fff; font-size: 1.05rem; font-weight: 800;
+            letter-spacing: 0.18em; text-transform: uppercase; cursor: pointer;
             border: 1px solid rgba(255,255,255,0.08);
-            box-shadow:
-                0 4px 24px rgba(192,57,43,0.45),
-                inset 0 1px 0 rgba(255,255,255,0.12);
+            box-shadow: 0 4px 24px rgba(192,57,43,0.45), inset 0 1px 0 rgba(255,255,255,0.12);
             transition: filter 0.15s, transform 0.12s, box-shadow 0.15s, opacity 0.2s;
         }
 
-        .spin-btn:hover:not(:disabled) {
-            filter: brightness(1.15);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 32px rgba(192,57,43,0.6), inset 0 1px 0 rgba(255,255,255,0.2);
-        }
-
+        .spin-btn:hover:not(:disabled)  { filter: brightness(1.15); transform: translateY(-2px); box-shadow: 0 8px 32px rgba(192,57,43,0.6), inset 0 1px 0 rgba(255,255,255,0.2); }
         .spin-btn:active:not(:disabled) { transform: translateY(0); }
-
-        .spin-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        /* Auto button */
+        .spin-btn:disabled              { opacity: 0.3; cursor: not-allowed; }
 
         .auto-btn {
-            padding: 0.9rem 1.5rem;
-            border-radius: 50px;
-            background: #09090f;
-            border: 1px solid #1e1a30;
-            color: #4a4030;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.25s;
-            white-space: nowrap;
+            padding: 0.9rem 1.5rem; border-radius: 50px;
+            background: #09090f; border: 1px solid #1e1a30;
+            color: #4a4030; font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.14em; text-transform: uppercase;
+            cursor: pointer; transition: all 0.25s;
         }
 
         .auto-btn:hover:not(:disabled) { border-color: #d4af37; color: #d4af37; }
+        .auto-btn:disabled             { opacity: 0.3; cursor: not-allowed; }
 
         .auto-btn.on {
-            background: rgba(212,175,55,0.08);
-            border-color: #d4af37;
-            color: #d4af37;
-            animation: pulse-gold 1.8s ease-in-out infinite;
+            color: #f5e070; background: rgba(212,175,55,0.1);
+            animation: casino-flash 0.9s ease-in-out infinite alternate;
         }
 
-        .auto-btn:disabled { opacity: 0.3; cursor: not-allowed; }
-
-        /* Reset button */
-
-        .reset-btn {
-            padding: 0.9rem 1.2rem;
-            border-radius: 50px;
-            background: #09090f;
-            border: 1px solid #1e1a30;
-            color: #3a3050;
-            font-size: 0.72rem;
-            font-weight: 700;
-            letter-spacing: 0.14em;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.22s;
+        @keyframes casino-flash {
+            from { box-shadow: 0 0 14px rgba(212,175,55,0.6), 0 0 28px rgba(212,175,55,0.25); border-color: #d4af37; }
+            to   { box-shadow: 0 0 14px rgba(192,57,43,0.7), 0 0 28px rgba(192,57,43,0.3);   border-color: #c0392b; }
         }
 
-        .reset-btn:hover { border-color: #c0392b; color: #c0392b; }
-
-        @keyframes pulse-gold {
-            0%, 100% { box-shadow: 0 0 8px rgba(212,175,55,0.15); }
-            50%       { box-shadow: 0 0 20px rgba(212,175,55,0.35); }
+        .undo-btn, .reset-btn {
+            padding: 0.55rem 1.1rem; border-radius: 50px;
+            background: #09090f; border: 1px solid #1e1a30;
+            font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
         }
 
-        /* ── Fire canvas ── */
+        .undo-btn  { color: #4a4030; }
+        .reset-btn { color: #4a4030; }
+        .undo-btn:hover:not(:disabled)  { border-color: #d4af37; color: #d4af37; }
+        .reset-btn:hover:not(:disabled) { border-color: #c0392b; color: #c0392b; }
+        .undo-btn:disabled, .reset-btn:disabled { opacity: 0.28; cursor: not-allowed; }
 
-        #fireCanvas {
-            position: fixed;
-            inset: 0;
-            z-index: 0;
-            pointer-events: none;
+        .display-row {
+            display: flex; align-items: center; gap: 0.7rem;
+            font-size: 0.65rem; color: #3a3050; letter-spacing: 0.08em; text-transform: uppercase;
         }
 
-        header, .container, .draft-section {
-            position: relative;
-            z-index: 1;
+        .display-row input[type=range] {
+            -webkit-appearance: none; appearance: none;
+            width: 100px; height: 3px;
+            background: #1e1a30; border-radius: 2px; outline: none; cursor: pointer;
         }
+
+        .display-row input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 13px; height: 13px; border-radius: 50%;
+            background: linear-gradient(145deg, #d4af37, #8b6914); cursor: pointer;
+        }
+
+        .display-val { color: #d4af37; min-width: 2.5rem; text-align: left; font-weight: 700; }
+
+        /* ── Toggle switch (shared) ── */
+
+        .toggle-switch {
+            position: relative; width: 36px; height: 20px; cursor: pointer;
+        }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; position: absolute; }
+
+        .toggle-track {
+            position: absolute; inset: 0;
+            background: #1e1a30; border: 1px solid #2a2040; border-radius: 20px;
+            transition: background 0.25s, border-color 0.25s;
+        }
+
+        .toggle-thumb {
+            position: absolute; top: 3px; left: 3px;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: #3a3050;
+            transition: transform 0.25s, background 0.25s;
+        }
+
+        .toggle-switch input:checked ~ .toggle-track {
+            background: rgba(212,175,55,0.15); border-color: #d4af37;
+        }
+
+        .toggle-switch input:checked ~ .toggle-track .toggle-thumb {
+            transform: translateX(16px);
+            background: #d4af37;
+            box-shadow: 0 0 6px rgba(212,175,55,0.6);
+        }
+
+        /* ── Options panel ── */
+
+        .options-btn {
+            padding: 0.55rem 1.1rem; border-radius: 50px;
+            background: #09090f; border: 1px solid #1e1a30;
+            color: #4a4030; font-size: 0.68rem; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
+        }
+
+        .options-btn:hover, .options-btn.open { border-color: #d4af37; color: #d4af37; }
+
+        .options-panel {
+            width: 100%; max-height: 0; overflow: hidden;
+            transition: max-height 0.32s ease;
+        }
+
+        .options-panel.open { max-height: 300px; }
+
+        .options-inner {
+            margin-top: 0.4rem;
+            background: linear-gradient(160deg, #0d0d1a, #090910);
+            border: 1px solid #1e1a30; border-radius: 10px;
+            padding: 0.9rem 1.1rem;
+            display: flex; flex-direction: column; gap: 0.75rem;
+        }
+
+        .options-title {
+            font-size: 0.58rem; font-weight: 700; color: #4a4030;
+            letter-spacing: 0.18em; text-transform: uppercase;
+        }
+
+        .option-row {
+            display: flex; align-items: center; gap: 0.9rem;
+            padding: 0.5rem 0.7rem;
+            background: #09090f; border: 1px solid #16141f;
+            border-radius: 8px;
+        }
+
+        .option-info { flex: 1; }
+
+        .option-name {
+            font-size: 0.8rem; font-weight: 700; color: #b8af98; letter-spacing: 0.04em;
+        }
+
+        .option-desc {
+            font-size: 0.62rem; color: #3a3050; margin-top: 0.18rem; letter-spacing: 0.02em;
+        }
+
+        /* ── Wheel shake ── */
+
+        @keyframes wheelShake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            12%       { transform: translate(-10px, -5px) rotate(-1.5deg); }
+            25%       { transform: translate(10px, 6px) rotate(1.5deg); }
+            37%       { transform: translate(-8px, 5px) rotate(-1deg); }
+            50%       { transform: translate(7px, -7px) rotate(1deg); }
+            62%       { transform: translate(-5px, 4px) rotate(-0.5deg); }
+            75%       { transform: translate(4px, -3px) rotate(0.5deg); }
+            87%       { transform: translate(-2px, 2px) rotate(-0.2deg); }
+        }
+
+        .wheel-wrap.shaking { animation: wheelShake 0.55s ease-in-out; }
 
         /* ── Winner overlay ── */
 
         .winner-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.87);
-            backdrop-filter: blur(7px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.35s;
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.87); backdrop-filter: blur(7px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.35s;
         }
 
         .winner-overlay.show { opacity: 1; pointer-events: all; }
 
         .winner-card {
             background: linear-gradient(160deg, #0e0e1c, #080810);
-            border-radius: 20px;
-            padding: 3rem 5rem;
-            text-align: center;
-            border: 1px solid #1e1a30;
-            border-top: 2px solid var(--win-color, #d4af37);
+            border-radius: 20px; padding: 3rem 5rem; text-align: center;
+            border: 1px solid #1e1a30; border-top: 2px solid var(--win-color, #d4af37);
             box-shadow: 0 40px 100px rgba(0,0,0,0.8), 0 0 80px var(--win-glow, rgba(212,175,55,0.1));
-            transform: scale(0.75);
-            transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+            transform: scale(0.75); transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .winner-overlay.show .winner-card { transform: scale(1); }
 
-        .winner-label {
-            font-size: 0.6rem;
-            font-weight: 700;
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
-            color: #4a4030;
-            margin-bottom: 0.6rem;
-        }
+        .winner-label  { font-size: 0.6rem; font-weight: 700; letter-spacing: 0.28em; text-transform: uppercase; color: #4a4030; margin-bottom: 0.6rem; }
+        .winner-suits  { font-size: 1.4rem; letter-spacing: 0.35em; color: #d4af37; margin-bottom: 0.6rem; opacity: 0.7; }
+        .winner-name   { font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 3.2rem; font-weight: 700; word-break: break-word; margin-bottom: 1.2rem; text-shadow: 0 0 40px currentColor; }
+        .winner-sub    { font-size: 0.7rem; color: #2e2840; letter-spacing: 0.06em; }
 
-        .winner-suits {
-            font-size: 1.4rem;
-            letter-spacing: 0.35em;
-            color: #d4af37;
-            margin-bottom: 0.6rem;
-            opacity: 0.7;
-        }
+        /* ── Draft ── */
 
-        .winner-name {
-            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
-            font-size: 3.2rem;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-            word-break: break-word;
-            margin-bottom: 1.2rem;
-            text-shadow: 0 0 40px currentColor;
-        }
-
-        .winner-sub { font-size: 0.7rem; color: #2e2840; letter-spacing: 0.06em; }
-
-        /* ── Draft order ── */
-
-        .draft-section {
-            width: 100%;
-            max-width: 1080px;
-            padding: 0 2rem 3.5rem;
-            display: none;
-            flex-direction: column;
-            gap: 1rem;
-        }
-
+        .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
         .draft-section.visible { display: flex; }
 
-        .draft-header {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
+        .draft-header  { display: flex; align-items: center; gap: 0.8rem; }
+        .draft-title   { font-size: 0.62rem; font-weight: 700; color: #d4af37; letter-spacing: 0.22em; text-transform: uppercase; white-space: nowrap; }
+        .draft-rule    { flex: 1; height: 1px; background: linear-gradient(to right, #2a2040, transparent); }
+
+        .draft-copy, .draft-restore, .draft-clear {
+            background: none; border: 1px solid #1e1a30; border-radius: 6px;
+            font-size: 0.68rem; letter-spacing: 0.06em; padding: 0.22rem 0.65rem; cursor: pointer; transition: border-color 0.15s, color 0.15s;
         }
 
-        .draft-title {
-            font-size: 0.62rem;
-            font-weight: 700;
-            color: #d4af37;
-            letter-spacing: 0.22em;
-            text-transform: uppercase;
-            white-space: nowrap;
-        }
+        .draft-copy    { color: #3a3050; }
+        .draft-restore { color: #3a3050; }
+        .draft-clear   { color: #2e2840; }
+        .draft-copy:hover    { border-color: #d4af37; color: #d4af37; }
+        .draft-restore:hover { border-color: #1e8449; color: #1e8449; }
+        .draft-clear:hover   { border-color: #c0392b; color: #c0392b; }
 
-        .draft-rule {
-            flex: 1;
-            height: 1px;
-            background: linear-gradient(to right, #2a2040, transparent);
-        }
-
-        .draft-clear {
-            background: none;
-            border: 1px solid #1e1a30;
-            border-radius: 6px;
-            color: #2e2840;
-            font-size: 0.68rem;
-            letter-spacing: 0.06em;
-            padding: 0.22rem 0.65rem;
-            cursor: pointer;
-            transition: border-color 0.15s, color 0.15s;
-        }
-
-        .draft-clear:hover { border-color: #c0392b; color: #c0392b; }
-
-        .draft-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.65rem;
-        }
+        .draft-grid { display: flex; flex-wrap: wrap; gap: 0.65rem; }
 
         .draft-card {
             background: linear-gradient(160deg, #0e0e1c, #080810);
-            border: 1px solid #16141f;
-            border-top: 2px solid var(--accent);
-            border-radius: 10px;
-            padding: 0.75rem 1rem;
-            min-width: 100px;
-            display: flex;
-            flex-direction: column;
-            gap: 0.2rem;
+            border: 1px solid #16141f; border-top: 2px solid var(--accent);
+            border-radius: 10px; padding: 0.75rem 1rem; min-width: 100px;
+            display: flex; flex-direction: column; gap: 0.2rem;
             animation: popIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
@@ -452,20 +362,8 @@
             to   { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .draft-pick-num {
-            font-size: 0.58rem;
-            font-weight: 700;
-            letter-spacing: 0.12em;
-            text-transform: uppercase;
-            color: #4a4030;
-        }
-
-        .draft-name {
-            font-size: 0.92rem;
-            font-weight: 700;
-            color: #e8dfc8;
-            word-break: break-word;
-        }
+        .draft-pick-num { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #4a4030; }
+        .draft-name     { font-size: 0.92rem; font-weight: 700; color: #e8dfc8; word-break: break-word; }
     </style>
 </head>
 <body>
@@ -489,13 +387,48 @@
     </div>
 
     <div class="wheel-panel">
-        <div class="wheel-wrap">
+        <div class="wheel-wrap" id="wheelWrap">
             <canvas id="wheel" width="480" height="480"></canvas>
         </div>
         <div class="btn-row">
             <button class="spin-btn" id="spinBtn" disabled>SPIN</button>
-            <button class="auto-btn" id="autoBtn" disabled>AUTO</button>
+            <button class="auto-btn" id="autoBtn" disabled>AUTOSPIN</button>
+        </div>
+        <div class="btn-row-secondary">
+            <button class="undo-btn" id="undoBtn" disabled>↩ UNDO</button>
             <button class="reset-btn" id="resetBtn">RESET</button>
+            <button class="options-btn" id="optionsBtn">⚙ OPTIONS</button>
+        </div>
+
+        <div class="options-panel" id="optionsPanel">
+            <div class="options-inner">
+                <div class="options-title">Options</div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Plot Twists</div>
+                        <div class="option-desc">20% chance the wheel fakes a stop then rockets back to speed</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="plotTwistToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Rigged</div>
+                        <div class="option-desc">Players whose name starts with "Gun" are always picked first</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="riggedToggle">
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="display-row">
+            <span>Winner display</span>
+            <input type="range" id="displaySlider" min="1" max="6" step="0.5" value="2.8">
+            <span class="display-val" id="displayVal">2.8s</span>
         </div>
     </div>
 
@@ -505,7 +438,9 @@
     <div class="draft-header">
         <span class="draft-title">♠ Draft Order ♠</span>
         <div class="draft-rule"></div>
-        <button class="draft-clear" id="draftClear">Clear</button>
+        <button class="draft-copy" id="copyBtn">COPY</button>
+        <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
+        <button class="draft-clear" id="draftClear">CLEAR</button>
     </div>
     <div class="draft-grid" id="draftGrid"></div>
 </section>
@@ -520,32 +455,45 @@
 </div>
 
 <script>
-    const canvas  = document.getElementById('wheel');
-    const ctx     = canvas.getContext('2d');
-    const SIZE    = canvas.width;   // 480
-    const cx      = SIZE / 2;       // 240
-    const cy      = SIZE / 2;       // 240
-    const R       = cx - 12;        // 228
+    /* ══════════════════════════════════════
+       DOM
+    ══════════════════════════════════════ */
+    const canvas        = document.getElementById('wheel');
+    const ctx           = canvas.getContext('2d');
+    const SIZE = canvas.width, cx = SIZE / 2, cy = SIZE / 2, R = cx - 12;
+    const wheelWrap     = document.getElementById('wheelWrap');
 
     const nameInput     = document.getElementById('nameInput');
     const addBtn        = document.getElementById('addBtn');
     const nameListEl    = document.getElementById('nameList');
     const spinBtn       = document.getElementById('spinBtn');
     const autoBtn       = document.getElementById('autoBtn');
+    const undoBtn       = document.getElementById('undoBtn');
+    const resetBtn      = document.getElementById('resetBtn');
+    const displaySlider = document.getElementById('displaySlider');
+    const displayValEl  = document.getElementById('displayVal');
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerNameEl  = document.getElementById('winnerName');
     const winnerCard    = document.getElementById('winnerCard');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
     const draftClear    = document.getElementById('draftClear');
+    const copyBtn       = document.getElementById('copyBtn');
 
-    let names      = [];
-    let rotation   = 0;
-    let isSpinning = false;
-    let autoSpin   = false;
-    let draftOrder = [];
+    /* ══════════════════════════════════════
+       State
+    ══════════════════════════════════════ */
+    let names           = [];
+    let draftOrder      = [];
+    let undoStack       = [];
+    let rotation        = 0;
+    let isSpinning      = false;
+    let autoSpin        = false;
+    let displayDuration = 2800;
+    let lastTickSection     = -1;
+    let plotTwistsEnabled   = true;
+    let riggedEnabled       = false;
 
-    /* Deep casino palette */
     const PALETTE = [
         '#b03a2e','#1a5276','#1e8449','#b7950b','#6c3483',
         '#117a65','#935116','#154360','#196f3d','#7b241c',
@@ -553,323 +501,535 @@
     ];
 
     function sliceColor(i) { return PALETTE[i % PALETTE.length]; }
+    function ordinal(n) { const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
 
-    /* ── Ordinal ── */
-    function ordinal(n) {
-        const s = ['th','st','nd','rd'];
-        const v = n % 100;
-        return n + (s[(v - 20) % 10] || s[v] || s[0]);
+    /* ══════════════════════════════════════
+       Audio
+    ══════════════════════════════════════ */
+    let audioCtx = null;
+
+    function ensureAudio() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    /* ── Draft ── */
+    function playTick() {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), filt = audioCtx.createBiquadFilter();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.05);
+        filt.type = 'bandpass'; filt.frequency.value = 1400; filt.Q.value = 0.6;
+        gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
+        osc.connect(filt); filt.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function playBoostSound() {
+        if (!audioCtx) return;
+        // Rising whoosh
+        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(60, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.45);
+        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.8);
+        gain.gain.setValueAtTime(0, audioCtx.currentTime);
+        gain.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.08);
+        gain.gain.setValueAtTime(0.55, audioCtx.currentTime + 0.38);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 1.0);
+        // Noise burst
+        const bufLen = Math.floor(audioCtx.sampleRate * 0.25);
+        const buf    = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+        const data   = buf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
+        const noise = audioCtx.createBufferSource(), ng = audioCtx.createGain(), nf = audioCtx.createBiquadFilter();
+        noise.buffer = buf; nf.type = 'bandpass'; nf.frequency.value = 350; nf.Q.value = 0.5;
+        ng.gain.setValueAtTime(0.4, audioCtx.currentTime);
+        ng.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
+        noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
+        noise.start(); noise.stop(audioCtx.currentTime + 0.3);
+    }
+
+    function playFanfare() {
+        if (!audioCtx) return;
+        const notes = [
+            { freq: 523.25, t: 0,    dur: 0.16 },
+            { freq: 659.25, t: 0.13, dur: 0.16 },
+            { freq: 783.99, t: 0.26, dur: 0.16 },
+            { freq: 1046.5, t: 0.39, dur: 0.6  },
+            { freq: 523.25, t: 0.45, dur: 0.55 },
+            { freq: 659.25, t: 0.45, dur: 0.55 },
+            { freq: 783.99, t: 0.45, dur: 0.55 },
+            { freq: 2093,   t: 0.55, dur: 0.07 },
+            { freq: 2637,   t: 0.62, dur: 0.07 },
+            { freq: 2093,   t: 0.69, dur: 0.07 },
+            { freq: 3136,   t: 0.74, dur: 0.1  },
+        ];
+        notes.forEach(({ freq, t, dur }) => {
+            const now = audioCtx.currentTime;
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'sine'; o.frequency.setValueAtTime(freq, now + t);
+            g.gain.setValueAtTime(0, now + t);
+            g.gain.linearRampToValueAtTime(freq > 1500 ? 0.18 : 0.32, now + t + 0.02);
+            g.gain.setValueAtTime(freq > 1500 ? 0.18 : 0.32, now + t + dur - 0.04);
+            g.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(now + t); o.stop(now + t + dur + 0.05);
+        });
+    }
+
+    /* ══════════════════════════════════════
+       localStorage
+    ══════════════════════════════════════ */
+    function saveState() {
+        try { localStorage.setItem('spinpage', JSON.stringify({ names, draftOrder, undoStack })); } catch(e) {}
+    }
+
+    function loadState() {
+        try {
+            const s = JSON.parse(localStorage.getItem('spinpage') || 'null');
+            if (s) { names = s.names||[]; draftOrder = s.draftOrder||[]; undoStack = s.undoStack||[]; }
+        } catch(e) {}
+    }
+
+    /* ══════════════════════════════════════
+       Overlay canvas (confetti + boost elements)
+    ══════════════════════════════════════ */
+    const overlayCanvas = document.createElement('canvas');
+    overlayCanvas.style.cssText = 'position:fixed;inset:0;z-index:1002;pointer-events:none;';
+    document.body.appendChild(overlayCanvas);
+    const octx = overlayCanvas.getContext('2d');
+
+    let confettiParticles = [];
+    let boostElements     = [];
+    let overlayRunning    = false;
+
+    function resizeOverlay() { overlayCanvas.width = window.innerWidth; overlayCanvas.height = window.innerHeight; }
+
+    const CONFETTI_COLORS = ['#d4af37','#f5e070','#c0392b','#e74c3c','#fff','#e8dfc8','#2471a3','#1e8449'];
+    const SUITS = ['♠','♥','♦','♣'];
+
+    function launchConfetti(accentColor) {
+        const W = overlayCanvas.width, H = overlayCanvas.height;
+        const ox = W / 2, oy = H * 0.42;
+        const colors = [...CONFETTI_COLORS, accentColor];
+        for (let i = 0; i < 160; i++) {
+            const angle = Math.random() * Math.PI * 2, speed = Math.random() * 14 + 4;
+            confettiParticles.push({
+                x: ox + (Math.random()-0.5)*80, y: oy + (Math.random()-0.5)*60,
+                vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 4,
+                color: colors[Math.floor(Math.random()*colors.length)],
+                w: Math.random()*11+5, h: Math.random()*6+3, r: Math.random()*5+2,
+                rot: Math.random()*Math.PI*2, rotV: (Math.random()-0.5)*0.28,
+                life: 0, maxLife: Math.floor(Math.random()*90+60),
+                shape: Math.random() < 0.55 ? 'rect' : 'circle',
+            });
+        }
+        startOverlay();
+    }
+
+    function launchBoostElements() {
+        const W = overlayCanvas.width, H = overlayCanvas.height;
+        const ox = W / 2, oy = H * 0.42;
+
+        // Flying card suits — large and dramatic
+        for (let i = 0; i < 28; i++) {
+            const angle = Math.random() * Math.PI * 2, speed = Math.random() * 22 + 14;
+            boostElements.push({
+                kind: 'suit',
+                symbol: SUITS[Math.floor(Math.random()*4)],
+                x: ox + (Math.random()-0.5)*180, y: oy + (Math.random()-0.5)*120,
+                vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 7,
+                rot: Math.random()*360, rotV: (Math.random()-0.5)*18,
+                size: Math.random()*42+22,
+                color: ['#d4af37','#f5e070','#c0392b','#ff6b6b','#fff'][Math.floor(Math.random()*5)],
+                life: 0, maxLife: Math.floor(Math.random()*70+50),
+            });
+        }
+
+        // Golden sparks
+        for (let i = 0; i < 70; i++) {
+            const angle = Math.random() * Math.PI * 2, speed = Math.random() * 20 + 10;
+            boostElements.push({
+                kind: 'spark',
+                x: ox + (Math.random()-0.5)*120, y: oy + (Math.random()-0.5)*100,
+                vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 4,
+                size: Math.random()*5+2,
+                color: Math.random() < 0.65 ? '#d4af37' : '#ff6b6b',
+                life: 0, maxLife: Math.floor(Math.random()*45+20),
+            });
+        }
+        startOverlay();
+    }
+
+    function startOverlay() {
+        if (!overlayRunning) { overlayRunning = true; requestAnimationFrame(overlayLoop); }
+    }
+
+    function overlayLoop() {
+        octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+
+        // Draw boost elements
+        boostElements = boostElements.filter(p => {
+            p.life++;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.38; p.vx *= 0.98;
+            const alpha = Math.max(0, 1 - p.life / p.maxLife);
+            if (alpha <= 0) return false;
+
+            octx.save();
+            octx.globalAlpha = alpha;
+            octx.translate(p.x, p.y);
+
+            if (p.kind === 'suit') {
+                p.rot += p.rotV;
+                octx.rotate(p.rot * Math.PI / 180);
+                octx.font = `bold ${p.size}px 'Palatino Linotype', serif`;
+                octx.fillStyle = p.color;
+                octx.shadowColor = p.color;
+                octx.shadowBlur = 22;
+                octx.textAlign = 'center';
+                octx.textBaseline = 'middle';
+                octx.fillText(p.symbol, 0, 0);
+            } else {
+                octx.beginPath(); octx.arc(0, 0, p.size, 0, Math.PI*2);
+                octx.fillStyle = p.color;
+                octx.shadowColor = p.color; octx.shadowBlur = 12;
+                octx.fill();
+            }
+            octx.restore();
+            return true;
+        });
+
+        // Draw confetti
+        confettiParticles = confettiParticles.filter(p => {
+            p.life++;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.28; p.vx *= 0.99;
+            p.rot += p.rotV;
+            const alpha = Math.max(0, 1 - p.life / p.maxLife);
+            if (alpha <= 0) return false;
+
+            octx.save();
+            octx.globalAlpha = alpha;
+            octx.translate(p.x, p.y); octx.rotate(p.rot);
+            octx.fillStyle = p.color;
+            if (p.shape === 'rect') { octx.fillRect(-p.w/2, -p.h/2, p.w, p.h); }
+            else { octx.beginPath(); octx.arc(0,0,p.r,0,Math.PI*2); octx.fill(); }
+            octx.restore();
+            return true;
+        });
+
+        if (boostElements.length === 0 && confettiParticles.length === 0) {
+            overlayRunning = false;
+            octx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+        } else {
+            requestAnimationFrame(overlayLoop);
+        }
+    }
+
+    /* ══════════════════════════════════════
+       Fire
+    ══════════════════════════════════════ */
+    const fireCanvas = document.getElementById('fireCanvas');
+    const fctx       = fireCanvas.getContext('2d');
+    let   fireParticles = [];
+
+    function resizeFire() { fireCanvas.width = window.innerWidth; fireCanvas.height = window.innerHeight; }
+
+    function spawnFlame(x, vy, size) {
+        fireParticles.push({
+            x, y: fireCanvas.height,
+            vx: (Math.random()-0.5)*1.6, vy: vy ?? -(Math.random()*3.8+1.8),
+            life: 0, maxLife: Math.floor(Math.random()*55+35),
+            size: size ?? Math.random()*18+8,
+        });
+    }
+
+    function fireColor(t) {
+        let r,g,b;
+        if      (t<0.22) { const u=t/0.22;          r=255; g=Math.round(255-u*55);       b=Math.round(120*(1-u)); }
+        else if (t<0.52) { const u=(t-0.22)/0.3;   r=255; g=Math.round(200*(1-u));      b=0; }
+        else if (t<0.78) { const u=(t-0.52)/0.26;  r=Math.round(255-u*85); g=0;         b=0; }
+        else             { const u=(t-0.78)/0.22;  r=Math.round(170*(1-u)); g=0;        b=0; }
+        return {r,g,b};
+    }
+
+    function fireLoop() {
+        const W=fireCanvas.width, H=fireCanvas.height;
+        fctx.clearRect(0,0,W,H);
+        const base = Math.max(1, Math.floor(W/16));
+        for (let i=0;i<base;i++) { if (Math.random()<0.55) spawnFlame(Math.random()*W); }
+        if (Math.random()<0.7) {
+            spawnFlame(Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
+            spawnFlame(W-Math.random()*W*0.18, -(Math.random()*5+2.5), Math.random()*22+12);
+        }
+        fireParticles = fireParticles.filter(p => {
+            p.life++; p.x+=p.vx+Math.sin(p.life*0.13)*0.9; p.y+=p.vy; p.vy*=0.99; p.size*=0.981;
+            if (p.life>p.maxLife||p.size<0.5) return false;
+            const t=p.life/p.maxLife, {r,g,b}=fireColor(t), alpha=Math.pow(1-t,1.6)*0.78;
+            const grad=fctx.createRadialGradient(p.x,p.y,0,p.x,p.y,p.size);
+            grad.addColorStop(0,    `rgba(${r},${g},${b},${alpha})`);
+            grad.addColorStop(0.45, `rgba(${r},${Math.round(g*0.4)},0,${(alpha*0.65).toFixed(2)})`);
+            grad.addColorStop(1,    `rgba(${Math.round(r*0.2)},0,0,0)`);
+            fctx.beginPath(); fctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+            fctx.fillStyle=grad; fctx.fill();
+            return true;
+        });
+        requestAnimationFrame(fireLoop);
+    }
+
+    /* ══════════════════════════════════════
+       Draft
+    ══════════════════════════════════════ */
     function renderDraft() {
         draftSection.classList.toggle('visible', draftOrder.length > 0);
         draftGrid.innerHTML = '';
         draftOrder.forEach((pick, i) => {
             const card = document.createElement('div');
-            card.className = 'draft-card';
-            card.style.setProperty('--accent', pick.color);
-
-            const num = document.createElement('div');
-            num.className = 'draft-pick-num';
-            num.textContent = ordinal(i + 1) + ' pick';
-
-            const name = document.createElement('div');
-            name.className = 'draft-name';
-            name.textContent = pick.name;
-
-            card.append(num, name);
-            draftGrid.appendChild(card);
+            card.className = 'draft-card'; card.style.setProperty('--accent', pick.color);
+            const num = document.createElement('div'); num.className='draft-pick-num'; num.textContent=ordinal(i+1)+' pick';
+            const name= document.createElement('div'); name.className='draft-name';    name.textContent=pick.name;
+            card.append(num,name); draftGrid.appendChild(card);
         });
     }
 
-    draftClear.addEventListener('click', () => { draftOrder = []; renderDraft(); });
+    draftClear.addEventListener('click', () => { draftOrder=[]; undoStack=[]; renderDraft(); updateButtons(); saveState(); });
 
-    /* ── Reset ── */
-    const resetBtn = document.getElementById('resetBtn');
-
-    resetBtn.addEventListener('click', () => {
-        if (isSpinning) return;
-        names      = [];
-        draftOrder = [];
-        rotation   = 0;
-        autoSpin   = false;
-        autoBtn.classList.remove('on');
-        autoBtn.textContent = 'AUTO';
-        renderList();
-        renderDraft();
-        redraw();
+    document.getElementById('restoreBtn').addEventListener('click', () => {
+        if (isSpinning || draftOrder.length === 0) return;
+        draftOrder.forEach(pick => names.push(pick.name));
+        draftOrder = []; undoStack = [];
+        renderList(); renderDraft(); redraw(); saveState();
     });
 
-    /* ── List ── */
+    copyBtn.addEventListener('click', () => {
+        if (!draftOrder.length) return;
+        const text = draftOrder.map((p,i) => `${ordinal(i+1)} pick: ${p.name}`).join('\n');
+        navigator.clipboard.writeText(text).then(() => {
+            const orig = copyBtn.textContent;
+            copyBtn.textContent='COPIED!'; copyBtn.style.color='#d4af37';
+            setTimeout(()=>{ copyBtn.textContent=orig; copyBtn.style.color=''; }, 2000);
+        });
+    });
+
+    /* ══════════════════════════════════════
+       Undo
+    ══════════════════════════════════════ */
+    function updateButtons() {
+        const has = names.length > 0;
+        spinBtn.disabled  = !has || isSpinning;
+        autoBtn.disabled  = !has || isSpinning;
+        undoBtn.disabled  = undoStack.length === 0 || isSpinning;
+        resetBtn.disabled = isSpinning;
+    }
+
+    undoBtn.addEventListener('click', () => {
+        if (undoStack.length===0||isSpinning) return;
+        const last = undoStack.pop();
+        draftOrder.pop(); names.push(last.name);
+        renderList(); renderDraft(); redraw(); updateButtons(); saveState();
+    });
+
+    /* ══════════════════════════════════════
+       List
+    ══════════════════════════════════════ */
     function renderList() {
         nameListEl.innerHTML = '';
         if (names.length === 0) {
-            const li = document.createElement('li');
-            li.className = 'empty-msg';
-            li.textContent = 'No players at the table';
+            const li=document.createElement('li'); li.className='empty-msg'; li.textContent='No players at the table';
             nameListEl.appendChild(li);
         } else {
-            names.forEach((name, i) => {
-                const li  = document.createElement('li');
-                li.className = 'name-item';
-                li.style.setProperty('--accent', sliceColor(i));
-
-                const txt = document.createElement('span');
-                txt.className = 'name-text';
-                txt.textContent = name;
-
-                const btn = document.createElement('button');
-                btn.className = 'remove-btn';
-                btn.textContent = '×';
-                btn.dataset.index = i;
-                btn.title = 'Remove';
-
-                li.append(txt, btn);
-                nameListEl.appendChild(li);
+            names.forEach((name,i)=>{
+                const li=document.createElement('li'); li.className='name-item'; li.style.setProperty('--accent',sliceColor(i));
+                const txt=document.createElement('span'); txt.className='name-text'; txt.textContent=name;
+                const btn=document.createElement('button'); btn.className='remove-btn'; btn.textContent='×'; btn.dataset.index=i; btn.title='Remove';
+                li.append(txt,btn); nameListEl.appendChild(li);
             });
         }
-        const hasNames = names.length > 0;
-        spinBtn.disabled = !hasNames || isSpinning;
-        autoBtn.disabled = !hasNames || isSpinning;
+        updateButtons();
     }
 
     nameListEl.addEventListener('click', e => {
         const btn = e.target.closest('.remove-btn');
-        if (!btn || isSpinning) return;
+        if (!btn||isSpinning) return;
         names.splice(+btn.dataset.index, 1);
-        if (names.length === 0 && autoSpin) {
-            autoSpin = false;
-            autoBtn.classList.remove('on');
-            autoBtn.textContent = 'AUTO';
-        }
-        renderList();
-        redraw();
+        if (names.length===0&&autoSpin) setAutoSpin(false);
+        renderList(); redraw(); saveState();
     });
 
-    /* ── Add ── */
+    /* ══════════════════════════════════════
+       Add name
+    ══════════════════════════════════════ */
     function addName() {
+        ensureAudio();
         const val = nameInput.value.trim();
         if (!val) return;
-        names.push(val);
-        nameInput.value = '';
-        renderList();
-        redraw();
+        if (names.some(n=>n.toLowerCase()===val.toLowerCase())) {
+            nameInput.select(); nameInput.style.borderColor='#c0392b';
+            setTimeout(()=>{ nameInput.style.borderColor=''; }, 800);
+            return;
+        }
+        names.push(val); nameInput.value='';
+        renderList(); redraw(); saveState();
     }
 
     addBtn.addEventListener('click', addName);
-    nameInput.addEventListener('keydown', e => { if (e.key === 'Enter') addName(); });
+    nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') addName(); });
 
-    /* ── Draw ── */
+    /* ══════════════════════════════════════
+       Draw wheel
+    ══════════════════════════════════════ */
     function drawWheel() {
-        ctx.clearRect(0, 0, SIZE, SIZE);
-
-        if (names.length === 0) {
-            const bg = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-            bg.addColorStop(0, '#161022');
-            bg.addColorStop(1, '#08080e');
-            ctx.beginPath();
-            ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-            ctx.fillStyle = bg;
-            ctx.fill();
-
-            ctx.beginPath();
-            ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-            ctx.strokeStyle = 'rgba(212,175,55,0.18)';
-            ctx.lineWidth = 3;
-            ctx.stroke();
-
-            ctx.fillStyle = '#3a3050';
-            ctx.font = 'italic 15px Palatino Linotype, Palatino, Georgia, serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText('Add players to spin', cx, cy);
+        ctx.clearRect(0,0,SIZE,SIZE);
+        if (names.length===0) {
+            const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+            bg.addColorStop(0,'#161022'); bg.addColorStop(1,'#08080e');
+            ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fillStyle=bg; ctx.fill();
+            ctx.strokeStyle='rgba(212,175,55,0.18)'; ctx.lineWidth=3; ctx.stroke();
+            ctx.fillStyle='#3a3050';
+            ctx.font='italic 15px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillText('Add players to spin',cx,cy);
             return;
         }
-
-        const arc = (2 * Math.PI) / names.length;
-
-        for (let i = 0; i < names.length; i++) {
-            const start = rotation - Math.PI / 2 + i * arc;
-            const end   = start + arc;
-            const mid   = (start + end) / 2;
-
-            /* Base fill */
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, R, start, end);
-            ctx.closePath();
-            ctx.fillStyle = sliceColor(i);
-            ctx.fill();
-
-            /* Radial shine */
-            const shine = ctx.createRadialGradient(cx, cy, 0, cx, cy, R);
-            shine.addColorStop(0, 'rgba(255,255,255,0.1)');
-            shine.addColorStop(0.55, 'rgba(255,255,255,0.03)');
-            shine.addColorStop(1, 'rgba(0,0,0,0.25)');
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.arc(cx, cy, R, start, end);
-            ctx.closePath();
-            ctx.fillStyle = shine;
-            ctx.fill();
-
-            /* Label */
-            ctx.save();
-            ctx.translate(cx, cy);
-            ctx.rotate(mid);
-
-            const textDist = R * 0.62;
-            const maxW     = R * 0.52;
-            const fs = names.length > 14 ? 9 : names.length > 9 ? 11 : names.length > 5 ? 13 : 15;
-            ctx.font = `bold ${fs}px Segoe UI, system-ui, sans-serif`;
-            ctx.textAlign    = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle    = 'rgba(255,255,255,0.95)';
-            ctx.shadowColor  = 'rgba(0,0,0,0.9)';
-            ctx.shadowBlur   = 5;
-
-            let label = names[i];
-            while (ctx.measureText(label).width > maxW && label.length > 2) {
-                label = label.slice(0, -1);
-            }
-            if (label !== names[i]) label += '…';
-
-            ctx.fillText(label, textDist, 0);
-            ctx.restore();
+        const arc=(2*Math.PI)/names.length;
+        for (let i=0;i<names.length;i++) {
+            const start=rotation-Math.PI/2+i*arc, end=start+arc, mid=(start+end)/2;
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
+            ctx.fillStyle=sliceColor(i); ctx.fill();
+            const shine=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+            shine.addColorStop(0,'rgba(255,255,255,0.10)'); shine.addColorStop(0.55,'rgba(255,255,255,0.03)'); shine.addColorStop(1,'rgba(0,0,0,0.25)');
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
+            ctx.fillStyle=shine; ctx.fill();
+            ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
+            const fs=names.length>14?9:names.length>9?11:names.length>5?13:15;
+            ctx.font=`bold ${fs}px Segoe UI,system-ui,sans-serif`;
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=5;
+            let label=names[i];
+            const maxW=R*0.52;
+            while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
+            if(label!==names[i]) label+='…';
+            ctx.fillText(label,R*0.62,0); ctx.restore();
         }
-
-        /* Gold dividers */
-        for (let i = 0; i < names.length; i++) {
-            const angle = rotation - Math.PI / 2 + i * (2 * Math.PI / names.length);
-            ctx.beginPath();
-            ctx.moveTo(cx, cy);
-            ctx.lineTo(cx + Math.cos(angle) * R, cy + Math.sin(angle) * R);
-            ctx.strokeStyle = 'rgba(212,175,55,0.4)';
-            ctx.lineWidth = 1.5;
-            ctx.stroke();
+        for (let i=0;i<names.length;i++) {
+            const angle=rotation-Math.PI/2+i*arc;
+            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(angle)*R,cy+Math.sin(angle)*R);
+            ctx.strokeStyle='rgba(212,175,55,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
         }
-
-        /* Outer gold ring */
-        ctx.beginPath();
-        ctx.arc(cx, cy, R, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(212,175,55,0.55)';
-        ctx.lineWidth = 4;
-        ctx.stroke();
-
-        /* Inner decorative ring */
-        ctx.beginPath();
-        ctx.arc(cx, cy, R - 9, 0, 2 * Math.PI);
-        ctx.strokeStyle = 'rgba(212,175,55,0.12)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-
-        /* Gold center hub */
-        const hub = ctx.createRadialGradient(cx, cy, 0, cx, cy, 22);
-        hub.addColorStop(0, '#f5e070');
-        hub.addColorStop(0.45, '#d4af37');
-        hub.addColorStop(1, '#6b5010');
-        ctx.beginPath();
-        ctx.arc(cx, cy, 22, 0, 2 * Math.PI);
-        ctx.fillStyle = hub;
-        ctx.fill();
-        ctx.strokeStyle = 'rgba(255,230,100,0.3)';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.strokeStyle='rgba(212,175,55,0.55)'; ctx.lineWidth=4; ctx.stroke();
+        ctx.beginPath(); ctx.arc(cx,cy,R-9,0,2*Math.PI); ctx.strokeStyle='rgba(212,175,55,0.12)'; ctx.lineWidth=1; ctx.stroke();
+        const hub=ctx.createRadialGradient(cx,cy,0,cx,cy,22);
+        hub.addColorStop(0,'#f5e070'); hub.addColorStop(0.45,'#d4af37'); hub.addColorStop(1,'#6b5010');
+        ctx.beginPath(); ctx.arc(cx,cy,22,0,2*Math.PI); ctx.fillStyle=hub; ctx.fill();
+        ctx.strokeStyle='rgba(255,230,100,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
     }
 
     function drawPointer() {
-        const tipX  = cx;
-        const tipY  = 22;
-        const baseY = 3;
-        const halfW = 15;
-
-        /* Glow */
-        ctx.shadowColor = 'rgba(212,175,55,0.8)';
-        ctx.shadowBlur  = 18;
-
-        /* Gold gradient triangle */
-        const pg = ctx.createLinearGradient(tipX - halfW, 0, tipX + halfW, 0);
-        pg.addColorStop(0,   '#6b5010');
-        pg.addColorStop(0.5, '#f5e070');
-        pg.addColorStop(1,   '#6b5010');
-
-        ctx.beginPath();
-        ctx.moveTo(tipX - halfW, baseY);
-        ctx.lineTo(tipX + halfW, baseY);
-        ctx.lineTo(tipX, tipY);
-        ctx.closePath();
-        ctx.fillStyle = pg;
-        ctx.fill();
-        ctx.shadowBlur = 0;
-
-        /* Tip jewel */
-        ctx.beginPath();
-        ctx.arc(tipX, tipY, 4.5, 0, 2 * Math.PI);
-        ctx.fillStyle = '#fff';
-        ctx.shadowColor = 'rgba(255,255,255,0.9)';
-        ctx.shadowBlur  = 8;
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        const tipX=cx, tipY=22, halfW=15;
+        ctx.shadowColor='rgba(212,175,55,0.8)'; ctx.shadowBlur=18;
+        const pg=ctx.createLinearGradient(tipX-halfW,0,tipX+halfW,0);
+        pg.addColorStop(0,'#6b5010'); pg.addColorStop(0.5,'#f5e070'); pg.addColorStop(1,'#6b5010');
+        ctx.beginPath(); ctx.moveTo(tipX-halfW,3); ctx.lineTo(tipX+halfW,3); ctx.lineTo(tipX,tipY);
+        ctx.closePath(); ctx.fillStyle=pg; ctx.fill(); ctx.shadowBlur=0;
+        ctx.beginPath(); ctx.arc(tipX,tipY,4.5,0,2*Math.PI);
+        ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,255,255,0.9)'; ctx.shadowBlur=6; ctx.fill(); ctx.shadowBlur=0;
     }
 
-    function redraw() {
-        drawWheel();
-        drawPointer();
+    function redraw() { drawWheel(); drawPointer(); }
+
+    /* ══════════════════════════════════════
+       Plot-twist easing
+       ─────────────────────────────────────
+       t 0.00→0.36 : fast initial spin    (61% of totalRot)
+       t 0.36→0.53 : FAKE slowdown         (0.5% — nearly stopped)
+       t 0.53→0.71 : BOOST — sudden blast  (20.5%)
+       t 0.71→1.00 : final deceleration    (18%)
+    ══════════════════════════════════════ */
+    function dramaticEase(t) {
+        function eOut4(u) { return 1-Math.pow(1-u,4); }
+        function eIO3(u)  { return u<0.5 ? 4*u*u*u : 1-Math.pow(-2*u+2,3)/2; }
+
+        if (t < 0.36) {
+            return eOut4(t/0.36) * 0.61;
+        } else if (t < 0.53) {
+            const u=(t-0.36)/0.17;
+            return 0.61 + eOut4(u)*0.005;  // barely moves — sells the fake stop
+        } else if (t < 0.71) {
+            const u=(t-0.53)/0.18;
+            return 0.615 + eIO3(u)*0.205;  // rockets back to speed
+        } else {
+            const u=(t-0.71)/0.29;
+            return 0.82 + eOut4(u)*0.18;
+        }
     }
 
-    /* ── Auto spin ── */
-    autoBtn.addEventListener('click', () => {
-        if (names.length === 0) return;
-        autoSpin = !autoSpin;
-        autoBtn.classList.toggle('on', autoSpin);
-        autoBtn.textContent = autoSpin ? 'AUTO: ON' : 'AUTO';
-    });
-
-    /* ── Spin ── */
+    /* ══════════════════════════════════════
+       Spin
+    ══════════════════════════════════════ */
     spinBtn.addEventListener('click', spin);
 
     function spin() {
-        if (isSpinning || names.length === 0) return;
+        if (isSpinning||names.length===0) return;
+        ensureAudio();
 
         isSpinning = true;
-        spinBtn.disabled = true;
-        autoBtn.disabled = true;
+        updateButtons();
 
-        const winnerIdx = Math.floor(Math.random() * names.length);
-        const arc       = (2 * Math.PI) / names.length;
+        const gunIdx    = riggedEnabled ? names.findIndex(n => n.toLowerCase().startsWith('gun')) : -1;
+        const winnerIdx = gunIdx >= 0 ? gunIdx : Math.floor(Math.random()*names.length);
+        const arc       = (2*Math.PI)/names.length;
 
-        /*
-         * Pointer is at the top (−π/2 in canvas coords).
-         * Section i center: rotation − π/2 + (i + 0.5) * arc
-         * Land winner center at top: rotation = −(winnerIdx + 0.5) * arc  (mod 2π)
-         */
-        const winnerMid   = (winnerIdx + 0.5) * arc;
-        const targetNorm  = ((2 * Math.PI - winnerMid % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-        const currentNorm = ((rotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
-
+        const winnerMid   = (winnerIdx+0.5)*arc;
+        const targetNorm  = ((2*Math.PI - winnerMid%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+        const currentNorm = ((rotation%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
         let delta = targetNorm - currentNorm;
-        if (delta < 0) delta += 2 * Math.PI;
+        if (delta<0) delta += 2*Math.PI;
 
-        const extraSpins = 6 + Math.floor(Math.random() * 4);   // 6–9 full rotations
-        const totalRot   = extraSpins * 2 * Math.PI + delta;
-        const duration   = 4200 + Math.random() * 1600;          // 4.2–5.8 s
+        const plotTwist = plotTwistsEnabled && Math.random() < 0.20;
+
+        // Plot twist needs more spins to accommodate the fake-stop + boost phases
+        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 6 + Math.floor(Math.random()*4);
+        const totalRot   = extraSpins*2*Math.PI + delta;
+        const duration   = plotTwist ? 5800 + Math.random()*1500 : 4000 + Math.random()*1600;
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
         const startTime = performance.now();
 
-        function easeOut(t) { return 1 - Math.pow(1 - t, 4); }
+        lastTickSection = Math.floor(rotation/arc);
+
+        let boostTriggered = false;
+
+        function easeOut(t) { return 1-Math.pow(1-t,4); }
 
         function frame(now) {
-            const t = Math.min((now - startTime) / duration, 1);
-            rotation = startRot + (endRot - startRot) * easeOut(t);
+            const t = Math.min((now-startTime)/duration, 1);
+            rotation = startRot + (endRot-startRot) * (plotTwist ? dramaticEase(t) : easeOut(t));
             redraw();
-            if (t < 1) {
+
+            // Section tick sounds
+            if (names.length>0) {
+                const sectionIdx = Math.floor(rotation/arc);
+                if (sectionIdx !== lastTickSection) {
+                    const crossed = Math.abs(sectionIdx-lastTickSection);
+                    for (let i=0;i<Math.min(crossed,2);i++) playTick();
+                    lastTickSection = sectionIdx;
+                }
+            }
+
+            // PLOT TWIST — boost phase (only when active)
+            if (plotTwist && !boostTriggered && t>=0.53) {
+                boostTriggered = true;
+                triggerBoost();
+            }
+
+            if (t<1) {
                 requestAnimationFrame(frame);
             } else {
-                rotation = endRot;
-                redraw();
+                rotation = endRot; redraw();
                 onSpinEnd(winnerIdx);
             }
         }
@@ -877,156 +1037,130 @@
         requestAnimationFrame(frame);
     }
 
+    /* ══════════════════════════════════════
+       Boost FX
+    ══════════════════════════════════════ */
+    function triggerBoost() {
+        playBoostSound();
+        flashScreen();
+        shakeWheel();
+        launchBoostElements();
+        // Brief fire surge
+        for (let i=0;i<60;i++) {
+            const W=fireCanvas.width;
+            spawnFlame(Math.random()*W, -(Math.random()*9+5), Math.random()*28+16);
+        }
+    }
+
+    function flashScreen() {
+        const el = document.createElement('div');
+        el.style.cssText = 'position:fixed;inset:0;background:rgba(212,175,55,0.22);z-index:1500;pointer-events:none;opacity:1;transition:opacity 0.45s ease;';
+        document.body.appendChild(el);
+        requestAnimationFrame(()=>{ el.style.opacity='0'; });
+        setTimeout(()=>el.remove(), 550);
+    }
+
+    function shakeWheel() {
+        wheelWrap.classList.remove('shaking');
+        void wheelWrap.offsetWidth; // force reflow
+        wheelWrap.classList.add('shaking');
+        setTimeout(()=>wheelWrap.classList.remove('shaking'), 600);
+    }
+
+    /* ══════════════════════════════════════
+       Win
+    ══════════════════════════════════════ */
     function onSpinEnd(winnerIdx) {
-        const c    = sliceColor(winnerIdx);
-        const name = names[winnerIdx];
-
-        winnerNameEl.textContent = name;
-        winnerNameEl.style.color = c;
-        winnerCard.style.setProperty('--win-color', c);
-        winnerCard.style.setProperty('--win-glow', c + '28');
-
+        const c=sliceColor(winnerIdx), name=names[winnerIdx];
+        winnerNameEl.textContent=name; winnerNameEl.style.color=c;
+        winnerCard.style.setProperty('--win-color',c);
+        winnerCard.style.setProperty('--win-glow',c+'28');
         winnerOverlay.classList.add('show');
+        playFanfare();
+        launchConfetti(c);
 
-        setTimeout(() => {
+        setTimeout(()=>{
             winnerOverlay.classList.remove('show');
-
-            setTimeout(() => {
-                draftOrder.push({ name, color: c });
-                renderDraft();
-                names.splice(winnerIdx, 1);
-
-                const hasNames = names.length > 0;
-                isSpinning = false;
-
-                if (!hasNames && autoSpin) {
-                    autoSpin = false;
-                    autoBtn.classList.remove('on');
-                    autoBtn.textContent = 'AUTO';
-                }
-
-                renderList();
-                redraw();
-
-                if (autoSpin && hasNames) {
-                    setTimeout(spin, 1400);
-                }
-            }, 380);
-        }, 2800);
+            setTimeout(()=>{
+                undoStack.push({name,color:c});
+                draftOrder.push({name,color:c});
+                names.splice(winnerIdx,1);
+                isSpinning=false;
+                const hasNames=names.length>0;
+                if (!hasNames&&autoSpin) setAutoSpin(false);
+                renderList(); renderDraft(); redraw(); saveState();
+                if (autoSpin&&hasNames) setTimeout(spin,1400);
+            },380);
+        }, displayDuration);
     }
 
-    /* ── Fire ── */
-    const fireCanvas = document.getElementById('fireCanvas');
-    const fctx       = fireCanvas.getContext('2d');
-    let fireParticles = [];
-
-    function resizeFire() {
-        fireCanvas.width  = window.innerWidth;
-        fireCanvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeFire);
-    resizeFire();
-
-    function spawnFlame() {
-        const W = fireCanvas.width;
-        const H = fireCanvas.height;
-        fireParticles.push({
-            x:       Math.random() * W,
-            y:       H,
-            vx:      (Math.random() - 0.5) * 1.6,
-            vy:      -(Math.random() * 3.8 + 1.8),
-            life:    0,
-            maxLife: Math.floor(Math.random() * 55 + 35),
-            size:    Math.random() * 18 + 8,
-        });
+    /* ══════════════════════════════════════
+       Auto spin
+    ══════════════════════════════════════ */
+    function setAutoSpin(val) {
+        autoSpin=val;
+        autoBtn.classList.toggle('on',autoSpin);
+        autoBtn.textContent = autoSpin ? '◉ AUTOSPIN' : 'AUTOSPIN';
     }
 
-    function fireColor(t) {
-        let r, g, b;
-        if (t < 0.22) {
-            // White-yellow core
-            const u = t / 0.22;
-            r = 255; g = Math.round(255 - u * 55); b = Math.round(120 * (1 - u));
-        } else if (t < 0.52) {
-            // Orange
-            const u = (t - 0.22) / 0.3;
-            r = 255; g = Math.round(200 * (1 - u)); b = 0;
-        } else if (t < 0.78) {
-            // Red
-            const u = (t - 0.52) / 0.26;
-            r = Math.round(255 - u * 85); g = 0; b = 0;
-        } else {
-            // Dark red fade
-            const u = (t - 0.78) / 0.22;
-            r = Math.round(170 * (1 - u)); g = 0; b = 0;
+    autoBtn.addEventListener('click', ()=>{ ensureAudio(); if(names.length===0)return; setAutoSpin(!autoSpin); });
+
+    /* ══════════════════════════════════════
+       Reset
+    ══════════════════════════════════════ */
+    resetBtn.addEventListener('click', ()=>{
+        if(isSpinning) return;
+        names=[]; draftOrder=[]; undoStack=[]; rotation=0;
+        setAutoSpin(false); renderList(); renderDraft(); redraw(); saveState();
+    });
+
+    /* ══════════════════════════════════════
+       Spacebar
+    ══════════════════════════════════════ */
+    document.addEventListener('keydown', e=>{
+        if(e.code==='Space'&&e.target.tagName!=='INPUT'&&e.target.tagName!=='BUTTON'){
+            e.preventDefault(); spin();
         }
-        return { r, g, b };
-    }
+    });
 
-    function fireLoop() {
-        const W = fireCanvas.width;
-        const H = fireCanvas.height;
+    /* ══════════════════════════════════════
+       Display slider
+    ══════════════════════════════════════ */
+    const optionsBtn   = document.getElementById('optionsBtn');
+    const optionsPanel = document.getElementById('optionsPanel');
+    const riggedToggle = document.getElementById('riggedToggle');
 
-        fctx.clearRect(0, 0, W, H);
+    optionsBtn.addEventListener('click', () => {
+        const open = optionsPanel.classList.toggle('open');
+        optionsBtn.classList.toggle('open', open);
+    });
 
-        // Spawn flames this frame — denser near corners for drama
-        const base = Math.max(1, Math.floor(W / 16));
-        for (let i = 0; i < base; i++) {
-            if (Math.random() < 0.55) spawnFlame();
-        }
-        // Extra bursts in the bottom corners
-        if (Math.random() < 0.7) {
-            fireParticles.push({
-                x: Math.random() * W * 0.18,
-                y: H, vx: (Math.random() - 0.3) * 2,
-                vy: -(Math.random() * 5 + 2.5),
-                life: 0, maxLife: Math.floor(Math.random() * 65 + 45),
-                size: Math.random() * 22 + 12,
-            });
-            fireParticles.push({
-                x: W - Math.random() * W * 0.18,
-                y: H, vx: (Math.random() + 0.3 - 0.6) * 2,
-                vy: -(Math.random() * 5 + 2.5),
-                life: 0, maxLife: Math.floor(Math.random() * 65 + 45),
-                size: Math.random() * 22 + 12,
-            });
-        }
+    riggedToggle.addEventListener('change', () => {
+        riggedEnabled = riggedToggle.checked;
+    });
 
-        fireParticles = fireParticles.filter(p => {
-            p.life++;
-            p.x += p.vx + Math.sin(p.life * 0.13) * 0.9;
-            p.y += p.vy;
-            p.vy *= 0.99;
-            p.size *= 0.981;
+    const plotTwistToggle = document.getElementById('plotTwistToggle');
 
-            if (p.life > p.maxLife || p.size < 0.5) return false;
+    plotTwistToggle.addEventListener('change', () => {
+        plotTwistsEnabled = plotTwistToggle.checked;
+    });
 
-            const t = p.life / p.maxLife;
-            const { r, g, b } = fireColor(t);
-            const alpha = Math.pow(1 - t, 1.6) * 0.78;
+    displaySlider.addEventListener('input', ()=>{
+        displayDuration = parseFloat(displaySlider.value)*1000;
+        displayValEl.textContent = displaySlider.value+'s';
+    });
 
-            const grad = fctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
-            grad.addColorStop(0,   `rgba(${r},${g},${b},${alpha})`);
-            grad.addColorStop(0.45,`rgba(${r},${Math.round(g * 0.4)},0,${(alpha * 0.65).toFixed(2)})`);
-            grad.addColorStop(1,   `rgba(${Math.round(r * 0.2)},0,0,0)`);
+    /* ══════════════════════════════════════
+       Resize
+    ══════════════════════════════════════ */
+    window.addEventListener('resize', ()=>{ resizeFire(); resizeOverlay(); });
 
-            fctx.beginPath();
-            fctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-            fctx.fillStyle = grad;
-            fctx.fill();
-
-            return true;
-        });
-
-        requestAnimationFrame(fireLoop);
-    }
-
+    /* ══════════════════════════════════════
+       Init
+    ══════════════════════════════════════ */
+    resizeFire(); resizeOverlay();
+    loadState(); renderList(); renderDraft(); updateButtons(); redraw();
     fireLoop();
-
-    /* ── Init ── */
-    renderList();
-    renderDraft();
-    redraw();
 </script>
 </body>
 </html>
