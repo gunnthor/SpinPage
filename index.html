@@ -257,21 +257,21 @@
 
         .options-inner {
             margin-top: 0.4rem;
-            background: linear-gradient(160deg, #0d0d1a, #090910);
-            border: 1px solid #1e1a30; border-radius: 10px;
+            background: #141420;
+            border: 1px solid #2e2848; border-radius: 10px;
             padding: 0.9rem 1.1rem;
             display: flex; flex-direction: column; gap: 0.75rem;
         }
 
         .options-title {
-            font-size: 0.58rem; font-weight: 700; color: #4a4030;
+            font-size: 0.58rem; font-weight: 700; color: #6b6040;
             letter-spacing: 0.18em; text-transform: uppercase;
         }
 
         .option-row {
             display: flex; align-items: center; gap: 0.9rem;
             padding: 0.5rem 0.7rem;
-            background: #09090f; border: 1px solid #16141f;
+            background: #1c1a2e; border: 1px solid #2e2848;
             border-radius: 8px;
         }
 
@@ -1047,7 +1047,9 @@
         const winnerIdx = gunIdx >= 0 ? gunIdx : Math.floor(Math.random()*names.length);
         const arc       = (2*Math.PI)/names.length;
 
-        const winnerMid   = (winnerIdx+0.5)*arc;
+        // Land at a random position within the slice, keeping 18% away from each edge
+        const landingPos  = 0.18 + Math.random() * 0.64;
+        const winnerMid   = (winnerIdx + landingPos) * arc;
         const targetNorm  = ((2*Math.PI - winnerMid%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
         const currentNorm = ((rotation%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
         let delta = targetNorm - currentNorm;
@@ -1056,9 +1058,9 @@
         const plotTwist = plotTwistsEnabled && Math.random() < 0.20;
 
         // Plot twist needs more spins to accommodate the fake-stop + boost phases
-        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 6 + Math.floor(Math.random()*4);
+        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*8);
         const totalRot   = extraSpins*2*Math.PI + delta;
-        const duration   = plotTwist ? 5800 + Math.random()*1500 : 4000 + Math.random()*1600;
+        const duration   = plotTwist ? 5800 + Math.random()*1500 : 2800 + Math.random()*3400;
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
