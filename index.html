@@ -388,6 +388,88 @@
         .winner-name   { font-family: 'Palatino Linotype', Palatino, Georgia, serif; font-size: 3.2rem; font-weight: 700; word-break: break-word; margin-bottom: 1.2rem; text-shadow: 0 0 40px currentColor; }
         .winner-sub    { font-size: 0.78rem; color: #7a7868; letter-spacing: 0.06em; font-style: italic; }
 
+        /* ── Draft complete splash ── */
+
+        .splash-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.93);
+            backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+        }
+
+        .splash-overlay.show { opacity: 1; pointer-events: all; }
+
+        .splash-card {
+            background: linear-gradient(160deg, #0f0e1c, #08080f);
+            border: 1px solid #2e2848; border-top: 3px solid #d4af37;
+            border-radius: 22px; padding: 2.5rem 2.8rem;
+            text-align: center; max-width: 480px; width: 92%;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.85), 0 0 80px rgba(212,175,55,0.12);
+            transform: scale(0.75) translateY(40px);
+            transition: transform 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .splash-overlay.show .splash-card { transform: scale(1) translateY(0); }
+
+        .splash-eyebrow {
+            font-size: 0.6rem; font-weight: 700; letter-spacing: 0.3em;
+            text-transform: uppercase; color: #d4af37; margin-bottom: 0.4rem;
+        }
+
+        .splash-heading {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 2.2rem; font-weight: 900; letter-spacing: 0.08em;
+            background: linear-gradient(to bottom, #f8ee80, #d4af37, #8b6914);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            margin-bottom: 1.6rem;
+        }
+
+        .splash-list {
+            display: flex; flex-direction: column; gap: 0.55rem; margin-bottom: 1.8rem;
+        }
+
+        .splash-item {
+            display: flex; align-items: center; gap: 0.85rem;
+            padding: 0.65rem 1rem;
+            background: #1a1828; border-radius: 10px;
+            border-left: 3px solid var(--item-color, #d4af37);
+            opacity: 0; transform: translateX(-24px);
+            animation: splashSlide 0.38s ease forwards;
+            animation-delay: var(--delay, 0s);
+        }
+
+        @keyframes splashSlide {
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .splash-rank {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1rem; font-weight: 900;
+            min-width: 2.2rem; text-align: center;
+        }
+
+        .splash-rank.gold   { color: #d4af37; text-shadow: 0 0 10px rgba(212,175,55,0.6); }
+        .splash-rank.silver { color: #b8c0c8; text-shadow: 0 0 10px rgba(184,192,200,0.4); }
+        .splash-rank.bronze { color: #cd7f32; text-shadow: 0 0 10px rgba(205,127,50,0.4); }
+        .splash-rank.plain  { color: #6a6858; }
+
+        .splash-name {
+            flex: 1; text-align: left;
+            font-size: 1rem; font-weight: 700; color: #e8dfc8;
+        }
+
+        .splash-close {
+            padding: 0.7rem 2.5rem; border: none; border-radius: 50px;
+            background: linear-gradient(145deg, #c0392b, #96281b);
+            color: #fff; font-size: 0.85rem; font-weight: 800;
+            letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer;
+            box-shadow: 0 4px 20px rgba(192,57,43,0.4);
+            transition: filter 0.15s, transform 0.12s;
+        }
+
+        .splash-close:hover { filter: brightness(1.15); transform: translateY(-2px); }
+
         /* ── Draft ── */
 
         .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
@@ -529,7 +611,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.5</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v1.6</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -575,6 +657,15 @@
     </div>
     <div class="draft-grid" id="draftGrid"></div>
 </section>
+
+<div class="splash-overlay" id="splashOverlay">
+    <div class="splash-card">
+        <div class="splash-eyebrow">♦ Draft Complete ♦</div>
+        <div class="splash-heading">Top Picks</div>
+        <div class="splash-list" id="splashList"></div>
+        <button class="splash-close" id="splashClose">CLOSE</button>
+    </div>
+</div>
 
 <div class="devil-popup" id="devilPopup">
     <span class="devil-emoji">😈</span>
@@ -1291,6 +1382,43 @@
     /* ══════════════════════════════════════
        Boost FX
     ══════════════════════════════════════ */
+    /* ── Draft complete splash ── */
+    const splashOverlay = document.getElementById('splashOverlay');
+    const splashList    = document.getElementById('splashList');
+
+    document.getElementById('splashClose').addEventListener('click', () => {
+        splashOverlay.classList.remove('show');
+    });
+
+    function showSplash() {
+        const top = draftOrder.slice(0, 5);
+        if (top.length === 0) return;
+
+        const rankClass = ['gold','silver','bronze','plain','plain'];
+
+        splashList.innerHTML = '';
+        top.forEach((pick, i) => {
+            const item = document.createElement('div');
+            item.className = 'splash-item';
+            item.style.setProperty('--item-color', pick.color);
+            item.style.setProperty('--delay', `${0.15 + i * 0.1}s`);
+
+            const rank = document.createElement('div');
+            rank.className = `splash-rank ${rankClass[i] || 'plain'}`;
+            rank.textContent = ordinal(i + 1);
+
+            const name = document.createElement('div');
+            name.className = 'splash-name';
+            name.textContent = pick.name;
+
+            item.append(rank, name);
+            splashList.appendChild(item);
+        });
+
+        // small delay so winner overlay finishes closing first
+        setTimeout(() => splashOverlay.classList.add('show'), 500);
+    }
+
     function showDevil() {
         const el = document.getElementById('devilPopup');
         el.classList.remove('in', 'wiggle', 'out');
@@ -1358,6 +1486,7 @@
                 const hasNames=names.length>0;
                 if (!hasNames&&autoSpin) setAutoSpin(false);
                 renderList(); renderDraft(); redraw(); saveState();
+                if (!hasNames) { showSplash(); return; }
                 if (autoSpin&&hasNames) setTimeout(spin,1400);
             },380);
         }, displayDuration);
