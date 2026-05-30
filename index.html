@@ -1047,8 +1047,8 @@
         const winnerIdx = gunIdx >= 0 ? gunIdx : Math.floor(Math.random()*names.length);
         const arc       = (2*Math.PI)/names.length;
 
-        // Land at a random position within the slice, keeping 18% away from each edge
-        const landingPos  = 0.18 + Math.random() * 0.64;
+        // Land at a random position within the slice (1%–99%)
+        const landingPos  = 0.01 + Math.random() * 0.98;
         const winnerMid   = (winnerIdx + landingPos) * arc;
         const targetNorm  = ((2*Math.PI - winnerMid%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
         const currentNorm = ((rotation%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
