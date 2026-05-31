@@ -934,6 +934,7 @@
     let undoStack       = [];
     let rotation        = 0;
     let isSpinning      = false;
+    let isBusy          = false;
     let autoSpin        = false;
     let displayDuration = 2800;
     let lastTickSection     = -1;
@@ -1077,8 +1078,31 @@
     function loadState() {
         try {
             const s = JSON.parse(localStorage.getItem('spinpage') || 'null');
-            if (s) { names = s.names||[]; draftOrder = s.draftOrder||[]; undoStack = s.undoStack||[]; }
+            if (s) {
+                names = normalizeNames(s.names);
+                draftOrder = normalizePicks(s.draftOrder);
+                undoStack = normalizePicks(s.undoStack);
+            }
         } catch(e) {}
+    }
+
+    function normalizeNames(value) {
+        if (!Array.isArray(value)) return [];
+        return value
+            .filter(name => typeof name === 'string')
+            .map(name => name.trim())
+            .filter(Boolean);
+    }
+
+    function normalizePicks(value) {
+        if (!Array.isArray(value)) return [];
+        return value
+            .filter(pick => pick && typeof pick.name === 'string')
+            .map(pick => ({
+                name: pick.name.trim(),
+                color: typeof pick.color === 'string' ? pick.color : '#d4af37'
+            }))
+            .filter(pick => pick.name);
     }
 
     /* ══════════════════════════════════════
@@ -1279,10 +1303,13 @@
         });
     }
 
-    draftClear.addEventListener('click', () => { draftOrder=[]; undoStack=[]; renderDraft(); updateButtons(); saveState(); });
+    draftClear.addEventListener('click', () => {
+        if (isSpinning || isBusy) return;
+        draftOrder=[]; undoStack=[]; renderDraft(); updateButtons(); saveState();
+    });
 
     document.getElementById('restoreBtn').addEventListener('click', () => {
-        if (isSpinning || draftOrder.length === 0) return;
+        if (isSpinning || isBusy || draftOrder.length === 0) return;
         draftOrder.forEach(pick => names.push(pick.name));
         draftOrder = []; undoStack = [];
         renderList(); renderDraft(); redraw(); saveState();
@@ -1303,14 +1330,14 @@
     ══════════════════════════════════════ */
     function updateButtons() {
         const has = names.length > 0;
-        spinBtn.disabled  = !has || isSpinning;
-        autoBtn.disabled  = !has || isSpinning;
-        undoBtn.disabled  = undoStack.length === 0 || isSpinning;
-        resetBtn.disabled = isSpinning;
+        spinBtn.disabled  = !has || isSpinning || isBusy;
+        autoBtn.disabled  = !has || isSpinning || isBusy;
+        undoBtn.disabled  = undoStack.length === 0 || isSpinning || isBusy;
+        resetBtn.disabled = isSpinning || isBusy;
     }
 
     undoBtn.addEventListener('click', () => {
-        if (undoStack.length===0||isSpinning) return;
+        if (undoStack.length===0||isSpinning||isBusy) return;
         const last = undoStack.pop();
         draftOrder.pop(); names.push(last.name);
         renderList(); renderDraft(); redraw(); updateButtons(); saveState();
@@ -1337,7 +1364,7 @@
 
     nameListEl.addEventListener('click', e => {
         const btn = e.target.closest('.remove-btn');
-        if (!btn||isSpinning) return;
+        if (!btn||isSpinning||isBusy) return;
         names.splice(+btn.dataset.index, 1);
         if (names.length===0&&autoSpin) setAutoSpin(false);
         renderList(); redraw(); saveState();
@@ -1347,10 +1374,11 @@
        Add name
     ══════════════════════════════════════ */
     function addName() {
+        if (isSpinning || isBusy) return;
         ensureAudio();
         const val = nameInput.value.trim();
         if (!val) return;
-        if (names.some(n=>n.toLowerCase()===val.toLowerCase())) {
+        if (isNameInUse(val)) {
             nameInput.select(); nameInput.style.borderColor='#c0392b';
             setTimeout(()=>{ nameInput.style.borderColor=''; }, 800);
             return;
@@ -1358,6 +1386,13 @@
         names.push(val); nameInput.value='';
         renderList(); redraw(); saveState();
         nameInput.focus();
+    }
+
+    function isNameInUse(name) {
+        const key = name.trim().toLowerCase();
+        return names.some(n=>n.toLowerCase()===key) ||
+               draftOrder.some(p=>p.name.toLowerCase()===key) ||
+               undoStack.some(p=>p.name.toLowerCase()===key);
     }
 
     addBtn.addEventListener('click', addName);
@@ -1466,7 +1501,7 @@
     spinBtn.addEventListener('click', spin);
 
     function spin() {
-        if (isSpinning||names.length===0) return;
+        if (isSpinning||isBusy||names.length===0) return;
         ensureAudio();
 
         isSpinning = true;
@@ -1604,6 +1639,8 @@
 
     function showNoisWheel(onDone) {
         if (!draftOrder.length) { onDone&&onDone(); return; }
+        isBusy = true;
+        updateButtons();
 
         const overlay    = document.getElementById('noisOverlay');
         const resultEl   = document.getElementById('noisResult');
@@ -1659,6 +1696,7 @@
                     names.push(victim.name);
 
                     overlay.classList.remove('show');
+                    isBusy = false;
                     renderList(); renderDraft(); redraw(); saveState(); updateButtons();
                     onDone&&onDone();
                 }, 2600);
@@ -1776,6 +1814,8 @@
                 const triggerNois = draftOrder.length >= 1 && Math.random() < 0.20;
 
                 if (triggerNois) {
+                    isBusy = true;
+                    updateButtons();
                     setTimeout(() => showNoisWheel(() => {
                         // After undraft: resume auto-spin if on and names remain
                         if (autoSpin && names.length > 0) setTimeout(spin, 1400);
@@ -1798,13 +1838,19 @@
         autoBtn.textContent = autoSpin ? '◉ AUTOSPIN' : 'AUTOSPIN';
     }
 
-    autoBtn.addEventListener('click', ()=>{ ensureAudio(); if(names.length===0)return; setAutoSpin(!autoSpin); });
+    autoBtn.addEventListener('click', ()=>{
+        ensureAudio();
+        if(names.length===0||isSpinning||isBusy)return;
+        const next = !autoSpin;
+        setAutoSpin(next);
+        if (next) spin();
+    });
 
     /* ══════════════════════════════════════
        Reset
     ══════════════════════════════════════ */
     resetBtn.addEventListener('click', ()=>{
-        if(isSpinning) return;
+        if(isSpinning || isBusy) return;
         names=[]; draftOrder=[]; undoStack=[]; rotation=0;
         setAutoSpin(false); renderList(); renderDraft(); redraw(); saveState();
     });
