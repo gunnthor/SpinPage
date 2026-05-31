@@ -274,14 +274,14 @@
 
         /* ── Options panel ── */
 
-        .options-btn {
+        .options-btn, .about-btn {
             padding: 0.55rem 1.1rem; border-radius: 50px;
             background: #131220; border: 1px solid #3a3555;
             color: #9a9080; font-size: 0.68rem; font-weight: 700;
             letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;
         }
 
-        .options-btn:hover, .options-btn.open { border-color: #d4af37; color: #d4af37; background: #1a1828; }
+        .options-btn:hover, .options-btn.open, .about-btn:hover { border-color: #d4af37; color: #d4af37; background: #1a1828; }
 
         .options-panel {
             width: 100%; max-height: 0; overflow: hidden;
@@ -474,6 +474,126 @@
 
         .splash-overlay.show .splash-card { transform: scale(1) translateY(0); }
 
+        /* ── About overlay ── */
+
+        .about-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.9);
+            backdrop-filter: blur(9px);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2100; opacity: 0; pointer-events: none; transition: opacity 0.35s;
+            padding: 1rem;
+        }
+
+        .about-overlay.show { opacity: 1; pointer-events: all; }
+
+        .about-card {
+            width: min(760px, 94vw);
+            max-height: 88vh;
+            overflow-y: auto;
+            background: linear-gradient(160deg, #0f0e1c, #08080f);
+            border: 1px solid #2e2848; border-top: 3px solid #d4af37;
+            border-radius: 18px;
+            padding: 2rem 2.2rem;
+            box-shadow: 0 40px 100px rgba(0,0,0,0.85), 0 0 90px rgba(212,175,55,0.12);
+            transform: scale(0.82) translateY(28px);
+            transition: transform 0.38s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .about-overlay.show .about-card { transform: scale(1) translateY(0); }
+
+        .about-card::-webkit-scrollbar { width: 5px; }
+        .about-card::-webkit-scrollbar-track { background: transparent; }
+        .about-card::-webkit-scrollbar-thumb { background: #2e2848; border-radius: 6px; }
+
+        .about-top {
+            display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start;
+            margin-bottom: 1.4rem;
+        }
+
+        .about-eyebrow {
+            font-size: 0.58rem; font-weight: 700; letter-spacing: 0.28em;
+            text-transform: uppercase; color: #d4af37; margin-bottom: 0.4rem;
+        }
+
+        .about-heading {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 2.25rem; font-weight: 900; letter-spacing: 0.08em;
+            background: linear-gradient(to bottom, #f8ee80, #d4af37, #8b6914);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        .about-close {
+            width: 34px; height: 34px;
+            border-radius: 50%; border: 1px solid #3a3555;
+            background: #131220; color: #8a8070; cursor: pointer;
+            font-size: 1.25rem; line-height: 1;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .about-close:hover { border-color: #c0392b; color: #ff6b6b; background: #1a1018; }
+
+        .about-lede {
+            color: #c6bda5; line-height: 1.65; font-size: 0.95rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .about-grid {
+            display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.4rem;
+        }
+
+        .about-chip {
+            background: #1a1828; border: 1px solid #2e2848;
+            border-left: 3px solid var(--chip-color, #d4af37);
+            border-radius: 9px;
+            padding: 0.72rem 0.85rem;
+        }
+
+        .about-chip-title {
+            color: #e8dfc8; font-weight: 800; font-size: 0.78rem;
+            letter-spacing: 0.05em; text-transform: uppercase;
+            margin-bottom: 0.22rem;
+        }
+
+        .about-chip-text { color: #7a7868; font-size: 0.72rem; line-height: 1.45; }
+
+        .about-section-title {
+            color: #d4af37; font-size: 0.64rem; font-weight: 800;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            margin: 1.2rem 0 0.65rem;
+        }
+
+        .about-list {
+            list-style: none;
+            display: grid; gap: 0.45rem;
+            color: #a9a08d; font-size: 0.82rem; line-height: 1.45;
+        }
+
+        .about-list li {
+            position: relative;
+            padding-left: 1.05rem;
+        }
+
+        .about-list li::before {
+            content: '♦';
+            position: absolute; left: 0; top: 0;
+            color: #d4af37; font-size: 0.65rem;
+        }
+
+        .about-quote {
+            margin-top: 1.5rem;
+            padding: 1rem 1.15rem;
+            background: rgba(212,175,55,0.08);
+            border: 1px solid rgba(212,175,55,0.22);
+            border-radius: 10px;
+            color: #e8dfc8;
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1rem; font-style: italic; text-align: center;
+        }
+
         .splash-eyebrow {
             font-size: 0.6rem; font-weight: 700; letter-spacing: 0.3em;
             text-transform: uppercase; color: #d4af37; margin-bottom: 0.4rem;
@@ -661,6 +781,10 @@
 
             .draft-header { flex-wrap: wrap; gap: 0.5rem; }
 
+            .about-card { padding: 1.55rem 1.35rem; }
+            .about-heading { font-size: 1.8rem; }
+            .about-grid { grid-template-columns: 1fr; }
+
             .winner-card { padding: 2rem 1.8rem; margin: 1rem; }
 
             .winner-name { font-size: 2.2rem; }
@@ -708,6 +832,7 @@
             <button class="undo-btn" id="undoBtn" disabled>↩ UNDO</button>
             <button class="reset-btn" id="resetBtn">RESET</button>
             <button class="options-btn" id="optionsBtn">⚙ OPTIONS</button>
+            <button class="about-btn" id="aboutBtn">ABOUT</button>
         </div>
 
         <div class="options-panel" id="optionsPanel">
@@ -768,6 +893,61 @@
     </div>
 </div>
 
+<div class="about-overlay" id="aboutOverlay">
+    <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
+        <div class="about-top">
+            <div>
+                <div class="about-eyebrow">♦ About SpinPage ♦</div>
+                <div class="about-heading" id="aboutTitle">SpinPage</div>
+            </div>
+            <button class="about-close" id="aboutClose" aria-label="Close about panel">×</button>
+        </div>
+
+        <p class="about-lede">
+            A dramatic spinning wheel and random name picker for draft orders, giveaways, party games,
+            and any moment that deserves a little spectacle. SpinPage turns a simple random picker into
+            a polished casino-style experience with confetti, fanfare, plot twists, and just enough chaos
+            to keep the table honest.
+        </p>
+
+        <div class="about-grid">
+            <div class="about-chip" style="--chip-color:#d4af37">
+                <div class="about-chip-title">Draft Orders</div>
+                <div class="about-chip-text">Winners leave the wheel and line up in a clean pick list.</div>
+            </div>
+            <div class="about-chip" style="--chip-color:#c0392b">
+                <div class="about-chip-title">Plot Twists</div>
+                <div class="about-chip-text">Fake stops, illegal spins, and sudden boosts keep every pick theatrical.</div>
+            </div>
+            <div class="about-chip" style="--chip-color:#1e8449">
+                <div class="about-chip-title">Zero Setup</div>
+                <div class="about-chip-text">No accounts, no build step, no dependencies. Just add names and spin.</div>
+            </div>
+            <div class="about-chip" style="--chip-color:#1a5276">
+                <div class="about-chip-title">Saved Locally</div>
+                <div class="about-chip-text">Your current table survives refreshes using browser localStorage.</div>
+            </div>
+        </div>
+
+        <div class="about-section-title">What It Does</div>
+        <ul class="about-list">
+            <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
+            <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
+            <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
+        </ul>
+
+        <div class="about-section-title">Best Used For</div>
+        <ul class="about-list">
+            <li>Fantasy drafts, giveaways, classroom picks, game nights, party orders, and dramatic tie-breakers.</li>
+            <li>Any decision that could technically be a spreadsheet, but deserves a spotlight instead.</li>
+        </ul>
+
+        <div class="about-quote">
+            Built for the sacred moment when everyone says, "Just spin it already."
+        </div>
+    </div>
+</div>
+
 <div class="nois-overlay" id="noisOverlay">
     <div class="nois-title">No one is safe</div>
     <div class="nois-wrap">
@@ -806,6 +986,9 @@
     const autoBtn       = document.getElementById('autoBtn');
     const undoBtn       = document.getElementById('undoBtn');
     const resetBtn      = document.getElementById('resetBtn');
+    const aboutBtn      = document.getElementById('aboutBtn');
+    const aboutOverlay  = document.getElementById('aboutOverlay');
+    const aboutClose    = document.getElementById('aboutClose');
     const displaySlider = document.getElementById('displaySlider');
     const displayValEl  = document.getElementById('displayVal');
     const winnerOverlay = document.getElementById('winnerOverlay');
@@ -1399,6 +1582,23 @@
     nameInput.addEventListener('keydown', e=>{ if(e.key==='Enter') addName(); });
 
     /* ══════════════════════════════════════
+       About
+    ══════════════════════════════════════ */
+    function openAbout() {
+        aboutOverlay.classList.add('show');
+    }
+
+    function closeAbout() {
+        aboutOverlay.classList.remove('show');
+    }
+
+    aboutBtn.addEventListener('click', openAbout);
+    aboutClose.addEventListener('click', closeAbout);
+    aboutOverlay.addEventListener('click', e => {
+        if (e.target === aboutOverlay) closeAbout();
+    });
+
+    /* ══════════════════════════════════════
        Draw wheel
     ══════════════════════════════════════ */
     function drawWheel() {
@@ -1859,6 +2059,11 @@
        Spacebar
     ══════════════════════════════════════ */
     document.addEventListener('keydown', e=>{
+        const aboutOpen = aboutOverlay.classList.contains('show');
+        if(aboutOpen){
+            if(e.key==='Escape') closeAbout();
+            return;
+        }
         if(e.code==='Space'&&e.target.tagName!=='INPUT'&&e.target.tagName!=='BUTTON'){
             e.preventDefault(); spin();
         }
