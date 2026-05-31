@@ -271,6 +271,24 @@
 
         .display-val { color: #d4af37; min-width: 2.5rem; text-align: left; font-weight: 700; }
 
+        .winner-slots-input {
+            width: 64px;
+            padding: 0.45rem 0.55rem;
+            background: #09090f;
+            border: 1px solid #3a3555;
+            border-radius: 8px;
+            color: #f5e070;
+            font-size: 0.85rem;
+            font-weight: 800;
+            text-align: center;
+            outline: none;
+        }
+
+        .winner-slots-input:focus {
+            border-color: #d4af37;
+            box-shadow: 0 0 0 2px rgba(212,175,55,0.12);
+        }
+
         /* ── Toggle switch (shared) ── */
 
         .toggle-switch {
@@ -319,7 +337,7 @@
             transition: max-height 0.32s ease;
         }
 
-        .options-panel.open { max-height: 300px; }
+        .options-panel.open { max-height: 520px; }
 
         .options-inner {
             margin-top: 0.4rem;
@@ -755,6 +773,17 @@
             animation: popIn 0.32s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
+        .draft-card.winner {
+            border-color: rgba(212,175,55,0.28);
+            border-top-color: #d4af37;
+            box-shadow: 0 0 24px rgba(212,175,55,0.08);
+        }
+
+        .draft-card.loser {
+            border-top-color: #3a3555;
+            opacity: 0.78;
+        }
+
         @keyframes popIn {
             from { opacity: 0; transform: scale(0.8) translateY(8px); }
             to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -762,6 +791,9 @@
 
         .draft-pick-num { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #7a7060; }
         .draft-name     { font-size: 0.92rem; font-weight: 700; color: #e8dfc8; word-break: break-word; }
+        .draft-status   { font-size: 0.56rem; font-weight: 900; letter-spacing: 0.14em; text-transform: uppercase; margin-top: 0.1rem; }
+        .draft-card.winner .draft-status { color: #d4af37; }
+        .draft-card.loser .draft-status  { color: #c06a5f; }
 
         /* ══════════════════════════════════════
            Responsive — mobile
@@ -890,11 +922,28 @@
                 </div>
                 <div class="option-row">
                     <div class="option-info">
+                        <div class="option-name">Winner slots</div>
+                        <div class="option-desc">First X draft positions count as winners. Everyone after that is a loser.</div>
+                    </div>
+                    <input class="winner-slots-input" type="number" id="winnerSlotsInput" min="1" max="99" step="1" value="1" aria-label="Number of winning positions">
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
                         <div class="option-name">Plot Twists</div>
                         <div class="option-desc">20% chance the wheel fakes a stop then rockets back to speed</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="plotTwistToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">No One Is Safe</div>
+                        <div class="option-desc">25% chance a new pick steals a drafted player's seat</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="noisToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -918,7 +967,7 @@
     <div class="draft-header">
         <div class="draft-heading">
             <span class="draft-title">♠ Draft Order ♠</span>
-            <span class="draft-subtitle">Spin results appear here in order.</span>
+            <span class="draft-subtitle" id="draftSubtitle">First position counts as winner. Everyone after that is a loser.</span>
         </div>
         <div class="draft-rule"></div>
         <button class="draft-copy" id="copyBtn">COPY</button>
@@ -1038,6 +1087,7 @@
     const aboutClose    = document.getElementById('aboutClose');
     const displaySlider = document.getElementById('displaySlider');
     const displayValEl  = document.getElementById('displayVal');
+    const winnerSlotsInput = document.getElementById('winnerSlotsInput');
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerNameEl  = document.getElementById('winnerName');
     const winnerSubEl   = document.getElementById('winnerSub');
@@ -1153,6 +1203,7 @@
     const winnerCard    = document.getElementById('winnerCard');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
+    const draftSubtitle = document.getElementById('draftSubtitle');
     const draftClear    = document.getElementById('draftClear');
     const copyBtn       = document.getElementById('copyBtn');
 
@@ -1167,8 +1218,10 @@
     let isBusy          = false;
     let autoSpin        = false;
     let displayDuration = 2800;
+    let winnerSlots     = 1;
     let lastTickSection     = -1;
     let plotTwistsEnabled   = true;
+    let noisEnabled         = true;
     let riggedEnabled       = false;
 
     const PALETTE = [
@@ -1302,7 +1355,7 @@
        localStorage
     ══════════════════════════════════════ */
     function saveState() {
-        try { localStorage.setItem('spinpage', JSON.stringify({ names, draftOrder, undoStack })); } catch(e) {}
+        try { localStorage.setItem('spinpage', JSON.stringify({ names, draftOrder, undoStack, winnerSlots, noisEnabled })); } catch(e) {}
     }
 
     function loadState() {
@@ -1312,6 +1365,8 @@
                 names = normalizeNames(s.names);
                 draftOrder = normalizePicks(s.draftOrder);
                 undoStack = normalizePicks(s.undoStack);
+                winnerSlots = normalizeWinnerSlots(s.winnerSlots);
+                if (typeof s.noisEnabled === 'boolean') noisEnabled = s.noisEnabled;
             }
         } catch(e) {}
     }
@@ -1333,6 +1388,28 @@
                 color: typeof pick.color === 'string' ? pick.color : '#d4af37'
             }))
             .filter(pick => pick.name);
+    }
+
+    function normalizeWinnerSlots(value) {
+        const parsed = parseInt(value, 10);
+        return Number.isFinite(parsed) ? Math.max(1, parsed) : 1;
+    }
+
+    function totalEntrants() {
+        return names.length + draftOrder.length;
+    }
+
+    function getWinnerSlots() {
+        return Math.max(1, Math.min(winnerSlots, Math.max(1, totalEntrants())));
+    }
+
+    function syncWinnerSlotsInput() {
+        const max = Math.max(1, totalEntrants());
+        winnerSlots = Math.max(1, Math.min(winnerSlots, max));
+        winnerSlotsInput.max = max;
+        winnerSlotsInput.value = winnerSlots;
+        const label = winnerSlots === 1 ? 'First position counts as winner.' : `First ${winnerSlots} positions count as winners.`;
+        draftSubtitle.textContent = `${label} Everyone after that is a loser.`;
     }
 
     /* ══════════════════════════════════════
@@ -1522,14 +1599,19 @@
        Draft
     ══════════════════════════════════════ */
     function renderDraft() {
+        syncWinnerSlotsInput();
         draftSection.classList.toggle('visible', draftOrder.length > 0);
         draftGrid.innerHTML = '';
+        const slots = getWinnerSlots();
         draftOrder.forEach((pick, i) => {
+            const isWinner = i < slots;
             const card = document.createElement('div');
-            card.className = 'draft-card'; card.style.setProperty('--accent', pick.color);
+            card.className = `draft-card ${isWinner ? 'winner' : 'loser'}`;
+            card.style.setProperty('--accent', pick.color);
             const num = document.createElement('div'); num.className='draft-pick-num'; num.textContent=ordinal(i+1)+' pick';
             const name= document.createElement('div'); name.className='draft-name';    name.textContent=pick.name;
-            card.append(num,name); draftGrid.appendChild(card);
+            const status = document.createElement('div'); status.className='draft-status'; status.textContent=isWinner ? 'Winner' : 'Loser';
+            card.append(num,name,status); draftGrid.appendChild(card);
         });
     }
 
@@ -1547,13 +1629,30 @@
 
     copyBtn.addEventListener('click', () => {
         if (!draftOrder.length) return;
-        const text = draftOrder.map((p,i) => `${ordinal(i+1)} pick: ${p.name}`).join('\n');
+        const text = formatDraftCopy();
         navigator.clipboard.writeText(text).then(() => {
             const orig = copyBtn.textContent;
             copyBtn.textContent='COPIED!'; copyBtn.style.color='#d4af37';
             setTimeout(()=>{ copyBtn.textContent=orig; copyBtn.style.color=''; }, 2000);
         });
     });
+
+    function formatDraftCopy() {
+        const slots = getWinnerSlots();
+        const winners = draftOrder.slice(0, slots);
+        const losers = draftOrder.slice(slots);
+        const lines = [];
+        if (winners.length) {
+            lines.push('WINNERS');
+            winners.forEach((p,i) => lines.push(`${ordinal(i+1)} pick: ${p.name}`));
+        }
+        if (losers.length) {
+            if (lines.length) lines.push('');
+            lines.push('LOSERS');
+            losers.forEach((p,i) => lines.push(`${ordinal(slots+i+1)} pick: ${p.name}`));
+        }
+        return lines.join('\n');
+    }
 
     /* ══════════════════════════════════════
        Undo
@@ -1571,6 +1670,7 @@
         spinHint.textContent = names.length === 0 ? 'Add at least 2 names to spin' :
                                names.length === 1 ? 'Add 1 more name to spin' :
                                'Names are loaded. The wheel is ready.';
+        syncWinnerSlotsInput();
     }
 
     undoBtn.addEventListener('click', () => {
@@ -1910,7 +2010,7 @@
         noisCtx.fill(); noisCtx.shadowBlur=0;
     }
 
-    function showNoisWheel(onDone) {
+    function showNoisWheel(replacementPick, onDone) {
         if (!draftOrder.length) { onDone&&onDone(); return; }
         isBusy = true;
         updateButtons();
@@ -1959,13 +2059,21 @@
                 noisRotation = endRot;
                 drawNoisWheel(candidates, noisRotation);
                 const victim = candidates[victimIdx];
-                resultEl.textContent = `${victim.name} is UNDRAFTED!`;
+                resultEl.textContent = replacementPick
+                    ? `${victim.name} is UNDRAFTED! ${replacementPick.name} takes the seat.`
+                    : `${victim.name} is UNDRAFTED!`;
 
                 setTimeout(() => {
                     const di=draftOrder.findIndex(p=>p.name===victim.name);
-                    if (di>=0) draftOrder.splice(di,1);
+                    if (di>=0) {
+                        if (replacementPick) draftOrder[di] = replacementPick;
+                        else draftOrder.splice(di,1);
+                    }
                     const ui=undoStack.findIndex(p=>p.name===victim.name);
-                    if (ui>=0) undoStack.splice(ui,1);
+                    if (ui>=0) {
+                        if (replacementPick) undoStack[ui] = replacementPick;
+                        else undoStack.splice(ui,1);
+                    }
                     names.push(victim.name);
                     if (names.length < 2 && autoSpin) setAutoSpin(false);
 
@@ -1989,7 +2097,7 @@
     });
 
     function showSplash() {
-        const top = draftOrder.slice(0, 5);
+        const top = draftOrder.slice(0, getWinnerSlots());
         if (top.length === 0) return;
 
         const rankClass = ['gold','silver','bronze','plain','plain'];
@@ -2077,33 +2185,38 @@
         setTimeout(()=>{
             winnerOverlay.classList.remove('show');
             setTimeout(()=>{
-                undoStack.push({name,color:c});
-                draftOrder.push({name,color:c});
+                const selectedPick = {name,color:c};
                 names.splice(winnerIdx,1);
-                if (names.length === 1) {
-                    const finalName = names[0], finalColor = sliceColor(0);
-                    undoStack.push({name: finalName, color: finalColor});
-                    draftOrder.push({name: finalName, color: finalColor});
-                    names.splice(0,1);
-                }
                 isSpinning=false;
                 const hasNames=names.length>0;
-                if (!hasNames&&autoSpin) setAutoSpin(false);
-                renderList(); renderDraft(); redraw(); saveState();
-                // 20% chance of "No one is safe" — needs at least 1 drafted player
-                const triggerNois = hasNames && draftOrder.length >= 1 && Math.random() < 0.20;
+                // 25% chance of "No one is safe" — needs an existing drafted seat to replace
+                const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < 0.25;
 
                 if (triggerNois) {
                     isBusy = true;
                     updateButtons();
-                    setTimeout(() => showNoisWheel(() => {
+                    renderList(); renderDraft(); redraw(); saveState();
+                    setTimeout(() => showNoisWheel(selectedPick, () => {
                         // After undraft: resume auto-spin if on and names remain
                         if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
                     }), 700);
-                } else if (!hasNames) {
-                    showSplash();
-                } else if (autoSpin && hasNames) {
-                    setTimeout(spin, 1400);
+                } else {
+                    undoStack.push(selectedPick);
+                    draftOrder.push(selectedPick);
+                    if (names.length === 1) {
+                        const finalName = names[0], finalColor = sliceColor(0);
+                        undoStack.push({name: finalName, color: finalColor});
+                        draftOrder.push({name: finalName, color: finalColor});
+                        names.splice(0,1);
+                    }
+                    const stillHasNames=names.length>0;
+                    if (!stillHasNames&&autoSpin) setAutoSpin(false);
+                    renderList(); renderDraft(); redraw(); saveState();
+                    if (!stillHasNames) {
+                        showSplash();
+                    } else if (autoSpin) {
+                        setTimeout(spin, 1400);
+                    }
                 }
             },380);
         }, displayDuration);
@@ -2155,6 +2268,7 @@
     const optionsBtn   = document.getElementById('optionsBtn');
     const optionsPanel = document.getElementById('optionsPanel');
     const riggedToggle = document.getElementById('riggedToggle');
+    const noisToggle   = document.getElementById('noisToggle');
 
     optionsBtn.addEventListener('click', () => {
         const open = optionsPanel.classList.toggle('open');
@@ -2171,9 +2285,21 @@
         plotTwistsEnabled = plotTwistToggle.checked;
     });
 
+    noisToggle.addEventListener('change', () => {
+        noisEnabled = noisToggle.checked;
+        saveState();
+    });
+
     displaySlider.addEventListener('input', ()=>{
         displayDuration = parseFloat(displaySlider.value)*1000;
         displayValEl.textContent = displaySlider.value+'s';
+    });
+
+    winnerSlotsInput.addEventListener('input', ()=>{
+        winnerSlots = normalizeWinnerSlots(winnerSlotsInput.value);
+        syncWinnerSlotsInput();
+        renderDraft();
+        saveState();
     });
 
     /* ══════════════════════════════════════
@@ -2185,7 +2311,7 @@
        Init
     ══════════════════════════════════════ */
     resizeFire(); resizeOverlay();
-    loadState(); renderList(); renderDraft(); updateButtons(); redraw();
+    loadState(); noisToggle.checked = noisEnabled; renderList(); renderDraft(); updateButtons(); redraw();
     fireLoop();
 </script>
 </body>
