@@ -3,41 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpinPage — Free Spinning Wheel &amp; Random Name Picker</title>
-    <meta name="description" content="Free online spinning wheel and random name picker. Add names, spin to pick a random winner, and build a full draft order — with dramatic effects and sound. No signup needed.">
+    <title>Spinpage — Free Spinning Wheel &amp; Random Name Picker</title>
+    <meta name="description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up required.">
     <meta name="keywords" content="spinning wheel, random name picker, spin the wheel, wheel spinner, name picker wheel, random picker, draft order picker, wheel of fortune online, random name generator">
     <meta name="robots" content="index, follow">
+    <link rel="canonical" href="https://www.ruglad.com">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="SpinPage — Free Spinning Wheel &amp; Random Name Picker">
-    <meta property="og:description" content="Add names and spin to pick a random winner. Features dramatic plot twists, confetti, fanfare, and draft order tracking. Free — no signup needed.">
+    <meta property="og:title" content="Spinpage — Free Spinning Wheel &amp; Random Name Picker">
+    <meta property="og:description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up.">
+    <meta property="og:image" content="https://www.ruglad.com/og-image.png">
+    <meta property="og:url" content="https://www.ruglad.com">
 
-    <meta name="twitter:card" content="summary">
-    <meta name="twitter:title" content="SpinPage — Free Spinning Wheel &amp; Random Name Picker">
-    <meta name="twitter:description" content="Add names and spin to pick a random winner. Features dramatic plot twists, confetti, fanfare, and draft order tracking. Free — no signup needed.">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Spinpage — Free Spinning Wheel &amp; Random Name Picker">
+    <meta name="twitter:description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up.">
+    <meta name="twitter:image" content="https://www.ruglad.com/og-image.png">
 
     <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "SpinPage",
-      "description": "Free online spinning wheel and random name picker. Add names, spin to pick a random winner, and track a full draft order with dramatic effects and sound.",
-      "applicationCategory": "UtilitiesApplication",
-      "operatingSystem": "Any",
-      "browserRequirements": "Requires JavaScript",
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "featureList": [
-        "Spinning wheel with canvas animation",
-        "Random name picker",
-        "Draft order tracking",
-        "Auto-spin mode",
-        "Plot twist mechanic",
-        "Confetti and fanfare effects",
-        "No One Is Safe second wheel",
-        "Undo and restore picks",
-        "Saves state to localStorage"
-      ]
-    }
+    {"@context":"https://schema.org","@type":"WebApplication","name":"Spinpage","url":"https://www.ruglad.com","description":"Free online spinning wheel and random name picker.","applicationCategory":"UtilityApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
     </script>
     <style>
         *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -72,7 +56,7 @@
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
         }
 
-        .subtitle { font-size: 0.62rem; letter-spacing: 0.35em; text-transform: uppercase; color: #4a4030; margin-top: 0.3rem; }
+        .subtitle { font-size: 0.62rem; letter-spacing: 0.35em; text-transform: uppercase; color: rgba(255,255,255,0.55); margin-top: 0.3rem; }
 
         /* ── Layout ── */
 
@@ -92,6 +76,12 @@
             border: 1px solid #1e1a30;
             box-shadow: 0 0 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.08);
             display: flex; flex-direction: column; gap: 1.1rem;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+
+        .name-panel.needs-players {
+            border-color: rgba(212,175,55,0.45);
+            box-shadow: 0 0 46px rgba(212,175,55,0.12), 0 0 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.16);
         }
 
         .panel-title {
@@ -114,7 +104,15 @@
         }
 
         .add-row input:focus { border-color: #d4af37; box-shadow: 0 0 0 2px rgba(212,175,55,0.12); }
-        .add-row input::placeholder { color: #2e2840; }
+        .add-row input::placeholder { color: #6e654f; }
+
+        .starter-hint {
+            margin-top: -0.7rem;
+            color: #9b8d68;
+            font-size: 0.68rem;
+            line-height: 1.35;
+            letter-spacing: 0.04em;
+        }
 
         .add-btn {
             width: 36px; height: 36px; flex-shrink: 0; border: none; border-radius: 8px;
@@ -188,6 +186,16 @@
         .spin-btn:active:not(:disabled) { transform: translateY(0); }
         .spin-btn:disabled              { opacity: 0.3; cursor: not-allowed; }
 
+        .spin-hint {
+            margin-top: -0.45rem;
+            color: #9b8d68;
+            font-size: 0.7rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            min-height: 1rem;
+            text-align: center;
+        }
+
         .auto-btn {
             padding: 0.9rem 1.5rem; border-radius: 50px;
             background: #131220; border: 1px solid #3a3555;
@@ -210,6 +218,7 @@
         }
 
         .undo-btn, .reset-btn {
+            min-height: 38px;
             padding: 0.55rem 1.1rem; border-radius: 50px;
             background: #131220; border: 1px solid #3a3555;
             font-size: 0.68rem; font-weight: 700;
@@ -230,13 +239,34 @@
         .display-row input[type=range] {
             -webkit-appearance: none; appearance: none;
             width: 100px; height: 3px;
-            background: #1e1a30; border-radius: 2px; outline: none; cursor: pointer;
+            background: linear-gradient(90deg, #8b6914, #d4af37, #f5e070);
+            border-radius: 2px; outline: none; cursor: pointer;
+            box-shadow: 0 0 10px rgba(212,175,55,0.22);
+            accent-color: #d4af37;
         }
 
         .display-row input[type=range]::-webkit-slider-thumb {
             -webkit-appearance: none; appearance: none;
             width: 13px; height: 13px; border-radius: 50%;
-            background: linear-gradient(145deg, #d4af37, #8b6914); cursor: pointer;
+            background: linear-gradient(145deg, #fff2a0, #d4af37 55%, #8b6914);
+            border: 1px solid rgba(255,255,255,0.35);
+            box-shadow: 0 0 12px rgba(212,175,55,0.65), 0 2px 6px rgba(0,0,0,0.55);
+            cursor: pointer;
+        }
+
+        .display-row input[type=range]::-moz-range-track {
+            height: 3px;
+            background: linear-gradient(90deg, #8b6914, #d4af37, #f5e070);
+            border-radius: 2px;
+            box-shadow: 0 0 10px rgba(212,175,55,0.22);
+        }
+
+        .display-row input[type=range]::-moz-range-thumb {
+            width: 13px; height: 13px; border-radius: 50%;
+            background: linear-gradient(145deg, #fff2a0, #d4af37 55%, #8b6914);
+            border: 1px solid rgba(255,255,255,0.35);
+            box-shadow: 0 0 12px rgba(212,175,55,0.65), 0 2px 6px rgba(0,0,0,0.55);
+            cursor: pointer;
         }
 
         .display-val { color: #d4af37; min-width: 2.5rem; text-align: left; font-weight: 700; }
@@ -275,6 +305,7 @@
         /* ── Options panel ── */
 
         .options-btn, .about-btn {
+            min-height: 38px;
             padding: 0.55rem 1.1rem; border-radius: 50px;
             background: #131220; border: 1px solid #3a3555;
             color: #9a9080; font-size: 0.68rem; font-weight: 700;
@@ -696,12 +727,15 @@
         .draft-section.visible { display: flex; }
 
         .draft-header  { display: flex; align-items: center; gap: 0.8rem; }
+        .draft-heading { display: flex; flex-direction: column; gap: 0.2rem; }
         .draft-title   { font-size: 0.62rem; font-weight: 700; color: #d4af37; letter-spacing: 0.22em; text-transform: uppercase; white-space: nowrap; }
+        .draft-subtitle { font-size: 0.68rem; color: #9b8d68; letter-spacing: 0.04em; white-space: nowrap; }
         .draft-rule    { flex: 1; height: 1px; background: linear-gradient(to right, #2a2040, transparent); }
 
         .draft-copy, .draft-restore, .draft-clear {
             background: #131220; border: 1px solid #3a3555; border-radius: 6px;
-            font-size: 0.68rem; letter-spacing: 0.06em; padding: 0.22rem 0.65rem; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+            min-height: 32px;
+            font-size: 0.68rem; letter-spacing: 0.06em; padding: 0.28rem 0.72rem; cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
         }
 
         .draft-copy    { color: #8a8070; }
@@ -770,6 +804,10 @@
 
             .spin-btn  { padding: 0.85rem 2.4rem; font-size: 0.95rem; }
             .auto-btn  { padding: 0.85rem 1.2rem; }
+            .add-btn, .spin-btn, .auto-btn, .undo-btn, .reset-btn, .options-btn, .about-btn,
+            .draft-copy, .draft-restore, .draft-clear {
+                min-height: 44px;
+            }
 
             .display-row { justify-content: center; }
 
@@ -780,6 +818,7 @@
             .draft-section { padding: 0 1rem 2.5rem; }
 
             .draft-header { flex-wrap: wrap; gap: 0.5rem; }
+            .draft-subtitle { white-space: normal; }
 
             .about-card { padding: 1.55rem 1.35rem; }
             .about-heading { font-size: 1.8rem; }
@@ -813,9 +852,10 @@
     <div class="name-panel">
         <div class="panel-title">Players</div>
         <div class="add-row">
-            <input type="text" id="nameInput" placeholder="Enter a name…" maxlength="30" autocomplete="off">
+            <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="30" autocomplete="off">
             <button class="add-btn" id="addBtn" title="Add">+</button>
         </div>
+        <div class="starter-hint" id="starterHint">Add at least 2 names to spin.</div>
         <ul class="name-list" id="nameList"></ul>
     </div>
 
@@ -826,13 +866,14 @@
         </div>
         <div class="btn-row">
             <button class="spin-btn" id="spinBtn" disabled>SPIN</button>
-            <button class="auto-btn" id="autoBtn" disabled>AUTOSPIN</button>
+            <button class="auto-btn" id="autoBtn" disabled title="Automatically spin every few seconds" aria-label="Autospin: automatically spin every few seconds">AUTOSPIN</button>
         </div>
+        <div class="spin-hint" id="spinHint">Add at least 2 names to spin</div>
         <div class="btn-row-secondary">
             <button class="undo-btn" id="undoBtn" disabled>↩ UNDO</button>
-            <button class="reset-btn" id="resetBtn">RESET</button>
+            <button class="reset-btn" id="resetBtn">↺ RESET</button>
             <button class="options-btn" id="optionsBtn">⚙ OPTIONS</button>
-            <button class="about-btn" id="aboutBtn">ABOUT</button>
+            <button class="about-btn" id="aboutBtn">ⓘ ABOUT</button>
         </div>
 
         <div class="options-panel" id="optionsPanel">
@@ -875,7 +916,10 @@
 
 <section class="draft-section" id="draftSection">
     <div class="draft-header">
-        <span class="draft-title">♠ Draft Order ♠</span>
+        <div class="draft-heading">
+            <span class="draft-title">♠ Draft Order ♠</span>
+            <span class="draft-subtitle">Spin results appear here in order.</span>
+        </div>
         <div class="draft-rule"></div>
         <button class="draft-copy" id="copyBtn">COPY</button>
         <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
@@ -979,11 +1023,14 @@
     const SIZE = canvas.width, cx = SIZE / 2, cy = SIZE / 2, R = cx - 12;
     const wheelWrap     = document.getElementById('wheelWrap');
 
+    const namePanel     = document.querySelector('.name-panel');
     const nameInput     = document.getElementById('nameInput');
     const addBtn        = document.getElementById('addBtn');
     const nameListEl    = document.getElementById('nameList');
+    const starterHint   = document.getElementById('starterHint');
     const spinBtn       = document.getElementById('spinBtn');
     const autoBtn       = document.getElementById('autoBtn');
+    const spinHint      = document.getElementById('spinHint');
     const undoBtn       = document.getElementById('undoBtn');
     const resetBtn      = document.getElementById('resetBtn');
     const aboutBtn      = document.getElementById('aboutBtn');
@@ -1512,11 +1559,18 @@
        Undo
     ══════════════════════════════════════ */
     function updateButtons() {
-        const has = names.length > 0;
-        spinBtn.disabled  = !has || isSpinning || isBusy;
-        autoBtn.disabled  = !has || isSpinning || isBusy;
+        const canSpin = names.length >= 2;
+        spinBtn.disabled  = !canSpin || isSpinning || isBusy;
+        autoBtn.disabled  = !canSpin || isSpinning || isBusy;
         undoBtn.disabled  = undoStack.length === 0 || isSpinning || isBusy;
         resetBtn.disabled = isSpinning || isBusy;
+        namePanel.classList.toggle('needs-players', names.length < 2);
+        starterHint.textContent = names.length === 0 ? 'Add at least 2 names to spin.' :
+                                  names.length === 1 ? 'Add 1 more name to unlock the wheel.' :
+                                  'Ready to spin.';
+        spinHint.textContent = names.length === 0 ? 'Add at least 2 names to spin' :
+                               names.length === 1 ? 'Add 1 more name to spin' :
+                               'Names are loaded. The wheel is ready.';
     }
 
     undoBtn.addEventListener('click', () => {
@@ -1532,7 +1586,7 @@
     function renderList() {
         nameListEl.innerHTML = '';
         if (names.length === 0) {
-            const li=document.createElement('li'); li.className='empty-msg'; li.textContent='No players at the table';
+            const li=document.createElement('li'); li.className='empty-msg'; li.textContent='No players at the table yet';
             nameListEl.appendChild(li);
         } else {
             names.forEach((name,i)=>{
@@ -1549,7 +1603,7 @@
         const btn = e.target.closest('.remove-btn');
         if (!btn||isSpinning||isBusy) return;
         names.splice(+btn.dataset.index, 1);
-        if (names.length===0&&autoSpin) setAutoSpin(false);
+        if (names.length<2&&autoSpin) setAutoSpin(false);
         renderList(); redraw(); saveState();
     });
 
@@ -1607,11 +1661,28 @@
             const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
             bg.addColorStop(0,'#161022'); bg.addColorStop(1,'#08080e');
             ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fillStyle=bg; ctx.fill();
-            ctx.strokeStyle='rgba(212,175,55,0.18)'; ctx.lineWidth=3; ctx.stroke();
-            ctx.fillStyle='#3a3050';
-            ctx.font='italic 15px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.strokeStyle='rgba(212,175,55,0.42)'; ctx.lineWidth=3; ctx.stroke();
             ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillText('Add players to spin',cx,cy);
+            ctx.fillStyle='#d4af37';
+            ctx.font='700 18px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.fillText('Add names on the left',cx,cy-10);
+            ctx.fillStyle='#9b8d68';
+            ctx.font='italic 13px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.fillText('to get started.',cx,cy+16);
+            return;
+        }
+        if (names.length===1) {
+            const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+            bg.addColorStop(0,'#161022'); bg.addColorStop(1,'#08080e');
+            ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fillStyle=bg; ctx.fill();
+            ctx.strokeStyle='rgba(212,175,55,0.42)'; ctx.lineWidth=3; ctx.stroke();
+            ctx.textAlign='center'; ctx.textBaseline='middle';
+            ctx.fillStyle='#d4af37';
+            ctx.font='700 18px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.fillText('Add 1 more name',cx,cy-10);
+            ctx.fillStyle='#9b8d68';
+            ctx.font='italic 13px Palatino Linotype, Palatino, Georgia, serif';
+            ctx.fillText('A duel needs two names to spin',cx,cy+16);
             return;
         }
         const arc=(2*Math.PI)/names.length;
@@ -1626,11 +1697,13 @@
                 ctx.fillStyle=shine; ctx.fill();
             }
             ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
-            const fs=names.length>14?9:names.length>9?11:names.length>5?13:15;
-            ctx.font=`bold ${fs}px Segoe UI,system-ui,sans-serif`;
+            const fs=names.length>14?10:names.length>9?12:names.length>5?14:16;
+            ctx.font=`700 ${fs}px Segoe UI,system-ui,sans-serif`;
             ctx.textAlign='center'; ctx.textBaseline='middle';
             ctx.fillStyle='rgba(255,255,255,0.95)';
-            if (!isSpinning) { ctx.shadowColor='rgba(0,0,0,0.9)'; ctx.shadowBlur=5; }
+            ctx.shadowColor='rgba(0,0,0,0.5)';
+            ctx.shadowBlur=2;
+            ctx.shadowOffsetY=1;
             let label=names[i];
             const maxW=R*0.52;
             while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
@@ -1701,7 +1774,7 @@
     spinBtn.addEventListener('click', spin);
 
     function spin() {
-        if (isSpinning||isBusy||names.length===0) return;
+        if (isSpinning||isBusy||names.length<2) return;
         ensureAudio();
 
         isSpinning = true;
@@ -1894,6 +1967,7 @@
                     const ui=undoStack.findIndex(p=>p.name===victim.name);
                     if (ui>=0) undoStack.splice(ui,1);
                     names.push(victim.name);
+                    if (names.length < 2 && autoSpin) setAutoSpin(false);
 
                     overlay.classList.remove('show');
                     isBusy = false;
@@ -2006,19 +2080,25 @@
                 undoStack.push({name,color:c});
                 draftOrder.push({name,color:c});
                 names.splice(winnerIdx,1);
+                if (names.length === 1) {
+                    const finalName = names[0], finalColor = sliceColor(0);
+                    undoStack.push({name: finalName, color: finalColor});
+                    draftOrder.push({name: finalName, color: finalColor});
+                    names.splice(0,1);
+                }
                 isSpinning=false;
                 const hasNames=names.length>0;
                 if (!hasNames&&autoSpin) setAutoSpin(false);
                 renderList(); renderDraft(); redraw(); saveState();
                 // 20% chance of "No one is safe" — needs at least 1 drafted player
-                const triggerNois = draftOrder.length >= 1 && Math.random() < 0.20;
+                const triggerNois = hasNames && draftOrder.length >= 1 && Math.random() < 0.20;
 
                 if (triggerNois) {
                     isBusy = true;
                     updateButtons();
                     setTimeout(() => showNoisWheel(() => {
                         // After undraft: resume auto-spin if on and names remain
-                        if (autoSpin && names.length > 0) setTimeout(spin, 1400);
+                        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
                     }), 700);
                 } else if (!hasNames) {
                     showSplash();
@@ -2040,7 +2120,7 @@
 
     autoBtn.addEventListener('click', ()=>{
         ensureAudio();
-        if(names.length===0||isSpinning||isBusy)return;
+        if(names.length<2||isSpinning||isBusy)return;
         const next = !autoSpin;
         setAutoSpin(next);
         if (next) spin();
