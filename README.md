@@ -15,6 +15,7 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Autospin** for hands-free draft generation.
 - **Undo, restore, clear, and copy** controls for managing draft results.
 - **Plot twists** where the wheel fakes a stop, then blasts back into motion.
+- **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds.
 - **Illegal spin moments** with a stamped invalid result and retry.
 - **No One Is Safe wheel** that can randomly undraft a previous pick.
 - **Confetti, fire, fanfare, ticks, and impact sounds** using browser-native canvas and Web Audio APIs.
@@ -52,7 +53,7 @@ http://localhost:8000
 4. Use **AUTOSPIN** to keep picking until the wheel is empty.
 5. Copy the finished draft order when you are done.
 
-The options panel lets you tune winner display duration, enable or disable plot twists, and turn on the rigged mode used for local jokes or demos.
+The options panel lets you tune winner display duration, set how many positions count as winners, toggle plot twists and power-up slices, enable the second-chance "No One Is Safe" wheel, and turn on the rigged mode used for local jokes or demos. All of these preferences persist across refreshes.
 
 ## Project Structure
 

@@ -343,7 +343,7 @@
             transition: max-height 0.32s ease;
         }
 
-        .options-panel.open { max-height: 520px; }
+        .options-panel.open { max-height: 660px; }
 
         .options-inner {
             margin-top: 0.4rem;
@@ -874,6 +874,61 @@
 
             .btn-row-secondary { gap: 0.5rem; }
         }
+
+        /* ── Power-up popup ── */
+
+        .powerup-popup {
+            position: fixed; top: 13%; left: 50%;
+            transform: translateX(-50%) scale(0.6);
+            z-index: 1600; pointer-events: none; text-align: center;
+            opacity: 0; will-change: transform, opacity;
+        }
+
+        .pu-emoji {
+            font-size: 4.6rem; line-height: 1; display: block;
+            filter: drop-shadow(0 0 16px var(--pu-color, #f5a623)) drop-shadow(0 0 36px rgba(0,0,0,0.5));
+        }
+
+        .pu-label {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1.55rem; font-weight: 900;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            margin-top: 0.3rem;
+            color: var(--pu-color, #f5a623);
+            text-shadow: 0 0 18px var(--pu-color, #f5a623);
+        }
+
+        .pu-name {
+            font-size: 0.82rem; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #e8dfc8; margin-top: 0.28rem; opacity: 0.85;
+        }
+
+        @keyframes puIn {
+            0%   { transform: translateX(-50%) scale(0.6);  opacity: 0; }
+            60%  { transform: translateX(-50%) scale(1.12); opacity: 1; }
+            100% { transform: translateX(-50%) scale(1);    opacity: 1; }
+        }
+
+        @keyframes puOut {
+            from { transform: translateX(-50%) scale(1);    opacity: 1; }
+            to   { transform: translateX(-50%) scale(0.85); opacity: 0; }
+        }
+
+        .powerup-popup.in  { animation: puIn  0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .powerup-popup.out { animation: puOut 0.3s ease forwards; }
+
+        /* ── Reduced motion ── */
+        /* Canvas spins are JS-driven and unaffected; this only calms decorative
+           CSS animation/transition and the photosensitive screen flash (guarded in JS). */
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+                scroll-behavior: auto !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -916,7 +971,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v2.0</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v2.1</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -940,6 +995,16 @@
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="plotTwistToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Power-ups</div>
+                        <div class="option-desc">35% chance a slice swells or shrinks before a spin — and it really shifts the odds</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="powerUpToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -1032,6 +1097,7 @@
         <ul class="about-list">
             <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
+            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
 
@@ -1058,6 +1124,12 @@
 <div class="devil-popup" id="devilPopup">
     <span class="devil-emoji">😈</span>
     <div class="devil-label">Plot Twist!</div>
+</div>
+
+<div class="powerup-popup" id="powerUpPopup">
+    <span class="pu-emoji">🔥</span>
+    <div class="pu-label">Hot Seat</div>
+    <div class="pu-name">Name</div>
 </div>
 
 <div class="winner-overlay" id="winnerOverlay">
@@ -1207,6 +1279,7 @@
         'CONGRATULATIONS, YOU BEAUTIFUL DEGENERATE! 😄',
     ];
     const winnerCard    = document.getElementById('winnerCard');
+    const powerUpPopup  = document.getElementById('powerUpPopup');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
     const draftSubtitle = document.getElementById('draftSubtitle');
@@ -1229,6 +1302,17 @@
     let plotTwistsEnabled   = true;
     let noisEnabled         = true;
     let riggedEnabled       = false;
+    let powerUpsEnabled     = true;
+    let sliceWeights        = null;   // per-spin slice multipliers (null = all equal)
+
+    const POWERUPS = [
+        { type: 'hotseat',  label: 'Hot Seat', emoji: '🔥', factor: 3.0,  color: '#f5a623' },
+        { type: 'cursed',   label: 'Cursed',   emoji: '💀', factor: 0.25, color: '#9b59b6' },
+        { type: 'wildcard', label: 'Wildcard', emoji: '🎲',               color: '#1abc9c' },
+    ];
+
+    const prefersReducedMotion = () =>
+        !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
     const PALETTE = [
         '#b03a2e','#1a5276','#1e8449','#b7950b','#6c3483',
@@ -1238,6 +1322,22 @@
 
     function sliceColor(i) { return PALETTE[i % PALETTE.length]; }
     function ordinal(n) { const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+    // Current slice multipliers, or all-equal. The length guard makes a stale
+    // array (after names change) fall back to equal sizes — no index desync.
+    function getWeights() {
+        return (sliceWeights && sliceWeights.length === names.length)
+            ? sliceWeights
+            : names.map(() => 1);
+    }
+
+    function weightedPick(w) {
+        const total = w.reduce((a, b) => a + b, 0);
+        if (total <= 0) return Math.floor(Math.random() * w.length);
+        let r = Math.random() * total;
+        for (let i = 0; i < w.length; i++) { r -= w[i]; if (r <= 0) return i; }
+        return w.length - 1;
+    }
 
     /* ══════════════════════════════════════
        Audio
@@ -1297,7 +1397,11 @@
             setTimeout(() => {
                 stamp.classList.remove('out');
                 isSpinning = false;
+                sliceWeights = null;          // clear any power-up sizing before the retry
+                redraw();
                 updateButtons();
+                // Illegal spins are a no-op retry — keep an active autospin alive
+                if (autoSpin && names.length >= 2) setTimeout(spin, 600);
             }, 480);
         }, 2600);
     }
@@ -1361,7 +1465,10 @@
        localStorage
     ══════════════════════════════════════ */
     function saveState() {
-        try { localStorage.setItem('spinpage', JSON.stringify({ names, draftOrder, undoStack, winnerSlots, noisEnabled })); } catch(e) {}
+        try { localStorage.setItem('spinpage', JSON.stringify({
+            names, draftOrder, undoStack, winnerSlots,
+            noisEnabled, powerUpsEnabled, plotTwistsEnabled, displayDuration
+        })); } catch(e) {}
     }
 
     function loadState() {
@@ -1373,6 +1480,9 @@
                 undoStack = normalizePicks(s.undoStack);
                 winnerSlots = normalizeWinnerSlots(s.winnerSlots);
                 if (typeof s.noisEnabled === 'boolean') noisEnabled = s.noisEnabled;
+                if (typeof s.powerUpsEnabled === 'boolean') powerUpsEnabled = s.powerUpsEnabled;
+                if (typeof s.plotTwistsEnabled === 'boolean') plotTwistsEnabled = s.plotTwistsEnabled;
+                if (typeof s.displayDuration === 'number' && s.displayDuration >= 1000 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
             }
         } catch(e) {}
     }
@@ -1558,6 +1668,11 @@
     const fireCanvas = document.getElementById('fireCanvas');
     const fctx       = fireCanvas.getContext('2d');
     let   fireParticles = [];
+    let   fireRunning   = false;
+
+    function startFire() {
+        if (!fireRunning) { fireRunning = true; requestAnimationFrame(fireLoop); }
+    }
 
     function resizeFire() { fireCanvas.width = window.innerWidth; fireCanvas.height = window.innerHeight; }
 
@@ -1598,6 +1713,8 @@
         });
         fctx.globalAlpha = 1;
 
+        // Stop the loop once the surge burns out — no idle full-screen RAF
+        if (fireParticles.length === 0) { fireRunning = false; fctx.clearRect(0,0,W,H); return; }
         requestAnimationFrame(fireLoop);
     }
 
@@ -1791,9 +1908,19 @@
             ctx.fillText('A duel needs two names to spin',cx,cy+16);
             return;
         }
-        const arc=(2*Math.PI)/names.length;
+        const weights = getWeights();
+        const totalW  = weights.reduce((a,b)=>a+b,0) || 1;
+        const TAU     = 2*Math.PI;
+        const base    = rotation - Math.PI/2;
+        let   acc     = 0;
+        const starts  = [];                       // local start offset per slice, for divider lines
         for (let i=0;i<names.length;i++) {
-            const start=rotation-Math.PI/2+i*arc, end=start+arc, mid=(start+end)/2;
+            const a0 = (acc/totalW)*TAU;
+            acc += weights[i];
+            const a1 = (acc/totalW)*TAU;
+            starts.push(a0);
+            const sliceAng = a1 - a0;
+            const start=base+a0, end=base+a1, mid=(start+end)/2;
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
             ctx.fillStyle=sliceColor(i); ctx.fill();
             if (!isSpinning) {
@@ -1802,22 +1929,24 @@
                 ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
                 ctx.fillStyle=shine; ctx.fill();
             }
-            ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
-            const fs=names.length>14?10:names.length>9?12:names.length>5?14:16;
-            ctx.font=`700 ${fs}px Segoe UI,system-ui,sans-serif`;
-            ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle='rgba(255,255,255,0.95)';
-            ctx.shadowColor='rgba(0,0,0,0.5)';
-            ctx.shadowBlur=2;
-            ctx.shadowOffsetY=1;
-            let label=names[i];
-            const maxW=R*0.52;
-            while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
-            if(label!==names[i]) label+='…';
-            ctx.fillText(label,R*0.62,0); ctx.restore();
+            if (sliceAng > 0.13) {                 // skip labels on ultra-thin (cursed) slices
+                ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
+                const fs=names.length>14?10:names.length>9?12:names.length>5?14:16;
+                ctx.font=`700 ${fs}px Segoe UI,system-ui,sans-serif`;
+                ctx.textAlign='center'; ctx.textBaseline='middle';
+                ctx.fillStyle='rgba(255,255,255,0.95)';
+                ctx.shadowColor='rgba(0,0,0,0.5)';
+                ctx.shadowBlur=2;
+                ctx.shadowOffsetY=1;
+                let label=names[i];
+                const maxW=R*0.52;
+                while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
+                if(label!==names[i]) label+='…';
+                ctx.fillText(label,R*0.62,0); ctx.restore();
+            }
         }
         for (let i=0;i<names.length;i++) {
-            const angle=rotation-Math.PI/2+i*arc;
+            const angle=base+starts[i];
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(angle)*R,cy+Math.sin(angle)*R);
             ctx.strokeStyle='rgba(212,175,55,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
         }
@@ -1886,31 +2015,115 @@
         isSpinning = true;
         updateButtons();
 
-        const gunIdx    = riggedEnabled ? names.findIndex(n => n.toLowerCase().startsWith('gun')) : -1;
-        const winnerIdx = gunIdx >= 0 ? gunIdx : Math.floor(Math.random()*names.length);
-        const arc       = (2*Math.PI)/names.length;
+        // Maybe drop a power-up: a slice swells/shrinks before the spin, which
+        // both looks dramatic AND shifts the real odds (winner is weighted).
+        const pu = rollPowerUp();
+        if (pu) {
+            playPowerUpSound();
+            showPowerUpPopup(pu);
+            animateWeights(pu.weights, 650, () => {
+                setTimeout(() => startSpin(pu.weights), 320);
+            });
+        } else {
+            sliceWeights = null;
+            redraw();
+            startSpin(names.map(() => 1));
+        }
+    }
 
-        // Land at a random position within the slice (1%–99%)
-        const landingPos  = 0.01 + Math.random() * 0.98;
-        const winnerMid   = (winnerIdx + landingPos) * arc;
-        const targetNorm  = ((2*Math.PI - winnerMid%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
-        const currentNorm = ((rotation%(2*Math.PI)) + 2*Math.PI) % (2*Math.PI);
+    /* ── Power-ups ── */
+    function rollPowerUp() {
+        if (!powerUpsEnabled || names.length < 3 || Math.random() >= 0.35) return null;
+        const pick = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
+        if (pick.type === 'wildcard') {
+            const weights = names.map(() => 0.35 + Math.random() * 2.65);
+            return { ...pick, weights, name: 'Everyone' };
+        }
+        const idx = Math.floor(Math.random() * names.length);
+        const weights = names.map(() => 1);
+        weights[idx] = pick.factor;
+        return { ...pick, idx, name: names[idx], weights };
+    }
+
+    // Tween slice sizes from their current values to the power-up target,
+    // redrawing each frame so the pies visibly grow/shrink before the spin.
+    function animateWeights(targetW, duration, done) {
+        const startW = getWeights().slice();
+        const t0 = performance.now();
+        (function step(now) {
+            const t = Math.min((now - t0) / duration, 1);
+            const e = 1 - Math.pow(1 - t, 3);
+            sliceWeights = startW.map((s, i) => s + (targetW[i] - s) * e);
+            redraw();
+            if (t < 1) requestAnimationFrame(step);
+            else { sliceWeights = targetW.slice(); redraw(); done && done(); }
+        })(performance.now());
+    }
+
+    function showPowerUpPopup(pu) {
+        powerUpPopup.querySelector('.pu-emoji').textContent = pu.emoji;
+        powerUpPopup.querySelector('.pu-label').textContent = pu.label;
+        powerUpPopup.querySelector('.pu-name').textContent  = pu.name;
+        powerUpPopup.style.setProperty('--pu-color', pu.color);
+        powerUpPopup.classList.remove('in', 'out');
+        void powerUpPopup.offsetWidth;
+        powerUpPopup.classList.add('in');
+        setTimeout(() => {
+            powerUpPopup.classList.remove('in');
+            powerUpPopup.classList.add('out');
+            setTimeout(() => powerUpPopup.classList.remove('out'), 320);
+        }, 1150);
+    }
+
+    function playPowerUpSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [523.25, 659.25, 880].forEach((f, i) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'triangle'; o.frequency.setValueAtTime(f, now + i * 0.07);
+            g.gain.setValueAtTime(0, now + i * 0.07);
+            g.gain.linearRampToValueAtTime(0.25, now + i * 0.07 + 0.02);
+            g.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.18);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(now + i * 0.07); o.stop(now + i * 0.07 + 0.2);
+        });
+    }
+
+    function startSpin(spinWeights) {
+        const TAU    = 2 * Math.PI;
+        const totalW = spinWeights.reduce((a, b) => a + b, 0) || 1;
+
+        const gunIdx    = riggedEnabled ? names.findIndex(n => n.toLowerCase().startsWith('gun')) : -1;
+        const winnerIdx = gunIdx >= 0 ? gunIdx : weightedPick(spinWeights);
+
+        // Land somewhere inside the winner's slice (kept clear of the edges so a
+        // thin cursed slice still lands cleanly under the pointer).
+        let before = 0;
+        for (let i = 0; i < winnerIdx; i++) before += spinWeights[i];
+        const sliceArc     = (spinWeights[winnerIdx] / totalW) * TAU;
+        const landingPos   = 0.12 + Math.random() * 0.76;
+        const winnerOffset = (before / totalW) * TAU + landingPos * sliceArc;
+        const targetNorm   = ((TAU - winnerOffset % TAU) + TAU) % TAU;
+        const currentNorm  = ((rotation % TAU) + TAU) % TAU;
         let delta = targetNorm - currentNorm;
-        if (delta<0) delta += 2*Math.PI;
+        if (delta < 0) delta += TAU;
 
         const isIllegal = Math.random() < 0.05;
         const plotTwist = !isIllegal && plotTwistsEnabled && Math.random() < 0.20;
 
         // Plot twist needs more spins to accommodate the fake-stop + boost phases
         const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*5);
-        const totalRot   = extraSpins*2*Math.PI + delta;
+        const totalRot   = extraSpins*TAU + delta;
         const duration   = plotTwist ? 7000 + Math.random()*2000 : 6500 + Math.random()*2500;
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
         const startTime = performance.now();
 
-        lastTickSection = Math.floor(rotation/arc);
+        // Tick cadence uses an even arc — a believable peg click rate that's
+        // independent of the (possibly uneven) slice geometry.
+        const tickArc = TAU / names.length;
+        lastTickSection = Math.floor(rotation/tickArc);
 
         let boostTriggered = false;
 
@@ -1924,13 +2137,11 @@
             redraw();
 
             // Section tick sounds
-            if (names.length>0) {
-                const sectionIdx = Math.floor(rotation/arc);
-                if (sectionIdx !== lastTickSection) {
-                    const crossed = Math.abs(sectionIdx-lastTickSection);
-                    for (let i=0;i<Math.min(crossed,2);i++) playTick();
-                    lastTickSection = sectionIdx;
-                }
+            const sectionIdx = Math.floor(rotation/tickArc);
+            if (sectionIdx !== lastTickSection) {
+                const crossed = Math.abs(sectionIdx-lastTickSection);
+                for (let i=0;i<Math.min(crossed,2);i++) playTick();
+                lastTickSection = sectionIdx;
             }
 
             // PLOT TWIST — boost phase (only when active)
@@ -2158,9 +2369,11 @@
             const W=fireCanvas.width;
             spawnFlame(Math.random()*W, -(Math.random()*9+5), Math.random()*28+16);
         }
+        startFire();
     }
 
     function flashScreen() {
+        if (prefersReducedMotion()) return;   // skip the photosensitive luminance flash
         const el = document.createElement('div');
         el.style.cssText = 'position:fixed;inset:0;background:rgba(212,175,55,0.22);z-index:1500;pointer-events:none;opacity:1;transition:opacity 0.45s ease;';
         document.body.appendChild(el);
@@ -2179,6 +2392,7 @@
        Win
     ══════════════════════════════════════ */
     function onSpinEnd(winnerIdx) {
+        sliceWeights = null;                  // power-up sizing only lasts for its spin
         const c=sliceColor(winnerIdx), name=names[winnerIdx];
         winnerNameEl.textContent=name; winnerNameEl.style.color=c;
         winnerSubEl.textContent = CONGRATS[Math.floor(Math.random()*CONGRATS.length)];
@@ -2275,6 +2489,7 @@
     const optionsPanel = document.getElementById('optionsPanel');
     const riggedToggle = document.getElementById('riggedToggle');
     const noisToggle   = document.getElementById('noisToggle');
+    const powerUpToggle = document.getElementById('powerUpToggle');
 
     optionsBtn.addEventListener('click', () => {
         const open = optionsPanel.classList.toggle('open');
@@ -2289,6 +2504,12 @@
 
     plotTwistToggle.addEventListener('change', () => {
         plotTwistsEnabled = plotTwistToggle.checked;
+        saveState();
+    });
+
+    powerUpToggle.addEventListener('change', () => {
+        powerUpsEnabled = powerUpToggle.checked;
+        saveState();
     });
 
     noisToggle.addEventListener('change', () => {
@@ -2299,6 +2520,7 @@
     displaySlider.addEventListener('input', ()=>{
         displayDuration = parseFloat(displaySlider.value)*1000;
         displayValEl.textContent = displaySlider.value+'s';
+        saveState();
     });
 
     winnerSlotsInput.addEventListener('input', ()=>{
@@ -2317,8 +2539,14 @@
        Init
     ══════════════════════════════════════ */
     resizeFire(); resizeOverlay();
-    loadState(); noisToggle.checked = noisEnabled; renderList(); renderDraft(); updateButtons(); redraw();
-    fireLoop();
+    loadState();
+    noisToggle.checked      = noisEnabled;
+    powerUpToggle.checked    = powerUpsEnabled;
+    plotTwistToggle.checked  = plotTwistsEnabled;
+    displaySlider.value      = displayDuration / 1000;
+    displayDuration          = parseFloat(displaySlider.value) * 1000;   // honor step snapping
+    displayValEl.textContent = displaySlider.value + 's';
+    renderList(); renderDraft(); updateButtons(); redraw();
 </script>
 </body>
 </html>
