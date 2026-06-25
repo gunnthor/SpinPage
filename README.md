@@ -16,6 +16,7 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Undo, restore, clear, and copy** controls for managing draft results.
 - **Plot twists** where the wheel fakes a stop, then blasts back into motion.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds.
+- **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
 - **Illegal spin moments** with a stamped invalid result and retry.
 - **No One Is Safe wheel** that can randomly undraft a previous pick.
 - **Confetti, fire, fanfare, ticks, and impact sounds** using browser-native canvas and Web Audio APIs.
@@ -92,6 +93,9 @@ Edit `index.html`, refresh the browser, repeat.
 For a lightweight JavaScript syntax check, you can extract the inline script and run it through Node, or use your editor's HTML/JS validation.
 
 ## Roadmap Ideas
+
+See [TODO.md](TODO.md) for the running backlog (including the proposed multiplayer "host a room" feature).
+
 
 - Import/export name lists.
 - Shareable saved wheels.

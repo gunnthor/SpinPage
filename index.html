@@ -363,7 +363,7 @@
             transition: max-height 0.32s ease;
         }
 
-        .options-panel.open { max-height: 660px; }
+        .options-panel.open { max-height: 820px; }
 
         .options-inner {
             margin-top: 0.4rem;
@@ -765,6 +765,97 @@
             text-shadow: 0 0 24px rgba(255,107,107,0.7);
         }
 
+        /* ── Marble race (PANIC) ── */
+
+        .marble-overlay {
+            position: fixed; inset: 0;
+            background: rgba(16,0,26,0.95);
+            backdrop-filter: blur(10px);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 0.8rem;
+            z-index: 1850; opacity: 0; pointer-events: none; transition: opacity 0.4s;
+            padding: 1rem;
+        }
+
+        .marble-overlay.show { opacity: 1; pointer-events: all; }
+
+        .marble-title {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 2.3rem; font-weight: 900;
+            letter-spacing: 0.16em; text-transform: uppercase;
+            background: linear-gradient(to bottom, #ff8080, #c0392b, #7b1c1c);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            animation: nois-flicker 1.4s ease-in-out infinite alternate;
+        }
+
+        .marble-subtitle {
+            font-size: 0.7rem; letter-spacing: 0.16em; text-transform: uppercase; color: #c98fb0;
+        }
+
+        .marble-stage {
+            display: flex; gap: 1rem; align-items: stretch;
+            filter: drop-shadow(0 0 28px rgba(192,57,43,0.35)) drop-shadow(0 16px 36px rgba(0,0,0,0.8));
+        }
+
+        #marbleCanvas {
+            background: linear-gradient(180deg, #0e0a1c, #08060f);
+            border: 1px solid #3a1a4a; border-radius: 12px;
+            max-width: 100%; height: auto;
+        }
+
+        .marble-board {
+            width: 184px; max-height: 560px; overflow-y: auto;
+            background: #140a1e; border: 1px solid #3a1a4a; border-radius: 12px;
+            padding: 0.7rem 0.8rem;
+        }
+
+        .marble-board::-webkit-scrollbar { width: 4px; }
+        .marble-board::-webkit-scrollbar-thumb { background: #3a1a4a; border-radius: 4px; }
+
+        .marble-board-title {
+            font-size: 0.54rem; font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase;
+            color: #c98fb0; margin-bottom: 0.5rem;
+        }
+
+        .marble-rank-list { list-style: none; display: flex; flex-direction: column; gap: 0.28rem; }
+
+        .marble-rank-item {
+            display: flex; align-items: center; gap: 0.5rem;
+            font-size: 0.78rem; color: #e8dfc8;
+            padding: 0.24rem 0.4rem; border-radius: 6px;
+            border-left: 3px solid var(--mc, #d4af37);
+            background: #1c0f28;
+            animation: popIn 0.25s ease;
+        }
+
+        .marble-rank-item.safe { box-shadow: inset 0 0 0 1px rgba(46,204,113,0.35); }
+        .marble-rank-item.out  { opacity: 0.5; }
+        .marble-rank-num  { font-weight: 900; color: #9b8d68; min-width: 1.3rem; text-align: right; }
+        .marble-rank-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .marble-rank-tag  { font-size: 0.52rem; font-weight: 900; letter-spacing: 0.1em; text-transform: uppercase; }
+        .marble-rank-item.safe .marble-rank-tag { color: #2ecc71; }
+        .marble-rank-item.out  .marble-rank-tag { color: #ff6b6b; }
+
+        .marble-cutoff {
+            text-align: center; font-size: 0.52rem; font-weight: 900; letter-spacing: 0.16em;
+            text-transform: uppercase; color: #ff6b6b; margin: 0.25rem 0;
+            border-top: 1px dashed rgba(192,57,43,0.5); padding-top: 0.32rem;
+        }
+
+        .marble-result {
+            font-family: 'Palatino Linotype', Palatino, Georgia, serif;
+            font-size: 1.2rem; font-weight: 700; letter-spacing: 0.04em;
+            color: #ff6b6b; min-height: 1.6rem; text-align: center;
+            text-shadow: 0 0 20px rgba(255,107,107,0.6);
+        }
+
+        @media (max-width: 700px) {
+            .marble-stage { flex-direction: column; align-items: center; }
+            #marbleCanvas { width: min(388px, 86vw); }
+            .marble-board { width: min(388px, 86vw); max-height: 160px; }
+            .marble-title { font-size: 1.7rem; }
+        }
+
         /* ── Draft ── */
 
         .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
@@ -995,9 +1086,14 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
+                        <div class="option-desc">Auto · ~2s under 5 players, shorter as the table grows</div>
                     </div>
-                    <div class="display-row" style="flex-shrink:0">
-                        <input type="range" id="displaySlider" min="1" max="6" step="0.5" value="2.8">
+                    <label class="toggle-switch" title="Auto-scale winner display by player count">
+                        <input type="checkbox" id="autoDisplayToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                    <div class="display-row" id="displayManual" style="flex-shrink:0;display:none">
+                        <input type="range" id="displaySlider" min="0.5" max="6" step="0.5" value="2.8">
                         <span class="display-val" id="displayVal">2.8s</span>
                     </div>
                 </div>
@@ -1011,7 +1107,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Plot Twists</div>
-                        <div class="option-desc">20% chance the wheel fakes a stop then rockets back to speed</div>
+                        <div class="option-desc">20% chance the wheel fakes a stop, then whips backwards before landing</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="plotTwistToggle" checked>
@@ -1031,10 +1127,20 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">No One Is Safe</div>
-                        <div class="option-desc">25% chance a new pick steals a drafted player's seat</div>
+                        <div class="option-desc">15% chance a new pick steals a drafted player's seat</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="noisToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Panic Slice</div>
+                        <div class="option-desc">Adds a ⚠ PANIC wedge once 2+ are drafted — landing it starts a horse race where only half survive</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="panicToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -1120,6 +1226,7 @@
             <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
             <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds.</li>
+            <li>Hides a ⚠ PANIC wedge that launches a horse race where only half the drafted survive.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
 
@@ -1141,6 +1248,19 @@
         <canvas id="noisWheel" width="380" height="380"></canvas>
     </div>
     <div class="nois-result" id="noisResult"></div>
+</div>
+
+<div class="marble-overlay" id="marbleOverlay">
+    <div class="marble-title">⚠ Panic ⚠</div>
+    <div class="marble-subtitle" id="marbleSubtitle">Only half survive the horse race</div>
+    <div class="marble-stage">
+        <canvas id="marbleCanvas" width="388" height="560"></canvas>
+        <div class="marble-board">
+            <div class="marble-board-title">Finish order</div>
+            <ol class="marble-rank-list" id="marbleRankList"></ol>
+        </div>
+    </div>
+    <div class="marble-result" id="marbleResult"></div>
 </div>
 
 <div class="devil-popup" id="devilPopup">
@@ -1187,6 +1307,17 @@
     const aboutClose    = document.getElementById('aboutClose');
     const displaySlider = document.getElementById('displaySlider');
     const displayValEl  = document.getElementById('displayVal');
+    const displayManual = document.getElementById('displayManual');
+    const autoDisplayToggle = document.getElementById('autoDisplayToggle');
+
+    // Winner overlay duration: linger (~2s) for small tables, snappier as the
+    // roster grows so big autospun drafts don't drag.
+    function winnerDisplayMs() {
+        if (!autoDisplay) return displayDuration;
+        const total = totalEntrants();
+        if (total < 5) return 2000;
+        return Math.max(600, Math.round(2000 - (total - 4) * 100));
+    }
     const winnerSlotsInput = document.getElementById('winnerSlotsInput');
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerNameEl  = document.getElementById('winnerName');
@@ -1319,6 +1450,7 @@
     let isBusy          = false;
     let autoSpin        = false;
     let displayDuration = 2800;
+    let autoDisplay     = true;     // auto-scale winner display by table size
     let winnerSlots     = 1;
     let lastTickSection     = -1;
     let plotTwistsEnabled   = true;
@@ -1326,13 +1458,40 @@
     let riggedEnabled       = false;
     let riggedValue         = '';     // name/prefix the rigged mode forces to win
     let powerUpsEnabled     = true;
+    let panicEnabled        = true;
+    let panicCooldown       = false;  // blocks PANIC from landing two spins in a row
     let sliceWeights        = null;   // per-spin slice multipliers (null = all equal)
+    let nameColors          = {};     // lowercased name -> stable color (consistent everywhere)
 
     const POWERUPS = [
         { type: 'hotseat',  label: 'Hot Seat', emoji: '🔥', factor: 3.0,  color: '#f5a623' },
         { type: 'cursed',   label: 'Cursed',   emoji: '💀', factor: 0.25, color: '#9b59b6' },
         { type: 'wildcard', label: 'Wildcard', emoji: '🎲',               color: '#1abc9c' },
     ];
+
+    // The PANIC wedge is a non-player slice: landing on it starts the horse race
+    // instead of picking a winner. It only appears once 2+ players are drafted.
+    const PANIC = { label: 'PANIC', color: '#2a0a3a', textColor: '#ff5c8a', weight: 0.8 };
+    function panicSliceActive() { return panicEnabled && draftOrder.length >= 2 && !panicCooldown; }
+
+    // The wheel's drawable slices = players (+ the PANIC wedge when active).
+    // baseWeights is a players-length array (equal, or the current power-up sizing).
+    function buildSegments(baseWeights) {
+        const labels  = names.slice();
+        const colors  = names.map(n => colorOf(n));
+        const weights = baseWeights.slice();
+        let panicIndex = -1;
+        if (panicSliceActive()) {
+            // Cap so the PANIC wedge is never more than 1/4 of the whole wheel:
+            // panicW / (playerSum + panicW) <= 0.25  ⇒  panicW <= playerSum / 3.
+            const playerSum = weights.reduce((a, b) => a + b, 0) || 1;
+            panicIndex = labels.length;
+            labels.push(PANIC.label);
+            colors.push(PANIC.color);
+            weights.push(Math.min(PANIC.weight, playerSum / 3));
+        }
+        return { labels, colors, weights, panicIndex };
+    }
 
     const prefersReducedMotion = () =>
         !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -1345,6 +1504,14 @@
 
     function sliceColor(i) { return PALETTE[i % PALETTE.length]; }
     function ordinal(n) { const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
+
+    // A player keeps one stable color for the whole session — assigned on first
+    // sight and reused on the wheel, draft cards, the NOIS wheel, and the horse race.
+    function colorOf(name) {
+        const key = name.trim().toLowerCase();
+        if (!nameColors[key]) nameColors[key] = PALETTE[Object.keys(nameColors).length % PALETTE.length];
+        return nameColors[key];
+    }
 
     // Current slice multipliers, or all-equal. The length guard makes a stale
     // array (after names change) fall back to equal sizes — no index desync.
@@ -1489,8 +1656,8 @@
     ══════════════════════════════════════ */
     function saveState() {
         try { localStorage.setItem('spinpage', JSON.stringify({
-            names, draftOrder, undoStack, winnerSlots,
-            noisEnabled, powerUpsEnabled, plotTwistsEnabled, displayDuration, riggedValue
+            names, draftOrder, undoStack, winnerSlots, nameColors,
+            noisEnabled, powerUpsEnabled, panicEnabled, plotTwistsEnabled, displayDuration, autoDisplay, riggedValue
         })); } catch(e) {}
     }
 
@@ -1504,9 +1671,17 @@
                 winnerSlots = normalizeWinnerSlots(s.winnerSlots);
                 if (typeof s.noisEnabled === 'boolean') noisEnabled = s.noisEnabled;
                 if (typeof s.powerUpsEnabled === 'boolean') powerUpsEnabled = s.powerUpsEnabled;
+                if (typeof s.panicEnabled === 'boolean') panicEnabled = s.panicEnabled;
                 if (typeof s.plotTwistsEnabled === 'boolean') plotTwistsEnabled = s.plotTwistsEnabled;
-                if (typeof s.displayDuration === 'number' && s.displayDuration >= 1000 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
+                if (typeof s.displayDuration === 'number' && s.displayDuration >= 500 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
+                if (typeof s.autoDisplay === 'boolean') autoDisplay = s.autoDisplay;
                 if (typeof s.riggedValue === 'string') riggedValue = s.riggedValue;
+                if (s.nameColors && typeof s.nameColors === 'object') nameColors = s.nameColors;
+                // Re-sync stable colors: current wheel names first, then drafted picks,
+                // so old/positional pick colors are migrated to the consistent scheme.
+                names.forEach(colorOf);
+                draftOrder.forEach(p => { p.color = colorOf(p.name); });
+                undoStack.forEach(p => { p.color = colorOf(p.name); });
             }
         } catch(e) {}
     }
@@ -1837,7 +2012,7 @@
             nameListEl.appendChild(li);
         } else {
             names.forEach((name,i)=>{
-                const li=document.createElement('li'); li.className='name-item'; li.style.setProperty('--accent',sliceColor(i));
+                const li=document.createElement('li'); li.className='name-item'; li.style.setProperty('--accent',colorOf(name));
                 const txt=document.createElement('span'); txt.className='name-text'; txt.textContent=name;
                 const btn=document.createElement('button'); btn.className='remove-btn'; btn.textContent='×'; btn.dataset.index=i; btn.title='Remove';
                 li.append(txt,btn); nameListEl.appendChild(li);
@@ -1945,13 +2120,16 @@
             ctx.fillText('A duel needs two names to spin',cx,cy+16);
             return;
         }
-        const weights = getWeights();
+        const seg     = buildSegments(getWeights());
+        const weights = seg.weights;
+        const count   = seg.labels.length;
         const totalW  = weights.reduce((a,b)=>a+b,0) || 1;
         const TAU     = 2*Math.PI;
         const base    = rotation - Math.PI/2;
         let   acc     = 0;
         const starts  = [];                       // local start offset per slice, for divider lines
-        for (let i=0;i<names.length;i++) {
+        for (let i=0;i<count;i++) {
+            const isPanic = i === seg.panicIndex;
             const a0 = (acc/totalW)*TAU;
             acc += weights[i];
             const a1 = (acc/totalW)*TAU;
@@ -1959,7 +2137,7 @@
             const sliceAng = a1 - a0;
             const start=base+a0, end=base+a1, mid=(start+end)/2;
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
-            ctx.fillStyle=sliceColor(i); ctx.fill();
+            ctx.fillStyle=seg.colors[i]; ctx.fill();
             if (!isSpinning) {
                 const shine=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
                 shine.addColorStop(0,'rgba(255,255,255,0.10)'); shine.addColorStop(0.55,'rgba(255,255,255,0.03)'); shine.addColorStop(1,'rgba(0,0,0,0.25)');
@@ -1968,21 +2146,21 @@
             }
             if (sliceAng > 0.13) {                 // skip labels on ultra-thin (cursed) slices
                 ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
-                const fs=names.length>14?10:names.length>9?12:names.length>5?14:16;
-                ctx.font=`700 ${fs}px Segoe UI,system-ui,sans-serif`;
+                const fs=isPanic?15:count>14?10:count>9?12:count>5?14:16;
+                ctx.font=`${isPanic?900:700} ${fs}px Segoe UI,system-ui,sans-serif`;
                 ctx.textAlign='center'; ctx.textBaseline='middle';
-                ctx.fillStyle='rgba(255,255,255,0.95)';
-                ctx.shadowColor='rgba(0,0,0,0.5)';
-                ctx.shadowBlur=2;
+                ctx.fillStyle = isPanic ? PANIC.textColor : 'rgba(255,255,255,0.95)';
+                ctx.shadowColor= isPanic ? 'rgba(255,92,138,0.7)' : 'rgba(0,0,0,0.5)';
+                ctx.shadowBlur = isPanic ? 8 : 2;
                 ctx.shadowOffsetY=1;
-                let label=names[i];
+                let label=seg.labels[i];
                 const maxW=R*0.52;
                 while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
-                if(label!==names[i]) label+='…';
-                ctx.fillText(label,R*0.62,0); ctx.restore();
+                if(label!==seg.labels[i]) label+='…';
+                ctx.fillText(isPanic ? '⚠ '+label : label,R*0.62,0); ctx.restore();
             }
         }
-        for (let i=0;i<names.length;i++) {
+        for (let i=0;i<count;i++) {
             const angle=base+starts[i];
             ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(angle)*R,cy+Math.sin(angle)*R);
             ctx.strokeStyle='rgba(212,175,55,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
@@ -2009,34 +2187,27 @@
     function redraw() { drawWheel(); drawPointer(); }
 
     /* ══════════════════════════════════════
-       Plot-twist easing
+       Plot-twist easing — the REVERSE twist
        ─────────────────────────────────────
-       t 0.00→0.36 : fast initial spin    (61% of totalRot)
-       t 0.36→0.53 : FAKE slowdown         (0.5% — nearly stopped)
-       t 0.53→0.71 : BOOST — sudden blast  (20.5%)
-       t 0.71→1.00 : final deceleration    (18%)
+       t 0.00→0.30 : fast forward spin            (→ 72% of totalRot)
+       t 0.30→0.40 : FAKE slowdown (nearly stops)
+       t 0.40→0.68 : REVERSE — wheel whips backwards (un-spins ~43%)
+       t 0.68→1.00 : settle forwards onto the winner, decelerating
+       The net rotation still ends exactly on target, so only the route
+       reverses — the landing slice is unchanged.
     ══════════════════════════════════════ */
     function dramaticEase(t) {
-        // Phase 1 (0→0.38):  fast spin,  quartic ease-out           → 60% of rotation
-        // Phase 2 (0.38→0.56): fake stop, barely moves              →  0.5%
-        // Phase 3 (0.56→0.70): boost,    pure cubic ease-IN         → 18.5%
-        //   easeIn means velocity is 0 at start (matches fake-stop)
-        //   and ramps to max by end — no mid-boost deceleration
-        // Phase 4 (0.70→1.0):  final crawl, degree-7 ease-out       → 21%
-        function eOut4(u) { return 1-Math.pow(1-u,4); }
-        function eIn3(u)  { return u*u*u; }
+        function eOut(u, p) { return 1 - Math.pow(1 - u, p); }
+        function smooth(u)  { return u * u * (3 - 2 * u); }   // ease in-out
 
-        if (t < 0.38) {
-            return eOut4(t/0.38) * 0.60;
-        } else if (t < 0.56) {
-            const u=(t-0.38)/0.18;
-            return 0.60 + eOut4(u)*0.005;
-        } else if (t < 0.70) {
-            const u=(t-0.56)/0.14;
-            return 0.605 + eIn3(u)*0.185;
-        } else {
-            const u=(t-0.70)/0.30;
-            return 0.79 + (1-Math.pow(1-u,7))*0.21;
+        if (t < 0.30) {            // forward burst
+            return eOut(t / 0.30, 4) * 0.72;
+        } else if (t < 0.40) {     // fake stop — barely moves
+            return 0.72 + eOut((t - 0.30) / 0.10, 2) * 0.01;
+        } else if (t < 0.68) {     // REVERSE — spin backwards
+            return 0.73 - smooth((t - 0.40) / 0.28) * 0.43;
+        } else {                   // settle forwards onto the winner, decelerating
+            return 0.30 + eOut((t - 0.68) / 0.32, 6) * 0.70;
         }
     }
 
@@ -2128,19 +2299,22 @@
 
     function startSpin(spinWeights) {
         const TAU    = 2 * Math.PI;
-        const totalW = spinWeights.reduce((a, b) => a + b, 0) || 1;
+        const seg    = buildSegments(spinWeights);   // players (+ PANIC wedge when active)
+        const segW   = seg.weights;
+        const totalW = segW.reduce((a, b) => a + b, 0) || 1;
 
         const riggedKey = riggedValue.trim().toLowerCase();
         const riggedIdx = (riggedEnabled && riggedKey)
             ? names.findIndex(n => n.toLowerCase().startsWith(riggedKey))
             : -1;
-        const winnerIdx = riggedIdx >= 0 ? riggedIdx : weightedPick(spinWeights);
+        // Rigged always forces a player; otherwise any segment can win — including PANIC.
+        const winnerIdx = riggedIdx >= 0 ? riggedIdx : weightedPick(segW);
 
-        // Land somewhere inside the winner's slice (kept clear of the edges so a
+        // Land somewhere inside the winning slice (kept clear of the edges so a
         // thin cursed slice still lands cleanly under the pointer).
         let before = 0;
-        for (let i = 0; i < winnerIdx; i++) before += spinWeights[i];
-        const sliceArc     = (spinWeights[winnerIdx] / totalW) * TAU;
+        for (let i = 0; i < winnerIdx; i++) before += segW[i];
+        const sliceArc     = (segW[winnerIdx] / totalW) * TAU;
         const landingPos   = 0.12 + Math.random() * 0.76;
         const winnerOffset = (before / totalW) * TAU + landingPos * sliceArc;
         const targetNorm   = ((TAU - winnerOffset % TAU) + TAU) % TAU;
@@ -2162,14 +2336,15 @@
 
         // Tick cadence uses an even arc — a believable peg click rate that's
         // independent of the (possibly uneven) slice geometry.
-        const tickArc = TAU / names.length;
+        const tickArc = TAU / seg.labels.length;
         lastTickSection = Math.floor(rotation/tickArc);
 
         let boostTriggered = false;
 
-        // Degree-7 ease-out: rockets fast, then spends the last ~35% of time
-        // barely moving — wheel visibly creeps to a stop section by section
-        function easeOut(t) { return 1-Math.pow(1-t,7); }
+        // Fast launch, then a long GENTLE glide: the wheel keeps visibly ticking
+        // through the final slices well into the back half and the deceleration
+        // eases off near the end (the last ~20% lands slowly) for maximum suspense.
+        function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
 
         function frame(now) {
             const t = Math.min((now-startTime)/duration, 1);
@@ -2185,7 +2360,7 @@
             }
 
             // PLOT TWIST — boost phase (only when active)
-            if (plotTwist && !boostTriggered && t>=0.53) {
+            if (plotTwist && !boostTriggered && t>=0.40) {
                 boostTriggered = true;
                 triggerBoost();
             }
@@ -2194,7 +2369,9 @@
                 requestAnimationFrame(frame);
             } else {
                 rotation = endRot; redraw();
-                if (isIllegal) { showIllegalStamp(); } else { onSpinEnd(winnerIdx); }
+                if (isIllegal) { showIllegalStamp(); }
+                else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
+                else { onSpinEnd(winnerIdx); }
             }
         }
 
@@ -2298,7 +2475,8 @@
             const startTime  = performance.now();
             let noisLastTick = Math.floor(noisRotation/arc);
 
-            function easeOut(t) { return 1-Math.pow(1-t,7); }
+            // Same gentle final glide as the main wheel for a suspenseful finish.
+            function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
 
             function frame(now) {
                 const t = Math.min((now-startTime)/duration, 1);
@@ -2343,6 +2521,258 @@
 
             requestAnimationFrame(frame);
         }, 900);
+    }
+
+    /* ══════════════════════════════════════
+       Marble race (PANIC slice)
+       ─────────────────────────────────────
+       Every drafted name becomes a marble dropped down a peg board. The first
+       floor(n/2) to cross the finish are SAFE; the rest are undrafted back onto
+       the wheel. Order is emergent from the physics — no rigging.
+    ══════════════════════════════════════ */
+    const marbleOverlay  = document.getElementById('marbleOverlay');
+    const marbleCanvas   = document.getElementById('marbleCanvas');
+    const mctx           = marbleCanvas.getContext('2d');
+    const marbleRankList = document.getElementById('marbleRankList');
+    const marbleResultEl = document.getElementById('marbleResult');
+    const marbleSubtitle = document.getElementById('marbleSubtitle');
+    const marbleBoard    = marbleRankList.parentElement;
+
+    const CANVAS_W = marbleCanvas.width;          // 388 — lanes use the full width
+    const MH = marbleCanvas.height;               // 560
+    const SPRINT_PAD_L = 102, SPRINT_PAD_R = 24;  // left name column + right margin
+    const TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
+    const SPRINT_BASE = 0.00075;                  // tuned: majority-safe quota fills in ~12-19s
+
+    function onPanicLanded() {
+        sliceWeights = null;
+        panicCooldown = true;       // no PANIC again until the next non-panic spin
+        isSpinning = false;
+        isBusy = true;              // block input through the whole event
+        redraw();
+        updateButtons();
+        playPanicSound();
+        setTimeout(startMarbleRace, 650);
+    }
+
+    function playPanicSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        for (let k = 0; k < 2; k++) {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(440, now + k * 0.24);
+            o.frequency.linearRampToValueAtTime(650, now + k * 0.24 + 0.12);
+            o.frequency.linearRampToValueAtTime(440, now + k * 0.24 + 0.24);
+            g.gain.setValueAtTime(0.0001, now + k * 0.24);
+            g.gain.linearRampToValueAtTime(0.3, now + k * 0.24 + 0.03);
+            g.gain.exponentialRampToValueAtTime(0.001, now + k * 0.24 + 0.22);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(now + k * 0.24); o.stop(now + k * 0.24 + 0.26);
+        }
+    }
+
+    function playFinishPing() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
+        g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.22, now + 0.015); g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+        o.connect(g); g.connect(audioCtx.destination); o.start(now); o.stop(now + 0.22);
+    }
+
+    function mRoundRect(x, y, w, h, r) {
+        mctx.beginPath();
+        mctx.moveTo(x + r, y);
+        mctx.arcTo(x + w, y, x + w, y + h, r); mctx.arcTo(x + w, y + h, x, y + h, r);
+        mctx.arcTo(x, y + h, x, y, r);         mctx.arcTo(x, y, x + w, y, r);
+        mctx.closePath();
+    }
+
+    // Sprint race: lanes drawn from scripted progress (r.p in 0..1). No physics,
+    // so runners always advance and always finish — nothing can stall or shaft.
+    function drawSprint(runners, safeCount) {
+        const n = runners.length;
+        const laneTop = 16, laneH = (MH - 32) / n;
+        const trackLen = FINISH_X - TRACK_X0;
+
+        const bg = mctx.createLinearGradient(0, 0, 0, MH);
+        bg.addColorStop(0, '#0c0716'); bg.addColorStop(1, '#1a0f2a');
+        mctx.fillStyle = bg; mctx.fillRect(0, 0, CANVAS_W, MH);
+
+        // checkered finish line + glow band
+        for (let yy = 0; yy < MH; yy += 10) {
+            mctx.fillStyle = (Math.floor(yy / 10) % 2) ? '#e8e8e8' : '#15151c';
+            mctx.fillRect(FINISH_X, yy, 6, 10);
+        }
+        mctx.fillStyle = 'rgba(46,204,113,0.10)';
+        mctx.fillRect(FINISH_X + 6, 0, CANVAS_W - FINISH_X - 6, MH);
+
+        for (let i = 0; i < n; i++) {
+            const r = runners[i];
+            const yc = laneTop + (i + 0.5) * laneH;
+            const hs = Math.max(15, Math.min(laneH * 0.85, 32));   // horse sprite size
+
+            // lane guide
+            mctx.strokeStyle = 'rgba(168,111,207,0.12)'; mctx.lineWidth = 1;
+            mctx.beginPath(); mctx.moveTo(TRACK_X0, yc); mctx.lineTo(FINISH_X, yc); mctx.stroke();
+
+            // pinned name chip on the left
+            const chipH = Math.min(16, laneH - 3);
+            const nm = r.pick.name.length > 11 ? r.pick.name.slice(0, 10) + '…' : r.pick.name;
+            mctx.fillStyle = 'rgba(8,4,16,0.7)';
+            mRoundRect(6, yc - chipH / 2, TRACK_X0 - 14, chipH, 4); mctx.fill();
+            mctx.strokeStyle = r.color; mctx.lineWidth = 1.5; mctx.stroke();
+            mctx.fillStyle = '#e8dfc8'; mctx.font = '700 10px Segoe UI,system-ui,sans-serif';
+            mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
+            mctx.fillText(nm, 12, yc + 0.5);
+
+            const ox = TRACK_X0 + Math.min(1, r.p) * trackLen;
+
+            // dust trail behind the horse
+            const grd = mctx.createLinearGradient(ox - 30, 0, ox, 0);
+            grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, r.color);
+            mctx.strokeStyle = grd; mctx.globalAlpha = 0.45; mctx.lineWidth = hs * 0.3;
+            mctx.beginPath(); mctx.moveTo(Math.max(TRACK_X0, ox - 30), yc + hs * 0.2); mctx.lineTo(ox, yc + hs * 0.2); mctx.stroke();
+            mctx.globalAlpha = 1;
+
+            // colored glow under the horse (player ID)
+            const glow = mctx.createRadialGradient(ox, yc, 1, ox, yc, hs * 0.6);
+            glow.addColorStop(0, r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
+            mctx.globalAlpha = r.finished ? 0.55 : 0.4;
+            mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
+            mctx.globalAlpha = 1;
+
+            // horse sprite — flipped to gallop toward the finish (right)
+            mctx.save();
+            mctx.translate(ox, yc); mctx.scale(-1, 1);
+            mctx.font = `${Math.round(hs)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
+            mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+            mctx.fillText('🐎', 0, 0);
+            mctx.restore();
+
+            // rank badge for safe finishers
+            if (r.finished && r.safeRank) {
+                const bx = ox + hs * 0.42, byc = yc - hs * 0.42;
+                mctx.fillStyle = '#1e8449'; mctx.beginPath(); mctx.arc(bx, byc, 7, 0, 2 * Math.PI); mctx.fill();
+                mctx.strokeStyle = '#fff'; mctx.lineWidth = 1; mctx.stroke();
+                mctx.fillStyle = '#fff'; mctx.font = '900 9px Segoe UI,system-ui,sans-serif';
+                mctx.textAlign = 'center'; mctx.textBaseline = 'middle'; mctx.fillText(r.safeRank, bx, byc + 0.5);
+            }
+        }
+
+        // vertical FINISH label up the right edge
+        mctx.save();
+        mctx.translate(FINISH_X + 16, MH - 8); mctx.rotate(-Math.PI / 2);
+        mctx.fillStyle = 'rgba(46,204,113,0.85)'; mctx.font = '800 11px Segoe UI,system-ui,sans-serif';
+        mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
+        mctx.fillText('FINISH', 0, 0); mctx.restore();
+    }
+
+    function addMarbleRankRow(m, rank, isSafe, safeCount) {
+        if (rank === safeCount + 1) {
+            const cut = document.createElement('div');
+            cut.className = 'marble-cutoff';
+            cut.textContent = '— safe cutoff —';
+            marbleRankList.appendChild(cut);
+        }
+        const li = document.createElement('li');
+        li.className = 'marble-rank-item ' + (isSafe ? 'safe' : 'out');
+        li.style.setProperty('--mc', m.color);
+        const num = document.createElement('span'); num.className = 'marble-rank-num'; num.textContent = rank;
+        const nm  = document.createElement('span'); nm.className = 'marble-rank-name'; nm.textContent = m.pick.name;
+        const tag = document.createElement('span'); tag.className = 'marble-rank-tag'; tag.textContent = isSafe ? 'Safe' : 'Out';
+        li.append(num, nm, tag);
+        marbleRankList.appendChild(li);
+        marbleBoard.scrollTop = marbleBoard.scrollHeight;
+    }
+
+    function startMarbleRace() {
+        const racers = draftOrder.slice();
+        if (racers.length < 2) { endMarbleRace(); return; }
+        // Majority always survives: only ceil(n/2)-1 (min 1) are at risk of dropping.
+        const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
+        const safeCount = racers.length - outCount;
+
+        marbleRankList.innerHTML = '';
+        marbleResultEl.textContent = '';
+        marbleSubtitle.textContent = `${racers.length} running — first ${safeCount} across are safe, last ${outCount} drop out`;
+        marbleOverlay.classList.add('show');
+
+        // Each runner advances by a scripted, always-positive amount whose "form"
+        // drifts (plus random surges) — that's what creates lead changes.
+        const runners = racers.map(pick => ({
+            pick, color: pick.color,
+            p: 0, form: (Math.random() - 0.5) * 0.3,
+            talent: 0.82 + Math.random() * 0.36,        // fixed speed edge → a real field spread
+            finished: false, safeRank: null,
+        }));
+
+        let frames = 0, lastTick = 0;
+        const MAXF = 1800;                  // ~30s hard cap (races naturally end ~13-20s)
+        const safe = [];                    // runners that claimed a SAFE spot, in finish order
+
+        // Decided the instant the safe quota fills — everyone still running is OUT.
+        function finishRace() {
+            const rest = runners.filter(r => !safe.includes(r)).sort((a, b) => b.p - a.p);
+            while (safe.length < safeCount && rest.length) {      // rare failsafe
+                const r = rest.shift(); safe.push(r); r.safeRank = safe.length;
+                addMarbleRankRow(r, safe.length, true, safeCount);
+            }
+            rest.forEach((r, i) => addMarbleRankRow(r, safeCount + 1 + i, false, safeCount));
+            drawSprint(runners, safeCount);
+            setTimeout(() => resolveMarbleRace(safe.map(r => r.pick), rest.map(r => r.pick)), 1100);
+        }
+
+        function frame(now) {
+            frames++;
+            for (const r of runners) {
+                if (r.finished) continue;
+                r.form += (Math.random() - 0.5) * 0.05;
+                if (Math.random() < 0.012) r.form += Math.random() * 0.5;   // a sudden surge
+                r.form = Math.max(-0.55, Math.min(0.9, r.form));
+                r.p += SPRINT_BASE * r.talent * (1 + r.form);               // always > 0
+                if (r.p >= 1) {
+                    r.p = 1; r.finished = true;
+                    if (safe.length < safeCount) {                          // grabbed a safe spot
+                        safe.push(r); r.safeRank = safe.length;
+                        addMarbleRankRow(r, safe.length, true, safeCount);
+                        playFinishPing();
+                    }
+                }
+            }
+            if (now - lastTick > 130) { playTick(); lastTick = now; }
+            drawSprint(runners, safeCount);
+
+            if (safe.length >= safeCount || frames >= MAXF) { finishRace(); return; }
+            requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+    }
+
+    function resolveMarbleRace(safe, doomed) {
+        marbleResultEl.textContent = doomed.length
+            ? `${doomed.length} undrafted! ${safe.length} survive the panic.`
+            : 'Everyone survived!';
+        playFanfare();
+
+        setTimeout(() => {
+            doomed.forEach(pick => {
+                const di = draftOrder.findIndex(p => p.name === pick.name);
+                if (di >= 0) draftOrder.splice(di, 1);
+                const ui = undoStack.findIndex(p => p.name === pick.name);
+                if (ui >= 0) undoStack.splice(ui, 1);
+                if (!names.some(n => n.toLowerCase() === pick.name.toLowerCase())) names.push(pick.name);
+            });
+            endMarbleRace();
+        }, 1900);
+    }
+
+    function endMarbleRace() {
+        marbleOverlay.classList.remove('show');
+        isBusy = false;
+        if (names.length < 2 && autoSpin) setAutoSpin(false);
+        renderList(); renderDraft(); redraw(); saveState(); updateButtons();
+        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
     }
 
     /* ── Draft complete splash ── */
@@ -2433,7 +2863,8 @@
     ══════════════════════════════════════ */
     function onSpinEnd(winnerIdx) {
         sliceWeights = null;                  // power-up sizing only lasts for its spin
-        const c=sliceColor(winnerIdx), name=names[winnerIdx];
+        panicCooldown = false;                // a normal pick clears the no-back-to-back-PANIC lock
+        const name=names[winnerIdx], c=colorOf(name);
         winnerNameEl.textContent=name; winnerNameEl.style.color=c;
         winnerSubEl.textContent = CONGRATS[Math.floor(Math.random()*CONGRATS.length)];
         winnerCard.style.setProperty('--win-color',c);
@@ -2450,7 +2881,7 @@
                 isSpinning=false;
                 const hasNames=names.length>0;
                 // 25% chance of "No one is safe" — needs an existing drafted seat to replace
-                const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < 0.25;
+                const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < 0.15;
 
                 if (triggerNois) {
                     isBusy = true;
@@ -2464,7 +2895,7 @@
                     undoStack.push(selectedPick);
                     draftOrder.push(selectedPick);
                     if (names.length === 1) {
-                        const finalName = names[0], finalColor = sliceColor(0);
+                        const finalName = names[0], finalColor = colorOf(finalName);
                         undoStack.push({name: finalName, color: finalColor});
                         draftOrder.push({name: finalName, color: finalColor});
                         names.splice(0,1);
@@ -2479,7 +2910,7 @@
                     }
                 }
             },380);
-        }, displayDuration);
+        }, winnerDisplayMs());
     }
 
     /* ══════════════════════════════════════
@@ -2504,7 +2935,7 @@
     ══════════════════════════════════════ */
     resetBtn.addEventListener('click', ()=>{
         if(isSpinning || isBusy) return;
-        names=[]; draftOrder=[]; undoStack=[]; rotation=0;
+        names=[]; draftOrder=[]; undoStack=[]; rotation=0; nameColors={};
         setAutoSpin(false); renderList(); renderDraft(); redraw(); saveState();
     });
 
@@ -2531,6 +2962,7 @@
     const riggedInput  = document.getElementById('riggedInput');
     const noisToggle   = document.getElementById('noisToggle');
     const powerUpToggle = document.getElementById('powerUpToggle');
+    const panicToggle  = document.getElementById('panicToggle');
 
     optionsBtn.addEventListener('click', () => {
         const open = optionsPanel.classList.toggle('open');
@@ -2560,8 +2992,20 @@
         saveState();
     });
 
+    panicToggle.addEventListener('change', () => {
+        panicEnabled = panicToggle.checked;
+        saveState();
+        redraw();   // show/hide the PANIC wedge immediately
+    });
+
     noisToggle.addEventListener('change', () => {
         noisEnabled = noisToggle.checked;
+        saveState();
+    });
+
+    autoDisplayToggle.addEventListener('change', ()=>{
+        autoDisplay = autoDisplayToggle.checked;
+        displayManual.style.display = autoDisplay ? 'none' : 'flex';
         saveState();
     });
 
@@ -2590,11 +3034,14 @@
     loadState();
     noisToggle.checked      = noisEnabled;
     powerUpToggle.checked    = powerUpsEnabled;
+    panicToggle.checked      = panicEnabled;
     plotTwistToggle.checked  = plotTwistsEnabled;
     riggedInput.value        = riggedValue;
     displaySlider.value      = displayDuration / 1000;
     displayDuration          = parseFloat(displaySlider.value) * 1000;   // honor step snapping
     displayValEl.textContent = displaySlider.value + 's';
+    autoDisplayToggle.checked = autoDisplay;
+    displayManual.style.display = autoDisplay ? 'none' : 'flex';
     renderList(); renderDraft(); updateButtons(); redraw();
 </script>
 </body>
