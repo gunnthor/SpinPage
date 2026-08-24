@@ -67,7 +67,7 @@
         /* ── Layout ── */
 
         .container {
-            display: flex; gap: 2.5rem;
+            display: flex; flex-wrap: wrap; gap: 2.5rem;
             padding: 1rem 2rem 2.5rem;
             width: 100%; max-width: 1080px;
             align-items: flex-start; justify-content: center;
@@ -952,8 +952,53 @@
 
         /* ── Draft ── */
 
-        .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
+        .draft-section { flex: 1 1 100%; width: 100%; padding: 0.5rem 0 1rem; display: none; flex-direction: column; gap: 1rem; }
         .draft-section.visible { display: flex; }
+        .draft-actions { display: flex; align-items: center; gap: 0.7rem; }
+        .draft-section.empty .draft-actions { display: none; }
+
+        /* Wide screens: the draft stands as its own column next to the wheel,
+           always on show — no scrolling, and no dock needed. */
+        /* Pin the wheel column to the wheel itself: left to size on content, the
+           (wider) options dropdown sets the column width and elbows its
+           neighbours out of the row. */
+        @media (min-width: 701px) {
+            .wheel-panel { width: 480px; flex: 0 0 auto; }
+        }
+
+        @media (min-width: 1240px) {
+            .container      { max-width: 1320px; gap: 1.75rem; }
+            .draft-section  { display: flex; flex: 0 1 300px; align-self: stretch;
+                              position: sticky; top: 1rem; padding: 0; gap: 0.8rem; }
+            .draft-header   { flex-direction: column; align-items: stretch; gap: 0.55rem; }
+            .draft-rule     { display: none; }
+            .draft-title    { font-size: 0.66rem; }
+            .draft-subtitle { white-space: normal; line-height: 1.35; }
+            .draft-actions  { justify-content: flex-start; }
+            .draft-actions button { flex: 1 1 auto; white-space: nowrap; padding: 0.28rem 0.35rem; font-size: 0.62rem; }
+            /* These beat the base .draft-grid / .draft-card rules further down */
+            .draft-section .draft-grid { flex-direction: column; flex-wrap: nowrap; gap: 0.45rem;
+                                         max-height: calc(100vh - 240px); overflow-y: auto; padding-right: 4px; }
+            .draft-section .draft-grid::-webkit-scrollbar       { width: 5px; }
+            .draft-section .draft-grid::-webkit-scrollbar-thumb { background: #2a2040; border-radius: 3px; }
+            /* One compact row per pick, so a long draft still fits the column */
+            .draft-section .draft-card {
+                width: 100%; min-width: 0; padding: 0.45rem 0.7rem;
+                /* Colour bar on the left, matching the players list */
+                border-top-width: 1px; border-left: 3px solid var(--accent);
+                display: grid; grid-template-columns: auto 1fr auto;
+                align-items: baseline; gap: 0.55rem;
+            }
+            .draft-section .draft-pick-num { white-space: nowrap; }
+            .draft-section .draft-status   { margin-top: 0; }
+        }
+
+        /* Nothing drafted yet — hold the column open so the board never jumps */
+        .draft-empty {
+            border: 1px dashed #2a2040; border-radius: 10px;
+            padding: 1rem 0.9rem; text-align: center;
+            color: #5c5470; font-size: 0.72rem; font-style: italic; line-height: 1.5;
+        }
 
         .draft-header  { display: flex; align-items: center; gap: 0.8rem; }
         .draft-heading { display: flex; flex-direction: column; gap: 0.2rem; }
@@ -1058,7 +1103,7 @@
 
             .name-list { max-height: 220px; }
 
-            .draft-section { padding: 0 1rem 2.5rem; }
+            .draft-section { order: 3; padding: 0 0 1.5rem; }
 
             .draft-dock { left: 0.6rem; right: 0.6rem; bottom: 0.6rem; width: auto; }
 
@@ -1268,21 +1313,23 @@
         </div>
     </div>
 
-</div>
-
-<section class="draft-section" id="draftSection">
-    <div class="draft-header">
-        <div class="draft-heading">
-            <span class="draft-title">♠ Draft Order ♠</span>
-            <span class="draft-subtitle" id="draftSubtitle">First position counts as winner. Everyone after that is a loser.</span>
+    <section class="draft-section" id="draftSection">
+        <div class="draft-header">
+            <div class="draft-heading">
+                <span class="draft-title">♠ Draft Order ♠</span>
+                <span class="draft-subtitle" id="draftSubtitle">First position counts as winner. Everyone after that is a loser.</span>
+            </div>
+            <div class="draft-rule"></div>
+            <div class="draft-actions">
+                <button class="draft-copy" id="copyBtn">COPY</button>
+                <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
+                <button class="draft-clear" id="draftClear">CLEAR</button>
+            </div>
         </div>
-        <div class="draft-rule"></div>
-        <button class="draft-copy" id="copyBtn">COPY</button>
-        <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
-        <button class="draft-clear" id="draftClear">CLEAR</button>
-    </div>
-    <div class="draft-grid" id="draftGrid"></div>
-</section>
+        <div class="draft-grid" id="draftGrid"></div>
+    </section>
+
+</div>
 
 <div class="draft-dock" id="draftDock" role="button" tabindex="0" aria-label="Show the full draft order">
     <div class="dock-head">
@@ -2054,8 +2101,17 @@
     function renderDraft() {
         syncWinnerSlotsInput();
         draftSection.classList.toggle('visible', draftOrder.length > 0);
+        draftSection.classList.toggle('empty', draftOrder.length === 0);
         draftGrid.innerHTML = '';
         const slots = getWinnerSlots();
+        if (draftOrder.length === 0) {
+            // Only ever seen in the wide side-column layout, which keeps the
+            // board open so it doesn't pop in and shove the wheel sideways.
+            const empty = document.createElement('div');
+            empty.className = 'draft-empty';
+            empty.textContent = 'No picks yet. Spin the wheel and they line up here.';
+            draftGrid.appendChild(empty);
+        }
         draftOrder.forEach((pick, i) => {
             const isWinner = i < slots;
             const card = document.createElement('div');
