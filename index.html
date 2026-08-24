@@ -175,6 +175,54 @@
 
         canvas { display: block; }
 
+        /* ── Grab-to-spin ──
+           The wheel itself is draggable, so touch scrolling has to be killed
+           on the canvas or a flick would scroll the page instead. */
+        canvas#wheel { position: relative; z-index: 2; touch-action: none; cursor: grab; }
+        canvas#wheel.locked                { cursor: default; }
+        .wheel-wrap.grabbing canvas#wheel  { cursor: grabbing; }
+
+        /* ── Pop-off ──
+           On a monster flick the wheel leaves its frame, bounces around the
+           viewport and drops back onto the hub to finish the spin. */
+        .wheel-wrap.flying { filter: none; z-index: 1400; }
+        .wheel-wrap.flying canvas#wheel {
+            filter: drop-shadow(0 0 30px rgba(212,175,55,0.55)) drop-shadow(0 18px 34px rgba(0,0,0,0.75));
+        }
+        .wheel-socket {
+            position: absolute; inset: 0; border-radius: 50%; z-index: 1;
+            background: radial-gradient(circle at 50% 45%, #150e22 0%, #08080e 68%, #04040a 100%);
+            box-shadow: inset 0 0 70px rgba(0,0,0,0.95), inset 0 0 0 3px rgba(212,175,55,0.16);
+            opacity: 0; transition: opacity 0.16s ease; pointer-events: none;
+        }
+        .wheel-socket::after {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 46px; height: 46px;
+            margin: -23px 0 0 -23px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(212,175,55,0.35), rgba(212,175,55,0) 70%);
+        }
+        .wheel-wrap.flying .wheel-socket { opacity: 1; }
+        .pointer-ghost {
+            position: absolute; top: 0.62%; left: 50%; width: 6.25%; height: 3.96%; z-index: 3;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #6b5010 0%, #f5e070 50%, #6b5010 100%);
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            filter: drop-shadow(0 0 10px rgba(212,175,55,0.85));
+            opacity: 0; transition: opacity 0.16s ease; pointer-events: none;
+        }
+        .wheel-wrap.flying .pointer-ghost { opacity: 1; }
+
+        /* Shockwave ring stamped on the hub when the wheel snaps back in */
+        .reseat-ring {
+            position: absolute; top: 50%; left: 50%; width: 40px; height: 40px;
+            margin: -20px 0 0 -20px; border-radius: 50%; z-index: 9;
+            border: 3px solid rgba(245,224,112,0.9); pointer-events: none;
+            animation: reseatRing 0.5s ease-out forwards;
+        }
+        @keyframes reseatRing {
+            from { transform: scale(0.2); opacity: 0.95; }
+            to   { transform: scale(9);   opacity: 0; }
+        }
+
         .btn-row           { display: flex; align-items: center; gap: 0.9rem; }
         .btn-row-secondary { display: flex; align-items: center; gap: 0.7rem; }
 
@@ -1065,7 +1113,9 @@
 
     <div class="wheel-panel">
         <div class="wheel-wrap" id="wheelWrap">
-            <canvas id="wheel" width="480" height="480"></canvas>
+            <div class="wheel-socket"></div>
+            <canvas id="wheel" width="480" height="480" title="Drag the wheel and let go to spin it yourself"></canvas>
+            <div class="pointer-ghost"></div>
             <div class="illegal-stamp" id="illegalStamp">ILLEGAL</div>
         </div>
         <div class="btn-row">
@@ -1082,7 +1132,7 @@
 
         <div class="options-panel" id="optionsPanel">
             <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v2.1</span></div>
+                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v2.2</span></div>
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner display</div>
@@ -1121,6 +1171,16 @@
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="powerUpToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Pop-off</div>
+                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it ricochets around the screen, drops back on and finishes the spin</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="popOffToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -1207,6 +1267,10 @@
                 <div class="about-chip-title">Draft Orders</div>
                 <div class="about-chip-text">Winners leave the wheel and line up in a clean pick list.</div>
             </div>
+            <div class="about-chip" style="--chip-color:#6c3483">
+                <div class="about-chip-title">Spin It Yourself</div>
+                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub.</div>
+            </div>
             <div class="about-chip" style="--chip-color:#c0392b">
                 <div class="about-chip-title">Plot Twists</div>
                 <div class="about-chip-text">Fake stops, illegal spins, and sudden boosts keep every pick theatrical.</div>
@@ -1224,6 +1288,7 @@
         <div class="about-section-title">What It Does</div>
         <ul class="about-list">
             <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
+            <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
             <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds.</li>
             <li>Hides a ⚠ PANIC wedge that launches a horse race where only half the drafted survive.</li>
@@ -1459,6 +1524,7 @@
     let riggedValue         = '';     // name/prefix the rigged mode forces to win
     let powerUpsEnabled     = true;
     let panicEnabled        = true;
+    let popOffEnabled       = true;   // allow a monster hand-flick to rip the wheel off its hub
     let panicCooldown       = false;  // blocks PANIC from landing two spins in a row
     let sliceWeights        = null;   // per-spin slice multipliers (null = all equal)
     let nameColors          = {};     // lowercased name -> stable color (consistent everywhere)
@@ -1657,7 +1723,7 @@
     function saveState() {
         try { localStorage.setItem('spinpage', JSON.stringify({
             names, draftOrder, undoStack, winnerSlots, nameColors,
-            noisEnabled, powerUpsEnabled, panicEnabled, plotTwistsEnabled, displayDuration, autoDisplay, riggedValue
+            noisEnabled, powerUpsEnabled, panicEnabled, plotTwistsEnabled, popOffEnabled, displayDuration, autoDisplay, riggedValue
         })); } catch(e) {}
     }
 
@@ -1673,6 +1739,7 @@
                 if (typeof s.powerUpsEnabled === 'boolean') powerUpsEnabled = s.powerUpsEnabled;
                 if (typeof s.panicEnabled === 'boolean') panicEnabled = s.panicEnabled;
                 if (typeof s.plotTwistsEnabled === 'boolean') plotTwistsEnabled = s.plotTwistsEnabled;
+                if (typeof s.popOffEnabled === 'boolean') popOffEnabled = s.popOffEnabled;
                 if (typeof s.displayDuration === 'number' && s.displayDuration >= 500 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
                 if (typeof s.autoDisplay === 'boolean') autoDisplay = s.autoDisplay;
                 if (typeof s.riggedValue === 'string') riggedValue = s.riggedValue;
@@ -1991,7 +2058,8 @@
                                   'Ready to spin.';
         spinHint.textContent = names.length === 0 ? 'Add at least 2 names to spin' :
                                names.length === 1 ? 'Add 1 more name to spin' :
-                               'Names are loaded. The wheel is ready.';
+                               'Drag the wheel and let go — or hit SPIN.';
+        canvas.classList.toggle('locked', !canSpin || isSpinning || isBusy);
         syncWinnerSlotsInput();
     }
 
@@ -2184,7 +2252,9 @@
         ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,255,255,0.9)'; ctx.shadowBlur=6; ctx.fill(); ctx.shadowBlur=0;
     }
 
-    function redraw() { drawWheel(); drawPointer(); }
+    // While the wheel is popped off, its pointer stays behind on the frame
+    // (a CSS ghost pinned to the empty socket) instead of flying with it.
+    function redraw() { drawWheel(); if (!popOff.active) drawPointer(); }
 
     /* ══════════════════════════════════════
        Plot-twist easing — the REVERSE twist
@@ -2216,8 +2286,15 @@
     ══════════════════════════════════════ */
     spinBtn.addEventListener('click', spin);
 
-    function spin() {
+    function spin() { beginSpin(null); }
+
+    // launch === null  → button/spacebar spin (the wheel builds its own speed)
+    // launch === {...} → hand flick: { vel, dir, power, popOff } from the drag
+    function beginSpin(launch) {
         if (isSpinning||isBusy||names.length<2) return;
+        // Hands on the wheel win: an autospin tick that lands mid-drag waits
+        // its turn instead of fighting the player for the rotation.
+        if (drag.active && !launch) { if (autoSpin) setTimeout(spin, 900); return; }
         ensureAudio();
 
         isSpinning = true;
@@ -2229,13 +2306,21 @@
         if (pu) {
             playPowerUpSound();
             showPowerUpPopup(pu);
-            animateWeights(pu.weights, 650, () => {
-                setTimeout(() => startSpin(pu.weights), 320);
-            });
+            if (launch) {
+                // A flick is already in motion — no time for the grow/shrink
+                // tween, so the slices warp instantly while the wheel flies.
+                sliceWeights = pu.weights.slice();
+                redraw();
+                startSpin(pu.weights, launch);
+            } else {
+                animateWeights(pu.weights, 650, () => {
+                    setTimeout(() => startSpin(pu.weights), 320);
+                });
+            }
         } else {
             sliceWeights = null;
             redraw();
-            startSpin(names.map(() => 1));
+            startSpin(names.map(() => 1), launch);
         }
     }
 
@@ -2297,7 +2382,7 @@
         });
     }
 
-    function startSpin(spinWeights) {
+    function startSpin(spinWeights, launch) {
         const TAU    = 2 * Math.PI;
         const seg    = buildSegments(spinWeights);   // players (+ PANIC wedge when active)
         const segW   = seg.weights;
@@ -2319,16 +2404,50 @@
         const winnerOffset = (before / totalW) * TAU + landingPos * sliceArc;
         const targetNorm   = ((TAU - winnerOffset % TAU) + TAU) % TAU;
         const currentNorm  = ((rotation % TAU) + TAU) % TAU;
-        let delta = targetNorm - currentNorm;
-        if (delta < 0) delta += TAU;
 
         const isIllegal = Math.random() < 0.05;
-        const plotTwist = !isIllegal && plotTwistsEnabled && Math.random() < 0.20;
+        const manual    = launch || null;
+        // The reverse-twist choreography assumes a forward, machine-paced spin,
+        // so it sits out backwards flicks, hard flicks and pop-offs.
+        const twistOk   = !isIllegal && plotTwistsEnabled &&
+                          !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
+        const plotTwist = twistOk && Math.random() < 0.20;
 
-        // Plot twist needs more spins to accommodate the fake-stop + boost phases
-        const extraSpins = plotTwist ? 10 + Math.floor(Math.random()*4) : 4 + Math.floor(Math.random()*5);
-        const totalRot   = extraSpins*TAU + delta;
-        const duration   = plotTwist ? 7000 + Math.random()*2000 : 6500 + Math.random()*2500;
+        const dir = (manual && !plotTwist) ? manual.dir : 1;
+
+        // Shortest trip to the landing angle, taken the way the wheel is turning.
+        let delta = targetNorm - currentNorm;
+        if (dir > 0) { if (delta < 0) delta += TAU; }
+        else         { if (delta > 0) delta -= TAU; }
+
+        let extraSpins, duration, ease;
+        if (plotTwist) {
+            // Plot twist needs more spins to accommodate the fake-stop + boost phases
+            extraSpins = 10 + Math.floor(Math.random()*4);
+            duration   = 7000 + Math.random()*2000;
+            ease       = dramaticEase;
+        } else if (manual) {
+            // Hand-off: the animation must leave your fingers at the speed you
+            // let go. Pick a lap count from the flick strength, then solve the
+            // decay curve whose opening slope equals that release speed — so a
+            // lazy nudge crawls and a hard flick genuinely rips.
+            extraSpins = MIN_FLICK_SPINS + Math.round(Math.pow(manual.power, 1.6) * 17)
+                                         + Math.floor(Math.random()*2);
+            const rot  = Math.abs(dir*extraSpins*TAU + delta);
+            const w    = manual.vel;
+            duration   = Math.max(2600, Math.min(4500 + manual.power*3300, rot*STOCK_SLOPE/w));
+            let slope  = w*duration/rot;
+            if (slope < 1.75) {                          // more laps than that speed buys:
+                duration = Math.min(7400, rot*1.75/w);   // let it coast longer instead
+                slope    = w*duration/rot;
+            }
+            ease = decayEase(slope);
+        } else {
+            extraSpins = 4 + Math.floor(Math.random()*5);
+            duration   = 6500 + Math.random()*2500;
+            ease       = easeOut;
+        }
+        const totalRot = dir*extraSpins*TAU + delta;
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
@@ -2341,14 +2460,13 @@
 
         let boostTriggered = false;
 
-        // Fast launch, then a long GENTLE glide: the wheel keeps visibly ticking
-        // through the final slices well into the back half and the deceleration
-        // eases off near the end (the last ~20% lands slowly) for maximum suspense.
-        function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
+        // Whole wheel torn off its hub — bounces around the viewport, drops back
+        // on and finishes the very same spin, landing exactly where it would have.
+        if (manual && manual.popOff) startPopOff(duration);
 
         function frame(now) {
             const t = Math.min((now-startTime)/duration, 1);
-            rotation = startRot + (endRot-startRot) * (plotTwist ? dramaticEase(t) : easeOut(t));
+            rotation = startRot + (endRot-startRot) * ease(t);
             redraw();
 
             // Section tick sounds
@@ -2368,6 +2486,7 @@
             if (t<1) {
                 requestAnimationFrame(frame);
             } else {
+                if (popOff.active) endPopOff();       // safety: never finish mid-flight
                 rotation = endRot; redraw();
                 if (isIllegal) { showIllegalStamp(); }
                 else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
@@ -2376,6 +2495,297 @@
         }
 
         requestAnimationFrame(frame);
+    }
+
+    /* ══════════════════════════════════════
+       Spin easing
+       ─────────────────────────────────────
+       1 - (a*(1-t)^9 + (1-a)*(1-t)^1.7): a two-term decay whose opening slope
+       is 9a + 1.7(1-a). Blending the two exponents lets a spin start at any
+       speed between a lazy roll (1.7x) and a violent rip (9x) and still glide
+       to the same gentle, tick-by-tick landing.
+    ══════════════════════════════════════ */
+    const STOCK_SLOPE     = 5.715;   // opening slope of the stock button spin (a = 0.55)
+    const MIN_FLICK_SPINS = 3;       // even a limp flick owes you a few full laps
+
+    function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
+
+    function decayEase(slope0) {
+        const a = Math.min(Math.max((slope0 - 1.7) / 7.3, 0), 1);
+        return t => 1 - (a*Math.pow(1-t,9) + (1-a)*Math.pow(1-t,1.7));
+    }
+
+    /* ══════════════════════════════════════
+       Grab-to-spin
+       ─────────────────────────────────────
+       Drag the wheel with a pointer and let go. The release speed drives the
+       SHOW - lap count, run time, how hard it launches, whether it pops off -
+       but never the RESULT: the winner is still drawn by weightedPick() inside
+       startSpin(), after your hand is off the wheel. You cannot aim it.
+    ══════════════════════════════════════ */
+    const TAU_FULL = 2 * Math.PI;
+
+    const FLICK = {
+        minVel:   0.0025,   // rad/ms - a release slower than this is just a nudge
+        maxVel:   0.030,    // rad/ms - a full-arm flick (~5 turns a second)
+        tapArc:   0.05,     // rad - barely moved? treat the press as a tap-to-spin
+        popPower: 0.88      // power above which the wheel can rip off its hub
+    };
+
+    const drag = { active: false, id: null, last: 0, moved: 0, samples: [] };
+
+    function segCount() { return names.length + (panicSliceActive() ? 1 : 0); }
+    function canGrab()  { return !isSpinning && !isBusy && !drag.active && names.length >= 2; }
+
+    function pointerAngle(e) {
+        const r = canvas.getBoundingClientRect();
+        return Math.atan2(e.clientY - (r.top + r.height/2), e.clientX - (r.left + r.width/2));
+    }
+
+    // Peg clicks while you drag, capped so a frantic sweep doesn't machine-gun.
+    function dragTicks() {
+        const arc = TAU_FULL / Math.max(segCount(), 1);
+        const idx = Math.floor(rotation / arc);
+        if (idx !== lastTickSection) {
+            const crossed = Math.min(Math.abs(idx - lastTickSection), 2);
+            for (let i = 0; i < crossed; i++) playTick();
+            lastTickSection = idx;
+        }
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+        if (!canGrab()) return;
+        ensureAudio();
+        e.preventDefault();
+        drag.active  = true;
+        drag.id      = e.pointerId;
+        drag.last    = pointerAngle(e);
+        drag.moved   = 0;
+        drag.samples = [{ t: performance.now(), a: rotation }];
+        lastTickSection = Math.floor(rotation / (TAU_FULL / Math.max(segCount(), 1)));
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+        wheelWrap.classList.add('grabbing');
+    });
+
+    canvas.addEventListener('pointermove', e => {
+        if (!drag.active || e.pointerId !== drag.id) return;
+        const a = pointerAngle(e);
+        let d = a - drag.last;                       // unwrap across the +/-PI seam
+        if (d >  Math.PI) d -= TAU_FULL;
+        if (d < -Math.PI) d += TAU_FULL;
+        drag.last   = a;
+        drag.moved += Math.abs(d);
+        rotation   += d;
+        const now = performance.now();
+        drag.samples.push({ t: now, a: rotation });
+        if (drag.samples.length > 12) drag.samples.shift();
+        redraw();
+        dragTicks();
+    });
+
+    function releaseDrag(e) {
+        if (!drag.active || (e && e.pointerId !== drag.id)) return;
+        drag.active = false;
+        wheelWrap.classList.remove('grabbing');
+        try { canvas.releasePointerCapture(drag.id); } catch (err) {}
+
+        // Release speed = angle covered over the last ~140ms, so a flick that
+        // ends in a stall reads as a stall, not as the whole drag's average.
+        const now = performance.now();
+        const win = drag.samples.filter(pt => now - pt.t < 140);
+        let vel = 0;
+        if (win.length >= 2) {
+            const dt = win[win.length-1].t - win[0].t;
+            if (dt > 6) vel = (win[win.length-1].a - win[0].a) / dt;
+        }
+        const speed = Math.abs(vel);
+
+        // Pressed without really turning it? That's a tap - spin it for them.
+        if (drag.moved < FLICK.tapArc && speed < FLICK.minVel) { spin(); return; }
+
+        const power = Math.min(Math.max((speed - FLICK.minVel) / (FLICK.maxVel - FLICK.minVel), 0), 1);
+        // Only a genuinely violent flick can tear the wheel loose, and even then
+        // it's close to a coin flip - so it stays a surprise, not a routine.
+        const pop = popOffEnabled && !prefersReducedMotion() && power >= FLICK.popPower &&
+                    Math.random() < 0.35 + (power - FLICK.popPower) * 4;
+
+        beginSpin({
+            vel:    Math.max(speed, FLICK.minVel),
+            dir:    vel < 0 ? -1 : 1,
+            power,
+            popOff: pop
+        });
+    }
+
+    canvas.addEventListener('pointerup', releaseDrag);
+    // A cancelled pointer (system gesture, lost contact) just drops the wheel
+    // where it is — an interrupted touch shouldn't fling it.
+    canvas.addEventListener('pointercancel', e => {
+        if (!drag.active || e.pointerId !== drag.id) return;
+        drag.active = false;
+        wheelWrap.classList.remove('grabbing');
+        try { canvas.releasePointerCapture(drag.id); } catch (err) {}
+    });
+
+    /* ══════════════════════════════════════
+       Pop-off - the wheel leaves the building
+       ─────────────────────────────────────
+       Only the presentation flies: `rotation` keeps ticking down the exact same
+       curve underneath, so the wheel re-seats and lands on the winner that was
+       already drawn. Bounces are viewport-bounded, so it can't sail off-screen.
+    ══════════════════════════════════════ */
+    const popOff = { active: false };
+
+    function startPopOff(spinDuration) {
+        if (popOff.active) return;
+        const ang   = -Math.PI/2 + (Math.random() - 0.5) * 2.2;      // mostly upward
+        const speed = 1.15 + Math.random() * 0.75;                   // px/ms
+        Object.assign(popOff, {
+            active: true, phase: 'fly',
+            x: 0, y: 0,
+            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+            scale: 1, targetScale: 0.6 + Math.random() * 0.14,
+            tilt: 0, vtilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05),
+            rect: wheelWrap.getBoundingClientRect(),
+            t0: performance.now(), last: performance.now(),
+            flight: Math.min(2300, Math.max(1200, spinDuration * 0.34))
+        });
+        wheelWrap.classList.add('flying');
+        canvas.style.willChange = 'transform';
+        playPopSound();
+        shakeWheel();
+        requestAnimationFrame(popFrame);
+    }
+
+    function popFrame(now) {
+        if (!popOff.active) return;
+        const dt = Math.min(now - popOff.last, 34);   // clamp so a stalled tab can't teleport it
+        popOff.last = now;
+        const r = popOff.rect;
+
+        if (popOff.phase === 'fly') {
+            popOff.x     += popOff.vx * dt;
+            popOff.y     += popOff.vy * dt;
+            popOff.vy    += 0.0014 * dt;              // a whisper of gravity, just to arc it
+            popOff.scale += (popOff.targetScale - popOff.scale) * 0.06;
+            popOff.tilt  += popOff.vtilt * dt;
+
+            const halfW = r.width  * popOff.scale / 2;
+            const halfH = r.height * popOff.scale / 2;
+            const px    = r.left + r.width/2  + popOff.x;
+            const py    = r.top  + r.height/2 + popOff.y;
+            const m     = 8;
+            let hit = false;
+            if (px - halfW < m) {
+                popOff.x += m - (px - halfW);
+                popOff.vx =  Math.abs(popOff.vx) * 0.94; hit = true;
+            } else if (px + halfW > window.innerWidth - m) {
+                popOff.x -= (px + halfW) - (window.innerWidth - m);
+                popOff.vx = -Math.abs(popOff.vx) * 0.94; hit = true;
+            }
+            if (py - halfH < m) {
+                popOff.y += m - (py - halfH);
+                popOff.vy =  Math.abs(popOff.vy) * 0.94; hit = true;
+            } else if (py + halfH > window.innerHeight - m) {
+                popOff.y -= (py + halfH) - (window.innerHeight - m);
+                popOff.vy = -Math.abs(popOff.vy) * 0.94; hit = true;
+            }
+            if (hit) { popOff.vtilt *= -0.85; playClank(); }
+
+            if (now - popOff.t0 > popOff.flight) {
+                popOff.phase = 'return';
+                popOff.rt0   = now;
+                popOff.from  = { x: popOff.x, y: popOff.y, s: popOff.scale, tilt: popOff.tilt };
+            }
+        } else {
+            const t = Math.min((now - popOff.rt0) / 380, 1);
+            const e = 1 - Math.pow(1 - t, 3);
+            popOff.x     = popOff.from.x * (1 - e);
+            popOff.y     = popOff.from.y * (1 - e);
+            popOff.scale = popOff.from.s + (1 - popOff.from.s) * e;
+            popOff.tilt  = popOff.from.tilt * (1 - e);
+            if (t >= 1) { endPopOff(); return; }
+        }
+
+        canvas.style.transform =
+            'translate3d(' + popOff.x.toFixed(2) + 'px,' + popOff.y.toFixed(2) + 'px,0) ' +
+            'scale(' + popOff.scale.toFixed(3) + ') rotate(' + popOff.tilt.toFixed(2) + 'deg)';
+        requestAnimationFrame(popFrame);
+    }
+
+    function endPopOff() {
+        if (!popOff.active) return;
+        popOff.active = false;
+        canvas.style.transform  = '';
+        canvas.style.willChange = '';
+        wheelWrap.classList.remove('flying');
+        const ring = document.createElement('div');
+        ring.className = 'reseat-ring';
+        wheelWrap.appendChild(ring);
+        setTimeout(() => ring.remove(), 520);
+        playReseatSound();
+        shakeWheel();
+        redraw();                                  // the pointer comes back
+    }
+
+    /* -- Pop-off sounds -- */
+    function noiseBurst(dur, freq, gain, q) {
+        const len  = Math.max(1, Math.floor(audioCtx.sampleRate * dur));
+        const buf  = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+        const data = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+        const src = audioCtx.createBufferSource(), g = audioCtx.createGain(), f = audioCtx.createBiquadFilter();
+        src.buffer = buf; f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q || 1;
+        g.gain.setValueAtTime(gain, audioCtx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+        src.connect(f); f.connect(g); g.connect(audioCtx.destination);
+        src.start(); src.stop(audioCtx.currentTime + dur + 0.02);
+    }
+
+    function playPopSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'square';
+        o.frequency.setValueAtTime(150, now);
+        o.frequency.exponentialRampToValueAtTime(1400, now + 0.11);
+        o.frequency.exponentialRampToValueAtTime(320, now + 0.34);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.38, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.38);
+        noiseBurst(0.22, 2600, 0.35, 0.7);
+    }
+
+    function playClank() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [1180, 1790].forEach((f, i) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(f * (0.94 + Math.random() * 0.12), now);
+            g.gain.setValueAtTime(0.0001, now);
+            g.gain.exponentialRampToValueAtTime(0.22 - i * 0.08, now + 0.006);
+            g.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(now); o.stop(now + 0.18);
+        });
+        noiseBurst(0.06, 3400, 0.2, 1.4);
+    }
+
+    function playReseatSound() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(160, now);
+        o.frequency.exponentialRampToValueAtTime(48, now + 0.28);
+        g.gain.setValueAtTime(0.5, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.36);
+        noiseBurst(0.12, 900, 0.28, 0.8);
     }
 
     /* ══════════════════════════════════════
@@ -2963,6 +3373,7 @@
     const noisToggle   = document.getElementById('noisToggle');
     const powerUpToggle = document.getElementById('powerUpToggle');
     const panicToggle  = document.getElementById('panicToggle');
+    const popOffToggle = document.getElementById('popOffToggle');
 
     optionsBtn.addEventListener('click', () => {
         const open = optionsPanel.classList.toggle('open');
@@ -2989,6 +3400,11 @@
 
     powerUpToggle.addEventListener('change', () => {
         powerUpsEnabled = powerUpToggle.checked;
+        saveState();
+    });
+
+    popOffToggle.addEventListener('change', () => {
+        popOffEnabled = popOffToggle.checked;
         saveState();
     });
 
@@ -3025,7 +3441,10 @@
     /* ══════════════════════════════════════
        Resize
     ══════════════════════════════════════ */
-    window.addEventListener('resize', ()=>{ resizeFire(); resizeOverlay(); });
+    // Keep a wheel in mid-flight bouncing off the CURRENT viewport edges
+    const refreshPopRect = () => { if (popOff.active) popOff.rect = wheelWrap.getBoundingClientRect(); };
+    window.addEventListener('resize', ()=>{ resizeFire(); resizeOverlay(); refreshPopRect(); });
+    window.addEventListener('scroll', refreshPopRect, { passive: true });
 
     /* ══════════════════════════════════════
        Init
@@ -3035,6 +3454,7 @@
     noisToggle.checked      = noisEnabled;
     powerUpToggle.checked    = powerUpsEnabled;
     panicToggle.checked      = panicEnabled;
+    popOffToggle.checked     = popOffEnabled;
     plotTwistToggle.checked  = plotTwistsEnabled;
     riggedInput.value        = riggedValue;
     displaySlider.value      = displayDuration / 1000;

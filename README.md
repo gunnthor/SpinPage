@@ -11,6 +11,8 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 ## Highlights
 
 - **Spinning wheel picker** with smooth canvas animation and weighted-looking theatrical timing.
+- **Grab-to-spin**: drag the wheel with a mouse or finger and let go. Your flick sets the speed, the lap count and the drama — never the winner, which is drawn after your hand leaves the wheel.
+- **Pop-off**: a violent enough hand-flick can rip the wheel off its hub, ricochet it around the viewport, then drop it back on to finish the very same spin.
 - **Draft order mode** that removes winners from the wheel and records every pick.
 - **Autospin** for hands-free draft generation.
 - **Undo, restore, clear, and copy** controls for managing draft results.
@@ -49,12 +51,14 @@ http://localhost:8000
 ## How To Use
 
 1. Add players or names in the left panel.
-2. Press **SPIN** to pick one winner.
+2. Press **SPIN**, or grab the wheel and flick it yourself — a tap on the wheel spins it too.
 3. Watch the winner move into the draft order.
 4. Use **AUTOSPIN** to keep picking until the wheel is empty.
 5. Copy the finished draft order when you are done.
 
-The options panel lets you tune winner display duration, set how many positions count as winners, toggle plot twists and power-up slices, enable the second-chance "No One Is Safe" wheel, and turn on the rigged mode used for local jokes or demos. All of these preferences persist across refreshes.
+**Spinning by hand.** Press anywhere on the wheel, drag it around and release. The wheel hands off at exactly the speed it left your fingers: a lazy nudge creeps through its minimum three laps, a hard flick rips through twenty. Flick it backwards and it spins backwards. Because the winner is drawn *after* you let go, no amount of practice lets the person holding the wheel aim it.
+
+The options panel lets you tune winner display duration, set how many positions count as winners, toggle plot twists, power-up slices and wheel pop-off, enable the second-chance "No One Is Safe" wheel, and turn on the rigged mode used for local jokes or demos. All of these preferences persist across refreshes.
 
 ## Project Structure
 
