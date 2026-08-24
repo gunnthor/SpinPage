@@ -1716,18 +1716,105 @@
         if (audioCtx.state === 'suspended') audioCtx.resume();
     }
 
-    function playTick() {
-        if (!audioCtx) return;
-        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), filt = audioCtx.createBiquadFilter();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(80, audioCtx.currentTime + 0.05);
-        filt.type = 'bandpass'; filt.frequency.value = 1400; filt.Q.value = 0.6;
-        gain.gain.setValueAtTime(0.35, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.07);
-        osc.connect(filt); filt.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 0.08);
+    /* ------------------------------------------------------------------
+       Peg click
+       ------------------------------------------------------------------
+       A leather flapper snapping off a wheel pin is two sounds at once: a
+       bright contact transient, then the pin and flapper ringing together on
+       a couple of inharmonic modes. Each click is rebuilt from those parts
+       with a little randomness, so no two are identical.
+
+       `tickIntensity` (0 = crawling, 1 = flat out) is the other half of it.
+       A fast wheel is bright, tight and clipped; a dying one is duller,
+       lower and rings on. That contrast is what makes a spin audibly slow
+       down instead of just clicking slower.
+    ------------------------------------------------------------------ */
+    let tickIntensity = 0.5;
+    let noiseBuffer   = null;
+    let tickBus       = null;
+
+    // One shared noise table, read from a random offset per click.
+    function getNoiseBuffer() {
+        if (!noiseBuffer) {
+            const len = Math.floor(audioCtx.sampleRate * 0.4);
+            noiseBuffer = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
+            const d = noiseBuffer.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+        }
+        return noiseBuffer;
     }
+
+    // Clicks can land ~100x a second at full tilt, so they share a compressor
+    // instead of stacking straight onto the output and clipping.
+    function getTickBus() {
+        if (!tickBus) {
+            const comp = audioCtx.createDynamicsCompressor();
+            comp.threshold.value = -20; comp.knee.value = 14; comp.ratio.value = 7;
+            comp.attack.value = 0.002; comp.release.value = 0.14;
+            // Six times as many clicks as the old one-per-slice cadence, so the
+            // bus is pulled well down to keep the clatter under the fanfare.
+            const out = audioCtx.createGain(); out.gain.value = 0.6;
+            comp.connect(out); out.connect(audioCtx.destination);
+            tickBus = comp;
+        }
+        return tickBus;
+    }
+
+    // accent = the click that marks a whole slice passing, rather than one of
+    // the pins between them: a shade lower, louder and woodier.
+    function playTick(accent) {
+        if (!audioCtx) return;
+        const t   = audioCtx.currentTime;
+        const i   = Math.min(Math.max(tickIntensity, 0), 1);
+        const bus = getTickBus();
+
+        // 1. Contact transient — flapper snapping off the pin.
+        const noise = audioCtx.createBufferSource();
+        noise.buffer = getNoiseBuffer();
+        noise.playbackRate.value = 0.75 + Math.random() * 0.6;
+        const hp = audioCtx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 1500 + 2800 * i;
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime((accent ? 0.42 : 0.28) * (0.7 + 0.3 * i), t);
+        ng.gain.exponentialRampToValueAtTime(0.0006, t + 0.010 + 0.012 * (1 - i));
+        noise.connect(hp); hp.connect(ng); ng.connect(bus);
+        noise.start(t, Math.random() * 0.3); noise.stop(t + 0.06);
+
+        // 2. Body — two inharmonic modes with a fast pitch drop, so it reads
+        //    as something struck rather than a beep.
+        const decay = 0.085 - 0.055 * i;
+        const base  = (accent ? 430 : 600) * (0.92 + Math.random() * 0.16) * (0.85 + 0.4 * i);
+        [[1, 1], [2.74, 0.4]].forEach(([mult, lvl]) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            o.type = 'triangle';
+            o.frequency.setValueAtTime(base * mult * 1.7, t);
+            o.frequency.exponentialRampToValueAtTime(base * mult, t + 0.018);
+            const peak = (accent ? 0.3 : 0.19) * lvl * (0.65 + 0.5 * (1 - i));
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(peak, t + 0.004);
+            g.gain.exponentialRampToValueAtTime(0.0005, t + decay);
+            o.connect(g); g.connect(bus);
+            o.start(t); o.stop(t + decay + 0.03);
+        });
+    }
+
+    // Wheel speed (rad/ms) -> click character. 0.03 rad/ms is about a
+    // full-blooded flick, which is where the tone tops out.
+    function setTickSpeed(radPerMs) {
+        tickIntensity = Math.min(Math.abs(radPerMs) / 0.03, 1);
+    }
+
+    // A real wheel carries far more pins than slices — a three-name wheel
+    // clicking three times a lap sounds empty. Clicks come off a ring of
+    // ~30 evenly spaced pegs instead, a whole number of them per slice, so
+    // every `per`-th click can be accented as a name goes by.
+    const PEG_RING = 30;
+    function pegRing(segments) {
+        const segs = Math.max(segments, 1);
+        const per  = Math.max(1, Math.ceil(PEG_RING / segs));
+        return { per, arc: (2 * Math.PI) / (segs * per) };
+    }
+    function isAccentPeg(idx, per) { return ((idx % per) + per) % per === 0; }
 
     function playStampSound() {
         if (!audioCtx) return;
@@ -2639,8 +2726,10 @@
 
         // Tick cadence uses an even arc — a believable peg click rate that's
         // independent of the (possibly uneven) slice geometry.
-        const tickArc = TAU / seg.labels.length;
+        const ring    = pegRing(seg.labels.length);
+        const tickArc = ring.arc;
         lastTickSection = Math.floor(rotation/tickArc);
+        let tickPrevTime = startTime, tickPrevRot = rotation;
 
         let boostTriggered = false;
 
@@ -2653,11 +2742,15 @@
             rotation = startRot + (endRot-startRot) * ease(t);
             redraw();
 
-            // Section tick sounds
+            // Peg clicks — brighter and tighter the faster the wheel is going
+            const frameMs = Math.max(now - tickPrevTime, 1);
+            setTickSpeed((rotation - tickPrevRot) / frameMs);
+            tickPrevTime = now; tickPrevRot = rotation;
+
             const sectionIdx = Math.floor(rotation/tickArc);
             if (sectionIdx !== lastTickSection) {
-                const crossed = Math.abs(sectionIdx-lastTickSection);
-                for (let i=0;i<Math.min(crossed,2);i++) playTick();
+                const crossed = Math.min(Math.abs(sectionIdx-lastTickSection), 2);
+                for (let i=0;i<crossed;i++) playTick(i === 0 && isAccentPeg(sectionIdx, ring.per));
                 lastTickSection = sectionIdx;
             }
 
@@ -2728,11 +2821,11 @@
 
     // Peg clicks while you drag, capped so a frantic sweep doesn't machine-gun.
     function dragTicks() {
-        const arc = TAU_FULL / Math.max(segCount(), 1);
-        const idx = Math.floor(rotation / arc);
+        const ring = pegRing(segCount());
+        const idx  = Math.floor(rotation / ring.arc);
         if (idx !== lastTickSection) {
             const crossed = Math.min(Math.abs(idx - lastTickSection), 2);
-            for (let i = 0; i < crossed; i++) playTick();
+            for (let i = 0; i < crossed; i++) playTick(i === 0 && isAccentPeg(idx, ring.per));
             lastTickSection = idx;
         }
     }
@@ -2746,7 +2839,7 @@
         drag.last    = pointerAngle(e);
         drag.moved   = 0;
         drag.samples = [{ t: performance.now(), a: rotation }];
-        lastTickSection = Math.floor(rotation / (TAU_FULL / Math.max(segCount(), 1)));
+        lastTickSection = Math.floor(rotation / pegRing(segCount()).arc);
         try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
         wheelWrap.classList.add('grabbing');
     });
@@ -2760,7 +2853,9 @@
         drag.last   = a;
         drag.moved += Math.abs(d);
         rotation   += d;
-        const now = performance.now();
+        const now  = performance.now();
+        const prev = drag.samples[drag.samples.length - 1];
+        setTickSpeed(d / Math.max(now - prev.t, 1));
         drag.samples.push({ t: now, a: rotation });
         if (drag.samples.length > 12) drag.samples.shift();
         redraw();
@@ -3067,7 +3162,9 @@
             const duration   = 4200 + Math.random()*2000;
             const startRot   = noisRotation, endRot = noisRotation+totalRot;
             const startTime  = performance.now();
-            let noisLastTick = Math.floor(noisRotation/arc);
+            const noisRing   = pegRing(candidates.length);
+            let noisLastTick = Math.floor(noisRotation/noisRing.arc);
+            let noisPrevT    = startTime, noisPrevRot = noisRotation;
 
             // Same gentle final glide as the main wheel for a suspenseful finish.
             function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
@@ -3077,9 +3174,13 @@
                 noisRotation = startRot + (endRot-startRot)*easeOut(t);
                 drawNoisWheel(candidates, noisRotation);
 
-                const sIdx = Math.floor(noisRotation/arc);
+                setTickSpeed((noisRotation - noisPrevRot) / Math.max(now - noisPrevT, 1));
+                noisPrevT = now; noisPrevRot = noisRotation;
+
+                const sIdx = Math.floor(noisRotation/noisRing.arc);
                 if (sIdx!==noisLastTick) {
-                    for(let i=0;i<Math.min(Math.abs(sIdx-noisLastTick),2);i++) playTick();
+                    const crossed = Math.min(Math.abs(sIdx-noisLastTick),2);
+                    for(let i=0;i<crossed;i++) playTick(i === 0 && isAccentPeg(sIdx, noisRing.per));
                     noisLastTick=sIdx;
                 }
 
@@ -3334,7 +3435,7 @@
                     }
                 }
             }
-            if (now - lastTick > 130) { playTick(); lastTick = now; }
+            if (now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
             drawSprint(runners, safeCount);
 
             if (safe.length >= safeCount || frames >= MAXF) { finishRace(); return; }
