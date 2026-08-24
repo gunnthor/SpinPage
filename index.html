@@ -904,6 +904,52 @@
             .marble-title { font-size: 1.7rem; }
         }
 
+        /* ── Draft dock ──
+           The full draft order lives at the bottom of the page, which is off
+           the fold on most laptops. Whenever it scrolls out of sight this
+           compact strip takes over so the picks are never invisible. */
+
+        .draft-dock {
+            position: fixed; right: 1rem; bottom: 1rem; z-index: 900;
+            width: min(320px, calc(100vw - 2rem));
+            background: linear-gradient(160deg, rgba(13,13,26,0.97), rgba(9,9,16,0.97));
+            border: 1px solid #2a2040; border-top: 2px solid #d4af37;
+            border-radius: 12px; padding: 0.55rem 0.65rem 0.5rem;
+            box-shadow: 0 14px 44px rgba(0,0,0,0.72);
+            cursor: pointer; text-align: left;
+            opacity: 0; transform: translateY(16px); pointer-events: none;
+            transition: opacity 0.28s ease, transform 0.28s ease, border-color 0.15s;
+        }
+        .draft-dock.show  { opacity: 1; transform: none; pointer-events: auto; }
+        .draft-dock:hover { border-color: rgba(212,175,55,0.55); }
+        .draft-dock:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+
+        .dock-head  { display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.42rem; }
+        .dock-title { font-size: 0.57rem; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: #d4af37; }
+        .dock-count { margin-left: auto; font-size: 0.55rem; letter-spacing: 0.12em; text-transform: uppercase; color: #9b8d68; }
+
+        .dock-list { display: flex; gap: 0.35rem; overflow-x: auto; scrollbar-width: thin; padding-bottom: 3px; }
+        .dock-list::-webkit-scrollbar        { height: 4px; }
+        .dock-list::-webkit-scrollbar-thumb  { background: #2a2040; border-radius: 3px; }
+
+        .dock-chip {
+            flex: 0 0 auto; display: flex; align-items: baseline; gap: 0.3rem;
+            max-width: 132px; padding: 0.24rem 0.45rem;
+            background: #0e0e1c; border: 1px solid #16141f;
+            border-left: 3px solid var(--accent); border-radius: 6px;
+        }
+        .dock-chip.winner { border-color: rgba(212,175,55,0.32); border-left-color: var(--accent); }
+        .dock-chip.latest { box-shadow: 0 0 14px rgba(212,175,55,0.18); }
+        .dock-num  { font-size: 0.52rem; font-weight: 700; color: #7a7060; }
+        .dock-name { font-size: 0.72rem; font-weight: 700; color: #e8dfc8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+        @keyframes dockPulse {
+            0%   { box-shadow: 0 14px 44px rgba(0,0,0,0.72); }
+            30%  { box-shadow: 0 0 0 3px rgba(212,175,55,0.4), 0 14px 44px rgba(0,0,0,0.72); }
+            100% { box-shadow: 0 14px 44px rgba(0,0,0,0.72); }
+        }
+        .draft-dock.pulse { animation: dockPulse 0.75s ease-out; }
+
         /* ── Draft ── */
 
         .draft-section { width: 100%; max-width: 1080px; padding: 0 2rem 3.5rem; display: none; flex-direction: column; gap: 1rem; }
@@ -1013,6 +1059,8 @@
             .name-list { max-height: 220px; }
 
             .draft-section { padding: 0 1rem 2.5rem; }
+
+            .draft-dock { left: 0.6rem; right: 0.6rem; bottom: 0.6rem; width: auto; }
 
             .draft-header { flex-wrap: wrap; gap: 0.5rem; }
             .draft-subtitle { white-space: normal; }
@@ -1235,6 +1283,14 @@
     </div>
     <div class="draft-grid" id="draftGrid"></div>
 </section>
+
+<div class="draft-dock" id="draftDock" role="button" tabindex="0" aria-label="Show the full draft order">
+    <div class="dock-head">
+        <span class="dock-title">♠ Draft Order</span>
+        <span class="dock-count" id="dockCount"></span>
+    </div>
+    <div class="dock-list" id="dockList"></div>
+</div>
 
 <div class="splash-overlay" id="splashOverlay">
     <div class="splash-card">
@@ -1502,6 +1558,9 @@
     const draftGrid     = document.getElementById('draftGrid');
     const draftSubtitle = document.getElementById('draftSubtitle');
     const draftClear    = document.getElementById('draftClear');
+    const draftDock     = document.getElementById('draftDock');
+    const dockList      = document.getElementById('dockList');
+    const dockCount     = document.getElementById('dockCount');
     const copyBtn       = document.getElementById('copyBtn');
 
     /* ══════════════════════════════════════
@@ -1567,6 +1626,11 @@
         '#117a65','#935116','#154360','#196f3d','#7b241c',
         '#4a235a','#0e6251','#784212','#1b4f72','#922b21',
     ];
+
+    // Below this width the name panel sits UNDER the wheel, so on-canvas
+    // copy has to point down instead of left. Matches the CSS breakpoint.
+    const STACK_BREAKPOINT = 700;
+    function stackedLayout() { return window.innerWidth <= STACK_BREAKPOINT; }
 
     function sliceColor(i) { return PALETTE[i % PALETTE.length]; }
     function ordinal(n) { const s=['th','st','nd','rd'],v=n%100; return n+(s[(v-20)%10]||s[v]||s[0]); }
@@ -2002,7 +2066,71 @@
             const status = document.createElement('div'); status.className='draft-status'; status.textContent=isWinner ? 'Winner' : 'Loser';
             card.append(num,name,status); draftGrid.appendChild(card);
         });
+        renderDock();
     }
+
+    /* ══════════════════════════════════════
+       Draft dock
+       ─────────────────────────────────────
+       The picks are only ever hidden if BOTH the real list is off-screen and
+       this strip is missing, so an observer on the grid decides which one is
+       carrying the draft at any moment.
+    ══════════════════════════════════════ */
+    let draftInView    = false;
+    let dockSuppressed = false;   // the strip steps aside while a name is being typed
+    let dockShown      = 0;       // pick count the dock last rendered, for the pulse
+
+    function renderDock() {
+        const slots = getWinnerSlots();
+        dockList.innerHTML = '';
+        draftOrder.forEach((pick, i) => {
+            const chip = document.createElement('div');
+            chip.className = 'dock-chip' + (i < slots ? ' winner' : '') +
+                             (i === draftOrder.length - 1 ? ' latest' : '');
+            chip.style.setProperty('--accent', pick.color);
+            const num  = document.createElement('span'); num.className  = 'dock-num';  num.textContent  = (i+1) + '.';
+            const name = document.createElement('span'); name.className = 'dock-name'; name.textContent = pick.name;
+            chip.append(num, name);
+            dockList.appendChild(chip);
+        });
+        dockCount.textContent = draftOrder.length
+            ? draftOrder.length + (draftOrder.length === 1 ? ' pick' : ' picks')
+            : '';
+        // Newest pick is the one you care about, so keep it in view.
+        dockList.scrollLeft = dockList.scrollWidth;
+
+        if (draftOrder.length > dockShown && draftDock.classList.contains('show')) {
+            draftDock.classList.remove('pulse');
+            void draftDock.offsetWidth;
+            draftDock.classList.add('pulse');
+        }
+        dockShown = draftOrder.length;
+        syncDock();
+    }
+
+    function syncDock() {
+        draftDock.classList.toggle('show', draftOrder.length > 0 && !draftInView && !dockSuppressed);
+    }
+
+    // On a phone the strip sits over the bottom of the page, which is exactly
+    // where the name field ends up — so it gets out of the way while you type.
+    nameInput.addEventListener('focus', () => { dockSuppressed = true;  syncDock(); });
+    nameInput.addEventListener('blur',  () => { dockSuppressed = false; syncDock(); });
+
+    if (typeof IntersectionObserver === 'function') {
+        new IntersectionObserver(entries => {
+            draftInView = entries[0].isIntersecting;
+            syncDock();
+        }, { threshold: 0.2 }).observe(draftGrid);
+    }
+
+    function jumpToDraft() {
+        draftSection.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    }
+    draftDock.addEventListener('click', jumpToDraft);
+    draftDock.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); jumpToDraft(); }
+    });
 
     draftClear.addEventListener('click', () => {
         if (isSpinning || isBusy) return;
@@ -2168,7 +2296,7 @@
             ctx.textAlign='center'; ctx.textBaseline='middle';
             ctx.fillStyle='#d4af37';
             ctx.font='700 18px Palatino Linotype, Palatino, Georgia, serif';
-            ctx.fillText('Add names on the left',cx,cy-10);
+            ctx.fillText(stackedLayout() ? 'Add names below' : 'Add names on the left',cx,cy-10);
             ctx.fillStyle='#9b8d68';
             ctx.font='italic 13px Palatino Linotype, Palatino, Georgia, serif';
             ctx.fillText('to get started.',cx,cy+16);
@@ -3443,7 +3571,10 @@
     ══════════════════════════════════════ */
     // Keep a wheel in mid-flight bouncing off the CURRENT viewport edges
     const refreshPopRect = () => { if (popOff.active) popOff.rect = wheelWrap.getBoundingClientRect(); };
-    window.addEventListener('resize', ()=>{ resizeFire(); resizeOverlay(); refreshPopRect(); });
+    window.addEventListener('resize', ()=>{
+        resizeFire(); resizeOverlay(); refreshPopRect();
+        if (!isSpinning) redraw();          // empty-wheel copy flips with the layout
+    });
     window.addEventListener('scroll', refreshPopRect, { passive: true });
 
     /* ══════════════════════════════════════
