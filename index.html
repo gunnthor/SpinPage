@@ -907,7 +907,7 @@
         }
 
         .marble-board {
-            width: 184px; max-height: 560px; overflow-y: auto;
+            width: 184px; max-height: 560px; overflow-y: auto; flex: 0 0 auto;
             background: #140a1e; border: 1px solid #3a1a4a; border-radius: 12px;
             padding: 0.7rem 0.8rem;
         }
@@ -954,8 +954,8 @@
 
         @media (max-width: 700px) {
             .marble-stage { flex-direction: column; align-items: center; }
-            #marbleCanvas { width: min(388px, 86vw); }
-            .marble-board { width: min(388px, 86vw); max-height: 160px; }
+            #marbleCanvas { width: auto; max-width: 100%; }
+            .marble-board { width: min(388px, 86vw); max-height: 160px !important; }
             .marble-title { font-size: 1.7rem; }
         }
 
@@ -1473,7 +1473,7 @@
             <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
             <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds, with the live odds shown beside the wheel.</li>
-            <li>Hides a ⚠ PANIC wedge that launches a horse race where only half the drafted survive.</li>
+            <li>Hides a ⚠ PANIC wedge that launches a horse race — over a hurdle, where each horse has its own posted odds of clearing it — and only half the drafted survive.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
 
@@ -3680,11 +3680,58 @@
     const marbleSubtitle = document.getElementById('marbleSubtitle');
     const marbleBoard    = marbleRankList.parentElement;
 
-    const CANVAS_W = marbleCanvas.width;          // 388 — lanes use the full width
-    const MH = marbleCanvas.height;               // 560
-    const SPRINT_PAD_L = 102, SPRINT_PAD_R = 24;  // left name column + right margin
-    const TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
+    // The race is a full-screen takeover, so the track is sized to the screen
+    // rather than pinned to the markup's 388x560 — on a wide monitor that left
+    // the field crammed into a strip down the middle.
+    let CANVAS_W = marbleCanvas.width;
+    let MH = marbleCanvas.height;
+    let SPRINT_PAD_L = 102;
+    const SPRINT_PAD_R = 24;                      // right margin past the finish
+    let TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
+    let lastRunners = null, lastSafeCount = 0;    // so a resize can redraw a finished race
+
+    function sizeMarbleCanvas(runnerCount) {
+        const wide   = window.innerWidth > 700;
+        const boardW = wide ? 200 : 0;                       // finish-order panel + gap
+        // Lanes want about 95px each — past that a small field is just spread
+        // thin down a tall canvas.
+        const want = runnerCount ? runnerCount * 95 + 60 : 700;
+        const w = Math.round(Math.max(320, Math.min(window.innerWidth - boardW - 64, 1200)));
+        const h = Math.round(Math.max(380, Math.min(window.innerHeight - 150, want, 900)));
+        if (marbleCanvas.width === w && marbleCanvas.height === h) return;
+        marbleCanvas.width  = w;
+        marbleCanvas.height = h;
+        CANVAS_W = w; MH = h;
+        // Name column keeps its share of the width, so long names still fit.
+        SPRINT_PAD_L = Math.round(Math.min(170, Math.max(96, w * 0.2)));
+        TRACK_X0 = SPRINT_PAD_L;
+        FINISH_X = w - SPRINT_PAD_R;
+        marbleBoard.style.maxHeight = h + 'px';
+    }
     const SPRINT_BASE = 0.00075;                  // tuned: majority-safe quota fills in ~12-19s
+
+    /* -- The hurdle --
+       One jump a quarter of the way in, with 75% of the track still to run.
+       Every horse carries its own posted chance of clearing it, and the
+       faster it is travelling relative to the rest of the field at the
+       moment it takes off, the more of that chance it gives back: coming in
+       hot is how you catch a rail. Clipping it costs momentum, not the race
+       — a stumbler can still recover and finish safe. */
+    const HURDLE_P      = 0.25;   // where the rail sits along the track
+    const HURDLE_LEAD   = 0.024;  // half-width of the leap, in track fraction
+    const HURDLE_RISK   = 0.30;   // how hard being quicker than the field bites
+    const HURDLE_RISKMAX= 0.25;   // ...capped, so a flier is never doomed
+    const HURDLE_FLOOR  = 0.25;   // ...and never worse than one-in-four
+    const STUMBLE_MS    = 1100;   // how long a clipped rail keeps you slow
+    let   hurdleFlash   = null;   // {name, color, at} for the on-canvas callout
+
+    // Posted chance, minus what the horse gives back for carrying more speed
+    // into the jump than the field around it.
+    function hurdleOdds(jump, speed, fieldSpeed) {
+        const ratio   = speed / (fieldSpeed || SPRINT_BASE);     // 1 = field average
+        const penalty = Math.min(Math.max((ratio - 1) * HURDLE_RISK, 0), HURDLE_RISKMAX);
+        return Math.max(jump - penalty, HURDLE_FLOOR);
+    }
 
     function onPanicLanded() {
         sliceWeights = null;
@@ -3714,6 +3761,25 @@
         }
     }
 
+    // Timber rattling — a clipped rail, not a clean note.
+    function playHurdleHit() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [196, 262, 147].forEach((f, i) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            const t = now + i * 0.045;
+            o.type = 'square';
+            o.frequency.setValueAtTime(f * (0.9 + Math.random() * 0.2), t);
+            o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.09);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.22 - i * 0.05, t + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.0006, t + 0.12);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(t); o.stop(t + 0.14);
+        });
+        noiseBurst(0.14, 900, 0.3, 0.9);
+    }
+
     function playFinishPing() {
         if (!audioCtx) return;
         const now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -3732,61 +3798,111 @@
 
     // Sprint race: lanes drawn from scripted progress (r.p in 0..1). No physics,
     // so runners always advance and always finish — nothing can stall or shaft.
-    function drawSprint(runners, safeCount) {
+    function drawSprint(runners, safeCount, now) {
         const n = runners.length;
         const laneTop = 16, laneH = (MH - 32) / n;
         const trackLen = FINISH_X - TRACK_X0;
+        const hurdleX  = TRACK_X0 + HURDLE_P * trackLen;
+        now = now || performance.now();
+        lastRunners = runners; lastSafeCount = safeCount;
+        // Type and sprites grow with the track so a big screen isn't a small
+        // race drawn far apart.
+        const k = Math.min(Math.max(CANVAS_W / 388, 1), 1.7);
 
         const bg = mctx.createLinearGradient(0, 0, 0, MH);
         bg.addColorStop(0, '#0c0716'); bg.addColorStop(1, '#1a0f2a');
         mctx.fillStyle = bg; mctx.fillRect(0, 0, CANVAS_W, MH);
 
         // checkered finish line + glow band
-        for (let yy = 0; yy < MH; yy += 10) {
-            mctx.fillStyle = (Math.floor(yy / 10) % 2) ? '#e8e8e8' : '#15151c';
-            mctx.fillRect(FINISH_X, yy, 6, 10);
+        const sq = Math.round(10 * k);
+        for (let yy = 0; yy < MH; yy += sq) {
+            mctx.fillStyle = (Math.floor(yy / sq) % 2) ? '#e8e8e8' : '#15151c';
+            mctx.fillRect(FINISH_X, yy, 6 * k, sq);
         }
         mctx.fillStyle = 'rgba(46,204,113,0.10)';
-        mctx.fillRect(FINISH_X + 6, 0, CANVAS_W - FINISH_X - 6, MH);
+        mctx.fillRect(FINISH_X + 6 * k, 0, CANVAS_W - FINISH_X - 6 * k, MH);
+
+        // hurdle marker running the height of the track
+        mctx.save();
+        mctx.setLineDash([5, 5]);
+        mctx.strokeStyle = 'rgba(212,175,55,0.35)'; mctx.lineWidth = 1;
+        mctx.beginPath(); mctx.moveTo(hurdleX, 0); mctx.lineTo(hurdleX, MH); mctx.stroke();
+        mctx.restore();
 
         for (let i = 0; i < n; i++) {
             const r = runners[i];
             const yc = laneTop + (i + 0.5) * laneH;
-            const hs = Math.max(15, Math.min(laneH * 0.85, 32));   // horse sprite size
+            const hs = Math.max(15, Math.min(laneH * 0.85, 30 + CANVAS_W * 0.03));   // horse sprite size
 
             // lane guide
             mctx.strokeStyle = 'rgba(168,111,207,0.12)'; mctx.lineWidth = 1;
             mctx.beginPath(); mctx.moveTo(TRACK_X0, yc); mctx.lineTo(FINISH_X, yc); mctx.stroke();
 
             // pinned name chip on the left
-            const chipH = Math.min(16, laneH - 3);
-            const nm = r.pick.name.length > 11 ? r.pick.name.slice(0, 10) + '…' : r.pick.name;
+            const chipH = Math.min(16 * k, laneH - 3);
+            const maxChars = Math.round(8 * k);
+            const nm = r.pick.name.length > maxChars ? r.pick.name.slice(0, maxChars - 1) + '…' : r.pick.name;
             mctx.fillStyle = 'rgba(8,4,16,0.7)';
             mRoundRect(6, yc - chipH / 2, TRACK_X0 - 14, chipH, 4); mctx.fill();
             mctx.strokeStyle = r.color; mctx.lineWidth = 1.5; mctx.stroke();
-            mctx.fillStyle = '#e8dfc8'; mctx.font = '700 10px Segoe UI,system-ui,sans-serif';
+            mctx.fillStyle = '#e8dfc8'; mctx.font = `700 ${Math.round(10 * k)}px Segoe UI,system-ui,sans-serif`;
             mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
             mctx.fillText(nm, 12, yc + 0.5);
 
+            // posted jump odds — dimmed once the horse has had its go
+            mctx.fillStyle = r.hurdle === 'fell'  ? 'rgba(192,57,43,0.95)'
+                           : r.hurdle === 'clear' ? 'rgba(46,204,113,0.75)'
+                           : 'rgba(212,175,55,0.9)';
+            mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+            mctx.textAlign = 'right';
+            mctx.fillText(Math.round(r.jump * 100) + '%', TRACK_X0 - 10, yc + 0.5);
+            mctx.textAlign = 'left';
+
             const ox = TRACK_X0 + Math.min(1, r.p) * trackLen;
 
+            // This lane's rail: upright until its horse knocks it flat.
+            const railH = Math.min(laneH * 0.5, 18 * k);
+            mctx.save();
+            mctx.translate(hurdleX, yc + railH * 0.35);
+            if (r.hurdle === 'fell') mctx.rotate(1.12);              // knocked over
+            mctx.fillStyle = r.hurdle === 'fell' ? '#7a2a22' : '#c9a227';
+            mctx.fillRect(-1.5 * k, -railH, 3 * k, railH);            // post
+            mctx.fillStyle = r.hurdle === 'fell' ? '#a33a2c' : '#f0e6c0';
+            mctx.fillRect(-6 * k, -railH, 12 * k, 3 * k);             // top rail
+            mctx.restore();
+
+            // Airborne over the rail, or pitching forward into it.
+            let yOff = 0, pitch = 0;
+            const near = (r.p - (HURDLE_P - HURDLE_LEAD)) / (2 * HURDLE_LEAD);
+            if (r.hurdle === 'clear' && near >= 0 && near <= 1) {
+                // Capped against the lane height so a leap doesn't land in the
+                // lane above on a big screen.
+                yOff  = -Math.sin(Math.PI * near) * Math.min(hs * 0.85, laneH * 0.42);
+                pitch = -Math.sin(Math.PI * near) * 0.42;
+            } else if (r.hurdle === 'fell' && now - r.fellAt < 700) {
+                const u = (now - r.fellAt) / 700;
+                yOff  = Math.sin(Math.PI * u) * hs * 0.16;
+                pitch = Math.sin(Math.PI * u) * 0.5;
+            }
+
             // dust trail behind the horse
-            const grd = mctx.createLinearGradient(ox - 30, 0, ox, 0);
+            const trail = Math.max(30, trackLen * 0.055);
+            const grd = mctx.createLinearGradient(ox - trail, 0, ox, 0);
             grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, r.color);
             mctx.strokeStyle = grd; mctx.globalAlpha = 0.45; mctx.lineWidth = hs * 0.3;
-            mctx.beginPath(); mctx.moveTo(Math.max(TRACK_X0, ox - 30), yc + hs * 0.2); mctx.lineTo(ox, yc + hs * 0.2); mctx.stroke();
+            mctx.beginPath(); mctx.moveTo(Math.max(TRACK_X0, ox - trail), yc + hs * 0.2); mctx.lineTo(ox, yc + hs * 0.2); mctx.stroke();
             mctx.globalAlpha = 1;
 
             // colored glow under the horse (player ID)
-            const glow = mctx.createRadialGradient(ox, yc, 1, ox, yc, hs * 0.6);
+            const glow = mctx.createRadialGradient(ox, yc + yOff, 1, ox, yc + yOff, hs * 0.6);
             glow.addColorStop(0, r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
             mctx.globalAlpha = r.finished ? 0.55 : 0.4;
-            mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
+            mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc + yOff, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
             mctx.globalAlpha = 1;
 
             // horse sprite — flipped to gallop toward the finish (right)
             mctx.save();
-            mctx.translate(ox, yc); mctx.scale(-1, 1);
+            mctx.translate(ox, yc + yOff); mctx.rotate(pitch); mctx.scale(-1, 1);
             mctx.font = `${Math.round(hs)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
             mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
             mctx.fillText('🐎', 0, 0);
@@ -3795,17 +3911,41 @@
             // rank badge for safe finishers
             if (r.finished && r.safeRank) {
                 const bx = ox + hs * 0.42, byc = yc - hs * 0.42;
-                mctx.fillStyle = '#1e8449'; mctx.beginPath(); mctx.arc(bx, byc, 7, 0, 2 * Math.PI); mctx.fill();
+                mctx.fillStyle = '#1e8449'; mctx.beginPath(); mctx.arc(bx, byc, 7 * k, 0, 2 * Math.PI); mctx.fill();
                 mctx.strokeStyle = '#fff'; mctx.lineWidth = 1; mctx.stroke();
-                mctx.fillStyle = '#fff'; mctx.font = '900 9px Segoe UI,system-ui,sans-serif';
+                mctx.fillStyle = '#fff'; mctx.font = `900 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
                 mctx.textAlign = 'center'; mctx.textBaseline = 'middle'; mctx.fillText(r.safeRank, bx, byc + 0.5);
             }
         }
 
+        // "X clips the hurdle!" for a moment after it happens
+        if (hurdleFlash && now - hurdleFlash.at < 1400) {
+            const fade = 1 - (now - hurdleFlash.at) / 1400;
+            mctx.save();
+            mctx.globalAlpha = Math.min(1, fade * 2.2);
+            mctx.font = `800 ${Math.round(12 * k)}px Segoe UI,system-ui,sans-serif`;
+            mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+            const msg = hurdleFlash.name + ' clips the hurdle!';
+            const w = mctx.measureText(msg).width + 16 * k;
+            mctx.fillStyle = 'rgba(10,4,16,0.85)';
+            mRoundRect(CANVAS_W / 2 - w / 2, 4, w, 20 * k, 6); mctx.fill();
+            mctx.strokeStyle = hurdleFlash.color; mctx.lineWidth = 1.5; mctx.stroke();
+            mctx.fillStyle = '#e8dfc8';
+            mctx.fillText(msg, CANVAS_W / 2, 4 + 10 * k);
+            mctx.restore();
+        }
+
+        // vertical HURDLE label up the left of the rail
+        mctx.save();
+        mctx.translate(hurdleX - 5, MH - 8); mctx.rotate(-Math.PI / 2);
+        mctx.fillStyle = 'rgba(212,175,55,0.7)'; mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+        mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
+        mctx.fillText('HURDLE', 0, 0); mctx.restore();
+
         // vertical FINISH label up the right edge
         mctx.save();
         mctx.translate(FINISH_X + 16, MH - 8); mctx.rotate(-Math.PI / 2);
-        mctx.fillStyle = 'rgba(46,204,113,0.85)'; mctx.font = '800 11px Segoe UI,system-ui,sans-serif';
+        mctx.fillStyle = 'rgba(46,204,113,0.85)'; mctx.font = `800 ${Math.round(11 * k)}px Segoe UI,system-ui,sans-serif`;
         mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
         mctx.fillText('FINISH', 0, 0); mctx.restore();
     }
@@ -3835,9 +3975,10 @@
         const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
         const safeCount = racers.length - outCount;
 
+        sizeMarbleCanvas(racers.length);
         marbleRankList.innerHTML = '';
         marbleResultEl.textContent = '';
-        marbleSubtitle.textContent = `${racers.length} running — first ${safeCount} across are safe, last ${outCount} drop out`;
+        marbleSubtitle.textContent = `${racers.length} running — one hurdle, first ${safeCount} across are safe, last ${outCount} drop out`;
         marbleOverlay.classList.add('show');
 
         // Each runner advances by a scripted, always-positive amount whose "form"
@@ -3846,12 +3987,30 @@
             pick, color: pick.color,
             p: 0, form: (Math.random() - 0.5) * 0.3,
             talent: 0.82 + Math.random() * 0.36,        // fixed speed edge → a real field spread
+            jump: 0.62 + Math.random() * 0.33,          // posted odds of clearing the hurdle
+            hurdle: null,                               // null | 'clear' | 'fell'
+            fellAt: 0, stumbleUntil: 0, speed: SPRINT_BASE,
             finished: false, safeRank: null,
         }));
+        hurdleFlash = null;
 
         let frames = 0, lastTick = 0;
         const MAXF = 1800;                  // ~30s hard cap (races naturally end ~13-20s)
         const safe = [];                    // runners that claimed a SAFE spot, in finish order
+
+        // Take-off. The posted chance is what the horse is worth on a level
+        // run; the speed it is actually carrying is what it pays to get over.
+        function takeHurdle(r, fieldSpeed, now) {
+            if (Math.random() < hurdleOdds(r.jump, r.speed, fieldSpeed)) { r.hurdle = 'clear'; return; }
+
+            r.hurdle       = 'fell';
+            r.fellAt       = now;
+            r.p            = Math.max(0, r.p - 0.012);   // knocked back into the rail
+            r.form         = -0.5;
+            r.stumbleUntil = now + STUMBLE_MS;
+            hurdleFlash    = { name: r.pick.name, color: r.color, at: now };
+            playHurdleHit();
+        }
 
         // Decided the instant the safe quota fills — everyone still running is OUT.
         function finishRace() {
@@ -3861,18 +4020,33 @@
                 addMarbleRankRow(r, safe.length, true, safeCount);
             }
             rest.forEach((r, i) => addMarbleRankRow(r, safeCount + 1 + i, false, safeCount));
-            drawSprint(runners, safeCount);
+            drawSprint(runners, safeCount, performance.now());
             setTimeout(() => resolveMarbleRace(safe.map(r => r.pick), rest.map(r => r.pick)), 1100);
         }
 
         function frame(now) {
             frames++;
+
+            // Work out everyone's speed for this frame first — the hurdle needs
+            // to compare a horse against the field it is actually running in.
+            let speedSum = 0, speedN = 0;
             for (const r of runners) {
                 if (r.finished) continue;
                 r.form += (Math.random() - 0.5) * 0.05;
                 if (Math.random() < 0.012) r.form += Math.random() * 0.5;   // a sudden surge
                 r.form = Math.max(-0.55, Math.min(0.9, r.form));
-                r.p += SPRINT_BASE * r.talent * (1 + r.form);               // always > 0
+                // A clipped rail costs speed, easing back to full over ~1s.
+                const left = r.stumbleUntil - now;
+                const hurt = left > 0 ? 0.45 + 0.55 * (1 - left / STUMBLE_MS) : 1;
+                r.speed = SPRINT_BASE * r.talent * (1 + r.form) * hurt;     // always > 0
+                speedSum += r.speed; speedN++;
+            }
+            const fieldSpeed = speedN ? speedSum / speedN : SPRINT_BASE;
+
+            for (const r of runners) {
+                if (r.finished) continue;
+                r.p += r.speed;
+                if (!r.hurdle && r.p >= HURDLE_P - HURDLE_LEAD) takeHurdle(r, fieldSpeed, now);
                 if (r.p >= 1) {
                     r.p = 1; r.finished = true;
                     if (safe.length < safeCount) {                          // grabbed a safe spot
@@ -3883,7 +4057,7 @@
                 }
             }
             if (now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
-            drawSprint(runners, safeCount);
+            drawSprint(runners, safeCount, now);
 
             if (safe.length >= safeCount || frames >= MAXF) { finishRace(); return; }
             requestAnimationFrame(frame);
@@ -4181,6 +4355,11 @@
     window.addEventListener('resize', ()=>{
         resizeFire(); resizeOverlay(); refreshPopRect();
         if (!isSpinning) redraw();          // empty-wheel copy flips with the layout
+        // Keep the race fitted if the window changes shape mid-race
+        if (marbleOverlay.classList.contains('show')) {
+            sizeMarbleCanvas(lastRunners ? lastRunners.length : 0);
+            if (lastRunners) drawSprint(lastRunners, lastSafeCount, performance.now());
+        }
     });
     window.addEventListener('scroll', refreshPopRect, { passive: true });
 

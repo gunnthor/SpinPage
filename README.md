@@ -20,6 +20,7 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Plot twists** where the wheel fakes a stop, then blasts back into motion.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds, with the resulting chance spelled out beside the wheel.
 - **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
+- **The hurdle**: a quarter of the way into that race, every horse jumps. Each carries its own posted chance of clearing it, and the more speed it is carrying relative to the field at take-off, the more of that chance it gives back — clip the rail and you lose momentum, not the race.
 - **Illegal spin moments** with a stamped invalid result and retry.
 - **No One Is Safe wheel** that can randomly undraft a previous pick.
 - **Confetti, fire, fanfare, ticks, and impact sounds** using browser-native canvas and Web Audio APIs.
