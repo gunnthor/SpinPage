@@ -17,7 +17,7 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Draft order mode** that removes winners from the wheel and records every pick.
 - **Autospin** for hands-free draft generation — and it can be called off mid-spin, without waiting for the draft to finish.
 - **Undo, restore, clear, and copy** controls for managing draft results.
-- **Plot twists** where the wheel fakes a stop, then blasts back into motion.
+- **Wind-back**: the wheel runs an ordinary spin, creeps to a stop on a slice — and then gets dragged backwards, held, and thrown forward again onto the real winner. Nothing about the first leg telegraphs it.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds, with the resulting chance spelled out beside the wheel.
 - **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
 - **Hurdles**: every race lays out 2-4 rails across the track. Each horse carries its own posted chance of clearing them, and the more speed it is carrying relative to the field at take-off, the more of that chance it gives back. Clip one and you lose momentum, not the race: the horse pitches forward, knocks the rail flat, glows red and runs SLOWED for a second before recovering.
