@@ -15,12 +15,13 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the viewport or drops to the floor and rolls away the direction it was spinning, then hops back onto the hub to finish the very same spin.
 - **Power-up rail**: while a power-up is in play, the panel beside the wheel names it and shows what it did to that player's real odds (`20% -> 44%`), so it stays readable even at full speed. Desktop only.
 - **Draft order mode** that removes winners from the wheel and records every pick.
-- **Autospin** for hands-free draft generation.
+- **Autospin** for hands-free draft generation — and it can be called off mid-spin, without waiting for the draft to finish.
 - **Undo, restore, clear, and copy** controls for managing draft results.
 - **Plot twists** where the wheel fakes a stop, then blasts back into motion.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds, with the resulting chance spelled out beside the wheel.
 - **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
-- **The hurdle**: a quarter of the way into that race, every horse jumps. Each carries its own posted chance of clearing it, and the more speed it is carrying relative to the field at take-off, the more of that chance it gives back — clip the rail and you lose momentum, not the race.
+- **Hurdles**: every race lays out 2-4 rails across the track. Each horse carries its own posted chance of clearing them, and the more speed it is carrying relative to the field at take-off, the more of that chance it gives back. Clip one and you lose momentum, not the race: the horse pitches forward, knocks the rail flat, glows red and runs SLOWED for a second before recovering.
+- **Head-count**: the players panel shows how many are still on the wheel out of everyone in the draft.
 - **Illegal spin moments** with a stamped invalid result and retry.
 - **No One Is Safe wheel** that can randomly undraft a previous pick.
 - **Confetti, fire, fanfare, ticks, and impact sounds** using browser-native canvas and Web Audio APIs.

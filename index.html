@@ -151,6 +151,13 @@
             display: flex; align-items: center; gap: 0.6rem;
         }
 
+        /* Running head-count: on the wheel now / everyone in the draft */
+        .panel-count {
+            font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em;
+            color: #e8dfc8; background: #171528; border: 1px solid #2a2040;
+            border-radius: 20px; padding: 0.12rem 0.5rem; white-space: nowrap;
+        }
+
         .panel-title::before, .panel-title::after { content: ''; flex: 1; height: 1px; }
         .panel-title::before { background: linear-gradient(to right, transparent, #2a2040); }
         .panel-title::after  { background: linear-gradient(to left,  transparent, #2a2040); }
@@ -1272,7 +1279,7 @@
     </div>
 
     <div class="name-panel">
-        <div class="panel-title">Players</div>
+        <div class="panel-title">Players <span class="panel-count" id="playerCount">0</span></div>
         <div class="add-row">
             <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="30" autocomplete="off">
             <button class="add-btn" id="addBtn" title="Add">+</button>
@@ -1473,7 +1480,7 @@
             <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
             <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds, with the live odds shown beside the wheel.</li>
-            <li>Hides a ⚠ PANIC wedge that launches a horse race — over a hurdle, where each horse has its own posted odds of clearing it — and only half the drafted survive.</li>
+            <li>Hides a ⚠ PANIC wedge that launches a horse race over 2–4 hurdles, each horse carrying its own posted odds of clearing them — and only half the drafted survive.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
 
@@ -1544,6 +1551,7 @@
     const addBtn        = document.getElementById('addBtn');
     const nameListEl    = document.getElementById('nameList');
     const starterHint   = document.getElementById('starterHint');
+    const playerCount   = document.getElementById('playerCount');
     const spinBtn       = document.getElementById('spinBtn');
     const autoBtn       = document.getElementById('autoBtn');
     const spinHint      = document.getElementById('spinHint');
@@ -1940,7 +1948,7 @@
                 redraw();
                 updateButtons();
                 // Illegal spins are a no-op retry — keep an active autospin alive
-                if (autoSpin && names.length >= 2) setTimeout(spin, 600);
+                if (autoSpin && names.length >= 2) queueAutoSpin(600);
             }, 480);
         }, 2600);
     }
@@ -2561,13 +2569,25 @@
     function updateButtons() {
         const canSpin = names.length >= 2;
         spinBtn.disabled  = !canSpin || isSpinning || isBusy;
-        autoBtn.disabled  = !canSpin || isSpinning || isBusy;
+        // While autospin is running it stays clickable, so it can be called off
+        // mid-spin — otherwise you have to sit through the rest of the draft.
+        autoBtn.disabled  = autoSpin ? false : (!canSpin || isSpinning || isBusy);
         undoBtn.disabled  = undoStack.length === 0 || isSpinning || isBusy;
         resetBtn.disabled = isSpinning || isBusy;
         namePanel.classList.toggle('needs-players', names.length < 2);
-        starterHint.textContent = names.length === 0 ? 'Add at least 2 names to spin.' :
-                                  names.length === 1 ? 'Add 1 more name to unlock the wheel.' :
-                                  'Ready to spin.';
+        // Head-count: the chip carries the total, the hint splits it up.
+        const total = totalEntrants();
+        playerCount.textContent = draftOrder.length
+            ? names.length + ' of ' + total
+            : String(total);
+        playerCount.title = total + ' player' + (total === 1 ? '' : 's') + ' in total' +
+            (draftOrder.length ? ' — ' + names.length + ' still on the wheel, ' + draftOrder.length + ' drafted' : '');
+
+        starterHint.textContent =
+            names.length === 0 ? (total ? total + ' drafted — the wheel is empty.' : 'Add at least 2 names to spin.') :
+            names.length === 1 ? 'Add 1 more name to unlock the wheel.' :
+            draftOrder.length  ? names.length + ' left on the wheel, ' + draftOrder.length + ' drafted.' :
+                                 names.length + ' players ready to spin.';
         spinHint.textContent = names.length === 0 ? 'Add at least 2 names to spin' :
                                names.length === 1 ? 'Add 1 more name to spin' :
                                'Drag the wheel and let go — or hit SPIN.';
@@ -2806,7 +2826,7 @@
         if (isSpinning||isBusy||names.length<2) return;
         // Hands on the wheel win: an autospin tick that lands mid-drag waits
         // its turn instead of fighting the player for the rotation.
-        if (drag.active && !launch) { if (autoSpin) setTimeout(spin, 900); return; }
+        if (drag.active && !launch) { if (autoSpin) queueAutoSpin(900); return; }
         ensureAudio();
 
         isSpinning = true;
@@ -3717,13 +3737,27 @@
        moment it takes off, the more of that chance it gives back: coming in
        hot is how you catch a rail. Clipping it costs momentum, not the race
        — a stumbler can still recover and finish safe. */
-    const HURDLE_P      = 0.25;   // where the rail sits along the track
-    const HURDLE_LEAD   = 0.024;  // half-width of the leap, in track fraction
+    const HURDLE_FIRST  = 0.22;   // first rail, with most of the track still to run
+    const HURDLE_LAST   = 0.74;   // last one, leaving a run-in to the line
+    const HURDLE_LEAD   = 0.022;  // half-width of the leap, in track fraction
     const HURDLE_RISK   = 0.30;   // how hard being quicker than the field bites
     const HURDLE_RISKMAX= 0.25;   // ...capped, so a flier is never doomed
     const HURDLE_FLOOR  = 0.25;   // ...and never worse than one-in-four
     const STUMBLE_MS    = 1100;   // how long a clipped rail keeps you slow
+    let   raceHurdles   = [];     // this race's rail positions along the track
     let   hurdleFlash   = null;   // {name, color, at} for the on-canvas callout
+
+    // Two to four rails, evenly spread with a little jitter so no two races
+    // are laid out the same.
+    function makeHurdles() {
+        const n = 2 + Math.floor(Math.random() * 3);
+        const step = (HURDLE_LAST - HURDLE_FIRST) / (n - 1);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            out.push(HURDLE_FIRST + i * step + (Math.random() - 0.5) * 0.035);
+        }
+        return out;
+    }
 
     // Posted chance, minus what the horse gives back for carrying more speed
     // into the jump than the field around it.
@@ -3802,7 +3836,7 @@
         const n = runners.length;
         const laneTop = 16, laneH = (MH - 32) / n;
         const trackLen = FINISH_X - TRACK_X0;
-        const hurdleX  = TRACK_X0 + HURDLE_P * trackLen;
+        const hurdleXs = raceHurdles.map(h => TRACK_X0 + h * trackLen);
         now = now || performance.now();
         lastRunners = runners; lastSafeCount = safeCount;
         // Type and sprites grow with the track so a big screen isn't a small
@@ -3822,11 +3856,13 @@
         mctx.fillStyle = 'rgba(46,204,113,0.10)';
         mctx.fillRect(FINISH_X + 6 * k, 0, CANVAS_W - FINISH_X - 6 * k, MH);
 
-        // hurdle marker running the height of the track
+        // hurdle markers running the height of the track
         mctx.save();
         mctx.setLineDash([5, 5]);
         mctx.strokeStyle = 'rgba(212,175,55,0.35)'; mctx.lineWidth = 1;
-        mctx.beginPath(); mctx.moveTo(hurdleX, 0); mctx.lineTo(hurdleX, MH); mctx.stroke();
+        hurdleXs.forEach(hx => {
+            mctx.beginPath(); mctx.moveTo(hx, 0); mctx.lineTo(hx, MH); mctx.stroke();
+        });
         mctx.restore();
 
         for (let i = 0; i < n; i++) {
@@ -3844,14 +3880,17 @@
             const nm = r.pick.name.length > maxChars ? r.pick.name.slice(0, maxChars - 1) + '…' : r.pick.name;
             mctx.fillStyle = 'rgba(8,4,16,0.7)';
             mRoundRect(6, yc - chipH / 2, TRACK_X0 - 14, chipH, 4); mctx.fill();
-            mctx.strokeStyle = r.color; mctx.lineWidth = 1.5; mctx.stroke();
+            mctx.strokeStyle = now < r.stumbleUntil ? '#e74c3c' : r.color;
+            mctx.lineWidth = now < r.stumbleUntil ? 2.5 : 1.5; mctx.stroke();
             mctx.fillStyle = '#e8dfc8'; mctx.font = `700 ${Math.round(10 * k)}px Segoe UI,system-ui,sans-serif`;
             mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
             mctx.fillText(nm, 12, yc + 0.5);
 
-            // posted jump odds — dimmed once the horse has had its go
-            mctx.fillStyle = r.hurdle === 'fell'  ? 'rgba(192,57,43,0.95)'
-                           : r.hurdle === 'clear' ? 'rgba(46,204,113,0.75)'
+            // posted jump odds — red the moment this horse clips anything
+            const anyFell = r.results.indexOf('fell') >= 0;
+            const allDone = r.next >= raceHurdles.length;
+            mctx.fillStyle = anyFell ? 'rgba(192,57,43,0.95)'
+                           : allDone ? 'rgba(46,204,113,0.75)'
                            : 'rgba(212,175,55,0.9)';
             mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
             mctx.textAlign = 'right';
@@ -3860,30 +3899,55 @@
 
             const ox = TRACK_X0 + Math.min(1, r.p) * trackLen;
 
-            // This lane's rail: upright until its horse knocks it flat.
+            // This lane's rails: upright until this horse knocks one flat.
             const railH = Math.min(laneH * 0.5, 18 * k);
-            mctx.save();
-            mctx.translate(hurdleX, yc + railH * 0.35);
-            if (r.hurdle === 'fell') mctx.rotate(1.12);              // knocked over
-            mctx.fillStyle = r.hurdle === 'fell' ? '#7a2a22' : '#c9a227';
-            mctx.fillRect(-1.5 * k, -railH, 3 * k, railH);            // post
-            mctx.fillStyle = r.hurdle === 'fell' ? '#a33a2c' : '#f0e6c0';
-            mctx.fillRect(-6 * k, -railH, 12 * k, 3 * k);             // top rail
-            mctx.restore();
+            hurdleXs.forEach((hx, hi) => {
+                const res = r.results[hi];
+                mctx.save();
+                mctx.translate(hx, yc + railH * 0.35);
+                if (res === 'fell') mctx.rotate(1.12);                // knocked over
+                mctx.fillStyle = res === 'fell' ? '#7a2a22' : '#c9a227';
+                mctx.fillRect(-1.5 * k, -railH, 3 * k, railH);        // post
+                mctx.fillStyle = res === 'fell' ? '#a33a2c' : '#f0e6c0';
+                mctx.fillRect(-6 * k, -railH, 12 * k, 3 * k);         // top rail
+                mctx.restore();
+            });
 
-            // Airborne over the rail, or pitching forward into it.
+            // Airborne over the rail it is at, or pitching forward into it.
             let yOff = 0, pitch = 0;
-            const near = (r.p - (HURDLE_P - HURDLE_LEAD)) / (2 * HURDLE_LEAD);
-            if (r.hurdle === 'clear' && near >= 0 && near <= 1) {
-                // Capped against the lane height so a leap doesn't land in the
-                // lane above on a big screen.
-                yOff  = -Math.sin(Math.PI * near) * Math.min(hs * 0.85, laneH * 0.42);
-                pitch = -Math.sin(Math.PI * near) * 0.42;
-            } else if (r.hurdle === 'fell' && now - r.fellAt < 700) {
-                const u = (now - r.fellAt) / 700;
-                yOff  = Math.sin(Math.PI * u) * hs * 0.16;
-                pitch = Math.sin(Math.PI * u) * 0.5;
+            const lastIdx = r.next - 1;
+            if (lastIdx >= 0) {
+                const near = (r.p - (raceHurdles[lastIdx] - HURDLE_LEAD)) / (2 * HURDLE_LEAD);
+                if (r.results[lastIdx] === 'clear' && near >= 0 && near <= 1) {
+                    // Capped against the lane height so a leap doesn't land in
+                    // the lane above on a big screen.
+                    yOff  = -Math.sin(Math.PI * near) * Math.min(hs * 0.85, laneH * 0.42);
+                    pitch = -Math.sin(Math.PI * near) * 0.42;
+                } else if (r.results[lastIdx] === 'fell' && now - r.fellAt < 700) {
+                    const u = (now - r.fellAt) / 700;
+                    yOff  = Math.sin(Math.PI * u) * hs * 0.16;
+                    pitch = Math.sin(Math.PI * u) * 0.5;
+                }
             }
+
+            // A clipped rail throws up dust at the point of contact.
+            if (r.fellAt && now - r.fellAt < 620 && lastIdx >= 0) {
+                const u = (now - r.fellAt) / 620;
+                mctx.save();
+                mctx.globalAlpha = (1 - u) * 0.5;
+                mctx.fillStyle = '#c0392b';
+                for (let d = 0; d < 7; d++) {
+                    const a  = d * 0.9 + (r.fellAt % 10) * 0.3;
+                    const dd = u * hs * (0.5 + (d % 3) * 0.3);
+                    mctx.beginPath();
+                    mctx.arc(hurdleXs[lastIdx] + Math.cos(a) * dd,
+                             yc + Math.sin(a) * dd * 0.6, (1 - u) * 3 * k, 0, 2 * Math.PI);
+                    mctx.fill();
+                }
+                mctx.restore();
+            }
+
+            const slowed = now < r.stumbleUntil;
 
             // dust trail behind the horse
             const trail = Math.max(30, trackLen * 0.055);
@@ -3894,9 +3958,9 @@
             mctx.globalAlpha = 1;
 
             // colored glow under the horse (player ID)
-            const glow = mctx.createRadialGradient(ox, yc + yOff, 1, ox, yc + yOff, hs * 0.6);
-            glow.addColorStop(0, r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
-            mctx.globalAlpha = r.finished ? 0.55 : 0.4;
+            const glow = mctx.createRadialGradient(ox, yc + yOff, 1, ox, yc + yOff, hs * (slowed ? 0.8 : 0.6));
+            glow.addColorStop(0, slowed ? '#e74c3c' : r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
+            mctx.globalAlpha = slowed ? 0.75 : (r.finished ? 0.55 : 0.4);
             mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc + yOff, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
             mctx.globalAlpha = 1;
 
@@ -3907,6 +3971,22 @@
             mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
             mctx.fillText('🐎', 0, 0);
             mctx.restore();
+
+            // SLOWED tag for as long as the stumble lasts
+            if (slowed) {
+                mctx.save();
+                mctx.font = `900 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+                mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+                const label = 'SLOWED';
+                const tw = mctx.measureText(label).width + 10 * k;
+                const ty = yc - hs * 0.75;
+                mctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(now / 140));
+                mctx.fillStyle = '#c0392b';
+                mRoundRect(ox - tw / 2, ty - 7 * k, tw, 14 * k, 4); mctx.fill();
+                mctx.fillStyle = '#fff';
+                mctx.fillText(label, ox, ty + 0.5);
+                mctx.restore();
+            }
 
             // rank badge for safe finishers
             if (r.finished && r.safeRank) {
@@ -3935,12 +4015,16 @@
             mctx.restore();
         }
 
-        // vertical HURDLE label up the left of the rail
-        mctx.save();
-        mctx.translate(hurdleX - 5, MH - 8); mctx.rotate(-Math.PI / 2);
-        mctx.fillStyle = 'rgba(212,175,55,0.7)'; mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
-        mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
-        mctx.fillText('HURDLE', 0, 0); mctx.restore();
+        // vertical label up the left of each rail
+        hurdleXs.forEach((hx, hi) => {
+            mctx.save();
+            mctx.translate(hx - 5, MH - 8); mctx.rotate(-Math.PI / 2);
+            mctx.fillStyle = 'rgba(212,175,55,0.7)';
+            mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+            mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
+            mctx.fillText('HURDLE ' + (hi + 1), 0, 0);
+            mctx.restore();
+        });
 
         // vertical FINISH label up the right edge
         mctx.save();
@@ -3976,9 +4060,11 @@
         const safeCount = racers.length - outCount;
 
         sizeMarbleCanvas(racers.length);
+        raceHurdles = makeHurdles();          // before the subtitle counts them
+        hurdleFlash = null;
         marbleRankList.innerHTML = '';
         marbleResultEl.textContent = '';
-        marbleSubtitle.textContent = `${racers.length} running — one hurdle, first ${safeCount} across are safe, last ${outCount} drop out`;
+        marbleSubtitle.textContent = `${racers.length} running — ${raceHurdles.length} hurdles, first ${safeCount} across are safe, last ${outCount} drop out`;
         marbleOverlay.classList.add('show');
 
         // Each runner advances by a scripted, always-positive amount whose "form"
@@ -3987,12 +4073,12 @@
             pick, color: pick.color,
             p: 0, form: (Math.random() - 0.5) * 0.3,
             talent: 0.82 + Math.random() * 0.36,        // fixed speed edge → a real field spread
-            jump: 0.62 + Math.random() * 0.33,          // posted odds of clearing the hurdle
-            hurdle: null,                               // null | 'clear' | 'fell'
+            jump: 0.62 + Math.random() * 0.33,          // posted odds at every rail
+            results: [],                                // per rail: 'clear' | 'fell'
+            next: 0,                                    // the rail it is running at
             fellAt: 0, stumbleUntil: 0, speed: SPRINT_BASE,
             finished: false, safeRank: null,
         }));
-        hurdleFlash = null;
 
         let frames = 0, lastTick = 0;
         const MAXF = 1800;                  // ~30s hard cap (races naturally end ~13-20s)
@@ -4001,9 +4087,12 @@
         // Take-off. The posted chance is what the horse is worth on a level
         // run; the speed it is actually carrying is what it pays to get over.
         function takeHurdle(r, fieldSpeed, now) {
-            if (Math.random() < hurdleOdds(r.jump, r.speed, fieldSpeed)) { r.hurdle = 'clear'; return; }
-
-            r.hurdle       = 'fell';
+            const idx = r.next++;
+            if (Math.random() < hurdleOdds(r.jump, r.speed, fieldSpeed)) {
+                r.results[idx] = 'clear';
+                return;
+            }
+            r.results[idx] = 'fell';
             r.fellAt       = now;
             r.p            = Math.max(0, r.p - 0.012);   // knocked back into the rail
             r.form         = -0.5;
@@ -4046,7 +4135,8 @@
             for (const r of runners) {
                 if (r.finished) continue;
                 r.p += r.speed;
-                if (!r.hurdle && r.p >= HURDLE_P - HURDLE_LEAD) takeHurdle(r, fieldSpeed, now);
+                const rail = raceHurdles[r.next];
+                if (rail !== undefined && r.p >= rail - HURDLE_LEAD) takeHurdle(r, fieldSpeed, now);
                 if (r.p >= 1) {
                     r.p = 1; r.finished = true;
                     if (safe.length < safeCount) {                          // grabbed a safe spot
@@ -4088,7 +4178,7 @@
         isBusy = false;
         if (names.length < 2 && autoSpin) setAutoSpin(false);
         renderList(); renderDraft(); redraw(); saveState(); updateButtons();
-        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
+        if (autoSpin && names.length >= 2) queueAutoSpin(1400);
     }
 
     /* ── Draft complete splash ── */
@@ -4205,7 +4295,7 @@
                     renderList(); renderDraft(); redraw(); saveState();
                     setTimeout(() => showNoisWheel(selectedPick, () => {
                         // After undraft: resume auto-spin if on and names remain
-                        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
+                        if (autoSpin && names.length >= 2) queueAutoSpin(1400);
                     }), 700);
                 } else {
                     undoStack.push(selectedPick);
@@ -4222,7 +4312,7 @@
                     if (!stillHasNames) {
                         showSplash();
                     } else if (autoSpin) {
-                        setTimeout(spin, 1400);
+                        queueAutoSpin(1400);
                     }
                 }
             },380);
@@ -4232,6 +4322,14 @@
     /* ══════════════════════════════════════
        Auto spin
     ══════════════════════════════════════ */
+    // A queued auto-spin asks again on the way in: switching autospin off
+    // during the winner card has to stop the next one, not just the one after.
+    function queueAutoSpin(ms) {
+        setTimeout(() => {
+            if (autoSpin && names.length >= 2 && !isSpinning && !isBusy) spin();
+        }, ms);
+    }
+
     function setAutoSpin(val) {
         autoSpin=val;
         autoBtn.classList.toggle('on',autoSpin);
@@ -4240,10 +4338,15 @@
 
     autoBtn.addEventListener('click', ()=>{
         ensureAudio();
+        if (autoSpin) {                       // calling it off is allowed at any moment
+            setAutoSpin(false);
+            updateButtons();
+            return;
+        }
         if(names.length<2||isSpinning||isBusy)return;
-        const next = !autoSpin;
-        setAutoSpin(next);
-        if (next) spin();
+        setAutoSpin(true);
+        updateButtons();
+        spin();
     });
 
     /* ══════════════════════════════════════
