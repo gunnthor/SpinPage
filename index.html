@@ -73,10 +73,65 @@
             align-items: flex-start; justify-content: center;
         }
 
+        /* ── Left column ── */
+
+        .side-col { width: 255px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
+
+        /* ── Power-up rail ──
+           A spinning wheel is a terrible place to read anything, so whatever a
+           power-up did to the odds is spelled out here for the whole spin. */
+
+        .powerup-rail {
+            display: none; flex-direction: column; gap: 0.55rem;
+            background: linear-gradient(160deg, #0d0d1a, #090910);
+            border: 1px solid #1e1a30; border-left: 3px solid #2a2040;
+            border-radius: 14px; padding: 0.85rem 1rem;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .powerup-rail.on { display: flex; }
+        .powerup-rail.live {
+            border-left-color: var(--pu-color, #f5a623);
+            border-color: color-mix(in srgb, var(--pu-color, #f5a623) 32%, #1e1a30);
+            box-shadow: 0 0 34px rgba(0,0,0,0.6), 0 0 22px color-mix(in srgb, var(--pu-color, #f5a623) 18%, transparent);
+        }
+
+        .rail-title {
+            font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em;
+            text-transform: uppercase; color: #d4af37;
+        }
+        .powerup-rail.live .rail-title { color: var(--pu-color, #f5a623); }
+
+        /* One slot, two faces — the height never changes, so nothing shifts
+           underneath when a power-up drops mid-draft. */
+        .rail-slot { position: relative; min-height: 62px; }
+        .rail-face { transition: opacity 0.25s ease; }
+        .rail-idle { color: #5c5470; font-size: 0.7rem; font-style: italic; line-height: 1.5; }
+        .rail-card { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+                     display: flex; flex-direction: column; gap: 0.35rem; }
+        .powerup-rail.live .rail-idle { opacity: 0; }
+        .powerup-rail.live .rail-card { opacity: 1; }
+
+        .rail-top    { display: flex; align-items: center; gap: 0.6rem; }
+        .rail-emoji  { font-size: 1.9rem; line-height: 1;
+                       filter: drop-shadow(0 0 10px var(--pu-color, #f5a623)); }
+        .rail-label  { font-size: 0.88rem; font-weight: 800; letter-spacing: 0.06em;
+                       color: var(--pu-color, #f5a623); }
+        .rail-name   { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+                       color: #e8dfc8; opacity: 0.85; margin-top: 0.1rem; }
+        .rail-odds   { font-size: 0.68rem; color: #9b8d68; letter-spacing: 0.03em; }
+        .rail-odds b { color: #e8dfc8; font-weight: 700; }
+
+        @keyframes railPulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.07); }
+        }
+        .powerup-rail.live .rail-emoji { animation: railPulse 1.6s ease-in-out infinite; }
+
         /* ── Name panel ── */
 
         .name-panel {
-            width: 255px; flex-shrink: 0;
+            width: 100%; flex-shrink: 0;
             background: linear-gradient(160deg, #0d0d1a, #090910);
             border-radius: 14px; padding: 1.5rem;
             border: 1px solid #1e1a30;
@@ -1070,7 +1125,10 @@
 
             /* Wheel first on mobile so it's visible above the fold */
             .wheel-panel { order: 1; width: 100%; }
-            .name-panel  { order: 2; width: 100%; }
+            .side-col    { order: 2; width: 100%; }
+
+            /* No side room on a phone — the drop popup does the announcing */
+            .powerup-rail { display: none !important; }
 
             .wheel-wrap {
                 width: min(calc(100vw - 2rem), 480px);
@@ -1194,6 +1252,25 @@
 
 <div class="container">
 
+    <div class="side-col">
+
+    <div class="powerup-rail" id="powerUpRail">
+        <div class="rail-title" id="railTitle">Power-ups</div>
+        <div class="rail-slot">
+            <div class="rail-face rail-idle">Armed. One spin in three warps a slice — and the odds with it.</div>
+            <div class="rail-face rail-card">
+                <div class="rail-top">
+                    <span class="rail-emoji" id="railEmoji">🔥</span>
+                    <div>
+                        <div class="rail-label" id="railLabel">Hot Seat</div>
+                        <div class="rail-name" id="railName">Ada</div>
+                    </div>
+                </div>
+                <div class="rail-odds" id="railOdds"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="name-panel">
         <div class="panel-title">Players</div>
         <div class="add-row">
@@ -1202,6 +1279,8 @@
         </div>
         <div class="starter-hint" id="starterHint">Add at least 2 names to spin.</div>
         <ul class="name-list" id="nameList"></ul>
+    </div>
+
     </div>
 
     <div class="wheel-panel">
@@ -1270,7 +1349,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Pop-off</div>
-                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it ricochets around the screen, drops back on and finishes the spin</div>
+                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it either ricochets around the screen or hits the floor and rolls away, then drops back on and finishes the spin</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="popOffToggle" checked>
@@ -1372,7 +1451,7 @@
             </div>
             <div class="about-chip" style="--chip-color:#6c3483">
                 <div class="about-chip-title">Spin It Yourself</div>
-                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub.</div>
+                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub, ricocheting or rolling away before it drops back on.</div>
             </div>
             <div class="about-chip" style="--chip-color:#c0392b">
                 <div class="about-chip-title">Plot Twists</div>
@@ -1393,7 +1472,7 @@
             <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
             <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
-            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds.</li>
+            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds, with the live odds shown beside the wheel.</li>
             <li>Hides a ⚠ PANIC wedge that launches a horse race where only half the drafted survive.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
@@ -1601,6 +1680,12 @@
     ];
     const winnerCard    = document.getElementById('winnerCard');
     const powerUpPopup  = document.getElementById('powerUpPopup');
+    const powerUpRail   = document.getElementById('powerUpRail');
+    const railTitle     = document.getElementById('railTitle');
+    const railEmoji     = document.getElementById('railEmoji');
+    const railLabel     = document.getElementById('railLabel');
+    const railName      = document.getElementById('railName');
+    const railOdds      = document.getElementById('railOdds');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
     const draftSubtitle = document.getElementById('draftSubtitle');
@@ -2574,6 +2659,7 @@
         // Maybe drop a power-up: a slice swells/shrinks before the spin, which
         // both looks dramatic AND shifts the real odds (winner is weighted).
         const pu = rollPowerUp();
+        setPowerUpRail(pu);
         if (pu) {
             playPowerUpSound();
             showPowerUpPopup(pu);
@@ -2622,6 +2708,54 @@
             if (t < 1) requestAnimationFrame(step);
             else { sliceWeights = targetW.slice(); redraw(); done && done(); }
         })(performance.now());
+    }
+
+    /* ------------------------------------------------------------------
+       Power-up rail
+       ------------------------------------------------------------------
+       The drop popup is gone in a second and the slice it warped is a blur
+       once the wheel is moving, so the rail keeps the active power-up — and
+       what it did to the real odds — on screen beside the wheel until the
+       next spin. Desktop only; a phone has no side to put it on.
+    ------------------------------------------------------------------ */
+
+    // Actual chance for one player, straight off the same segment weights the
+    // draw uses — so it accounts for the PANIC wedge eating into the wheel.
+    function chanceOf(weights, idx) {
+        const seg   = buildSegments(weights);
+        const total = seg.weights.reduce((a, b) => a + b, 0) || 1;
+        return seg.weights[idx] / total;
+    }
+    const pct = v => Math.round(v * 100) + '%';
+
+    function setPowerUpRail(pu) {
+        railTitle.textContent = pu ? 'Active this spin' : 'Power-ups';
+        if (!pu) { powerUpRail.classList.remove('live'); syncPowerUpRail(); return; }
+
+        powerUpRail.style.setProperty('--pu-color', pu.color);
+        railEmoji.textContent = pu.emoji;
+        railLabel.textContent = pu.label;
+        railName.textContent  = pu.name;
+
+        if (pu.type === 'wildcard') {
+            const flat = names.map(() => 1);
+            const best = pu.weights.indexOf(Math.max(...pu.weights));
+            railOdds.innerHTML = 'Every slice re-rolled. Best odds: <b>' +
+                names[best] + ' ' + pct(chanceOf(pu.weights, best)) + '</b> (was ' +
+                pct(chanceOf(flat, best)) + ')';
+        } else {
+            const flat = names.map(() => 1);
+            railOdds.innerHTML = 'Odds <b>' + pct(chanceOf(flat, pu.idx)) + ' → ' +
+                pct(chanceOf(pu.weights, pu.idx)) + '</b> to win this spin';
+        }
+        powerUpRail.classList.add('live');
+        syncPowerUpRail();
+    }
+
+    function syncPowerUpRail() {
+        // Hidden outright when the feature is off — one steady state, so
+        // nothing below it ever jumps around mid-draft.
+        powerUpRail.classList.toggle('on', powerUpsEnabled);
     }
 
     function showPowerUpPopup(pu) {
@@ -2735,7 +2869,7 @@
 
         // Whole wheel torn off its hub — bounces around the viewport, drops back
         // on and finishes the very same spin, landing exactly where it would have.
-        if (manual && manual.popOff) startPopOff(duration);
+        if (manual && manual.popOff) startPopOff(duration, { stunt: manual.stunt, dir });
 
         function frame(now) {
             const t = Math.min((now-startTime)/duration, 1);
@@ -2892,7 +3026,8 @@
             vel:    Math.max(speed, FLICK.minVel),
             dir:    vel < 0 ? -1 : 1,
             power,
-            popOff: pop
+            popOff: pop,
+            stunt:  Math.random() < 0.5 ? 'roll' : 'bounce'
         });
     }
 
@@ -2915,20 +3050,42 @@
     ══════════════════════════════════════ */
     const popOff = { active: false };
 
-    function startPopOff(spinDuration) {
+    // Two ways off the hub, picked at the moment of release:
+    //   bounce - the wheel pinballs around the viewport
+    //   roll   - it drops to the floor and rolls away the way it was spinning
+    function startPopOff(spinDuration, opts) {
         if (popOff.active) return;
-        const ang   = -Math.PI/2 + (Math.random() - 0.5) * 2.2;      // mostly upward
-        const speed = 1.15 + Math.random() * 0.75;                   // px/ms
-        Object.assign(popOff, {
-            active: true, phase: 'fly',
-            x: 0, y: 0,
-            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
-            scale: 1, targetScale: 0.6 + Math.random() * 0.14,
-            tilt: 0, vtilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05),
+        const stunt = (opts && opts.stunt) === 'roll' ? 'roll' : 'bounce';
+        const now   = performance.now();
+        const base  = {
+            active: true, stunt,
+            x: 0, y: 0, scale: 1, sx: 1, sy: 1,
+            tilt: 0, squashT: 0,
             rect: wheelWrap.getBoundingClientRect(),
-            t0: performance.now(), last: performance.now(),
+            t0: now, last: now,
             flight: Math.min(2300, Math.max(1200, spinDuration * 0.34))
-        });
+        };
+
+        if (stunt === 'roll') {
+            const dir = (opts && opts.dir < 0) ? -1 : 1;   // rolls the way it spins
+            Object.assign(popOff, base, {
+                phase: 'drop',
+                vx: dir * (0.85 + Math.random() * 0.55),
+                vy: 0.05,
+                baseScale: 0.74 + Math.random() * 0.08,
+                vtilt: 0
+            });
+        } else {
+            const ang   = -Math.PI/2 + (Math.random() - 0.5) * 2.2;  // mostly upward
+            const speed = 1.15 + Math.random() * 0.75;               // px/ms
+            Object.assign(popOff, base, {
+                phase: 'fly',
+                vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+                baseScale: 0.6 + Math.random() * 0.14,
+                vtilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05)
+            });
+        }
+
         wheelWrap.classList.add('flying');
         canvas.style.willChange = 'transform';
         playPopSound();
@@ -2936,24 +3093,117 @@
         requestAnimationFrame(popFrame);
     }
 
+    // Where the wheel's edges are right now, in transform-offset space, so both
+    // stunts can be kept inside the viewport.
+    function popBounds() {
+        const r = popOff.rect, m = 12;
+        // The wheel is a circle inside a square canvas, so the transparent
+        // corners are not part of it — bound the drawn radius instead, or it
+        // stops short of every edge and tilting makes it worse.
+        const halfW = (r.width  / 2 - 12) * popOff.sx;
+        const halfH = (r.height / 2 - 12) * popOff.sy;
+        return {
+            halfW, halfH,
+            left:  m + halfW - (r.left + r.width/2),
+            right: window.innerWidth  - m - halfW - (r.left + r.width/2),
+            floor: window.innerHeight - m - halfH - (r.top  + r.height/2)
+        };
+    }
+
+    // A decaying squash on impact: fat and short, springing back to round.
+    function popSquash(now) {
+        if (!popOff.squashT) return 0;
+        const u = (now - popOff.squashT) / 220;
+        if (u >= 1) return 0;
+        return Math.sin(Math.PI * u) * Math.exp(-2.4 * u) * 0.17;
+    }
+
     function popFrame(now) {
         if (!popOff.active) return;
         const dt = Math.min(now - popOff.last, 34);   // clamp so a stalled tab can't teleport it
         popOff.last = now;
+
+        if (popOff.stunt === 'roll') stepRoll(now, dt);
+        else                         stepBounce(now, dt);
+        if (!popOff.active) return;                   // the step may have finished it
+
+        canvas.style.transform =
+            'translate3d(' + popOff.x.toFixed(2) + 'px,' + popOff.y.toFixed(2) + 'px,0) ' +
+            'rotate(' + popOff.tilt.toFixed(2) + 'deg) ' +
+            'scale(' + popOff.sx.toFixed(3) + ',' + popOff.sy.toFixed(3) + ')';
+        requestAnimationFrame(popFrame);
+    }
+
+    /* -- Stunt: roll --
+       The wheel is already spinning flat out, so a wheel-shaped thing running
+       along the floor reads as rolling without faking any wheel rotation. It
+       rolls out, runs out of momentum, and comes back the way it came, which
+       is also what carries it home. */
+    function stepRoll(now, dt) {
+        const b = popBounds();
+
+        if (popOff.phase === 'drop') {
+            popOff.vy    += 0.0055 * dt;              // real gravity this time
+            popOff.y     += popOff.vy * dt;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.08;
+            if (popOff.y >= b.floor) {                // touchdown
+                popOff.y       = b.floor;
+                popOff.phase   = 'roll';
+                popOff.rollT0  = now;
+                popOff.squashT = now;
+                playThud();
+                shakeWheel();
+                startRumble();
+            }
+        } else if (popOff.phase === 'roll') {
+            popOff.x     += popOff.vx * dt;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.08;
+            // Rolling friction, so it visibly runs out of steam.
+            const drag = 0.00042 * dt;
+            popOff.vx = Math.abs(popOff.vx) <= drag ? 0 : popOff.vx - Math.sign(popOff.vx) * drag;
+            if (popOff.x < b.left)  { popOff.x = b.left;  popOff.vx =  Math.abs(popOff.vx) * 0.6; popOff.squashT = now; playClank(); }
+            if (popOff.x > b.right) { popOff.x = b.right; popOff.vx = -Math.abs(popOff.vx) * 0.6; popOff.squashT = now; playClank(); }
+            popOff.y = b.floor;
+            setRumble(popOff.vx);
+            if (popOff.vx === 0 || now - popOff.rollT0 > popOff.flight) {
+                popOff.phase = 'home';
+                popOff.rt0   = now;
+                popOff.from  = { x: popOff.x, y: popOff.y, s: popOff.scale };
+                stopRumble();
+            }
+        } else {                                      // home - one hop back on
+            const t = Math.min((now - popOff.rt0) / 540, 1);
+            const e = t * t * (3 - 2 * t);
+            popOff.x     = popOff.from.x * (1 - e);
+            popOff.y     = popOff.from.y * (1 - e) - Math.sin(Math.PI * t) * 110;   // arcs over
+            popOff.scale = popOff.from.s + (1 - popOff.from.s) * e;
+            popOff.tilt  = 0;
+            popOff.sx    = popOff.sy = popOff.scale;
+            if (t >= 1) endPopOff();
+            return;
+        }
+
+        const k = popSquash(now);
+        popOff.sx = popOff.scale * (1 + k * 0.75);
+        popOff.sy = popOff.scale * (1 - k);
+    }
+
+    /* -- Stunt: bounce -- */
+    function stepBounce(now, dt) {
         const r = popOff.rect;
 
         if (popOff.phase === 'fly') {
             popOff.x     += popOff.vx * dt;
             popOff.y     += popOff.vy * dt;
             popOff.vy    += 0.0014 * dt;              // a whisper of gravity, just to arc it
-            popOff.scale += (popOff.targetScale - popOff.scale) * 0.06;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.06;
             popOff.tilt  += popOff.vtilt * dt;
 
-            const halfW = r.width  * popOff.scale / 2;
-            const halfH = r.height * popOff.scale / 2;
+            const halfW = (r.width  / 2 - 12) * popOff.scale;
+            const halfH = (r.height / 2 - 12) * popOff.scale;
             const px    = r.left + r.width/2  + popOff.x;
             const py    = r.top  + r.height/2 + popOff.y;
-            const m     = 8;
+            const m     = 12;
             let hit = false;
             if (px - halfW < m) {
                 popOff.x += m - (px - halfW);
@@ -2985,16 +3235,13 @@
             popOff.tilt  = popOff.from.tilt * (1 - e);
             if (t >= 1) { endPopOff(); return; }
         }
-
-        canvas.style.transform =
-            'translate3d(' + popOff.x.toFixed(2) + 'px,' + popOff.y.toFixed(2) + 'px,0) ' +
-            'scale(' + popOff.scale.toFixed(3) + ') rotate(' + popOff.tilt.toFixed(2) + 'deg)';
-        requestAnimationFrame(popFrame);
+        popOff.sx = popOff.sy = popOff.scale;
     }
 
     function endPopOff() {
         if (!popOff.active) return;
         popOff.active = false;
+        stopRumble();
         canvas.style.transform  = '';
         canvas.style.willChange = '';
         wheelWrap.classList.remove('flying');
@@ -3051,6 +3298,50 @@
             o.start(now); o.stop(now + 0.18);
         });
         noiseBurst(0.06, 3400, 0.2, 1.4);
+    }
+
+    // Heavy, wooden landing when the wheel meets the floor.
+    function playThud() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(120, now);
+        o.frequency.exponentialRampToValueAtTime(34, now + 0.22);
+        g.gain.setValueAtTime(0.6, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.42);
+        noiseBurst(0.09, 260, 0.4, 0.6);
+    }
+
+    // Low looping rumble while it rolls, tracked to how fast it is going.
+    function startRumble() {
+        if (!audioCtx || popOff.rumble) return;
+        const src = audioCtx.createBufferSource();
+        src.buffer = getNoiseBuffer(); src.loop = true;
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 210; lp.Q.value = 0.8;
+        const g = audioCtx.createGain(); g.gain.value = 0;
+        src.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+        src.start();
+        popOff.rumble = { src, g };
+    }
+
+    function setRumble(speed) {
+        if (!popOff.rumble) return;
+        const target = Math.min(Math.abs(speed) * 0.42, 0.4);
+        popOff.rumble.g.gain.setTargetAtTime(target, audioCtx.currentTime, 0.04);
+    }
+
+    function stopRumble() {
+        if (!popOff.rumble) return;
+        const { src, g } = popOff.rumble;
+        popOff.rumble = null;
+        try {
+            g.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+            src.stop(audioCtx.currentTime + 0.3);
+        } catch (err) {}
     }
 
     function playReseatSound() {
@@ -3631,7 +3922,8 @@
     resetBtn.addEventListener('click', ()=>{
         if(isSpinning || isBusy) return;
         names=[]; draftOrder=[]; undoStack=[]; rotation=0; nameColors={};
-        setAutoSpin(false); renderList(); renderDraft(); redraw(); saveState();
+        setAutoSpin(false); setPowerUpRail(null);
+        renderList(); renderDraft(); redraw(); saveState();
     });
 
     /* ══════════════════════════════════════
@@ -3685,6 +3977,8 @@
 
     powerUpToggle.addEventListener('change', () => {
         powerUpsEnabled = powerUpToggle.checked;
+        if (!powerUpsEnabled) setPowerUpRail(null);
+        syncPowerUpRail();
         saveState();
     });
 
@@ -3750,7 +4044,7 @@
     displayValEl.textContent = displaySlider.value + 's';
     autoDisplayToggle.checked = autoDisplay;
     displayManual.style.display = autoDisplay ? 'none' : 'flex';
-    renderList(); renderDraft(); updateButtons(); redraw();
+    renderList(); renderDraft(); updateButtons(); syncPowerUpRail(); redraw();
 </script>
 </body>
 </html>

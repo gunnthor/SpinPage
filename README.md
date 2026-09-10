@@ -12,12 +12,13 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 
 - **Spinning wheel picker** with smooth canvas animation and weighted-looking theatrical timing.
 - **Grab-to-spin**: drag the wheel with a mouse or finger and let go. Your flick sets the speed, the lap count and the drama — never the winner, which is drawn after your hand leaves the wheel.
-- **Pop-off**: a violent enough hand-flick can rip the wheel off its hub, ricochet it around the viewport, then drop it back on to finish the very same spin.
+- **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the viewport or drops to the floor and rolls away the direction it was spinning, then hops back onto the hub to finish the very same spin.
+- **Power-up rail**: while a power-up is in play, the panel beside the wheel names it and shows what it did to that player's real odds (`20% -> 44%`), so it stays readable even at full speed. Desktop only.
 - **Draft order mode** that removes winners from the wheel and records every pick.
 - **Autospin** for hands-free draft generation.
 - **Undo, restore, clear, and copy** controls for managing draft results.
 - **Plot twists** where the wheel fakes a stop, then blasts back into motion.
-- **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds.
+- **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds, with the resulting chance spelled out beside the wheel.
 - **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
 - **Illegal spin moments** with a stamped invalid result and retry.
 - **No One Is Safe wheel** that can randomly undraft a previous pick.
