@@ -73,10 +73,65 @@
             align-items: flex-start; justify-content: center;
         }
 
+        /* ── Left column ── */
+
+        .side-col { width: 255px; flex-shrink: 0; display: flex; flex-direction: column; gap: 1rem; }
+
+        /* ── Power-up rail ──
+           A spinning wheel is a terrible place to read anything, so whatever a
+           power-up did to the odds is spelled out here for the whole spin. */
+
+        .powerup-rail {
+            display: none; flex-direction: column; gap: 0.55rem;
+            background: linear-gradient(160deg, #0d0d1a, #090910);
+            border: 1px solid #1e1a30; border-left: 3px solid #2a2040;
+            border-radius: 14px; padding: 0.85rem 1rem;
+            box-shadow: 0 0 40px rgba(0,0,0,0.6);
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        .powerup-rail.on { display: flex; }
+        .powerup-rail.live {
+            border-left-color: var(--pu-color, #f5a623);
+            border-color: color-mix(in srgb, var(--pu-color, #f5a623) 32%, #1e1a30);
+            box-shadow: 0 0 34px rgba(0,0,0,0.6), 0 0 22px color-mix(in srgb, var(--pu-color, #f5a623) 18%, transparent);
+        }
+
+        .rail-title {
+            font-size: 0.58rem; font-weight: 700; letter-spacing: 0.2em;
+            text-transform: uppercase; color: #d4af37;
+        }
+        .powerup-rail.live .rail-title { color: var(--pu-color, #f5a623); }
+
+        /* One slot, two faces — the height never changes, so nothing shifts
+           underneath when a power-up drops mid-draft. */
+        .rail-slot { position: relative; min-height: 62px; }
+        .rail-face { transition: opacity 0.25s ease; }
+        .rail-idle { color: #5c5470; font-size: 0.7rem; font-style: italic; line-height: 1.5; }
+        .rail-card { position: absolute; inset: 0; opacity: 0; pointer-events: none;
+                     display: flex; flex-direction: column; gap: 0.35rem; }
+        .powerup-rail.live .rail-idle { opacity: 0; }
+        .powerup-rail.live .rail-card { opacity: 1; }
+
+        .rail-top    { display: flex; align-items: center; gap: 0.6rem; }
+        .rail-emoji  { font-size: 1.9rem; line-height: 1;
+                       filter: drop-shadow(0 0 10px var(--pu-color, #f5a623)); }
+        .rail-label  { font-size: 0.88rem; font-weight: 800; letter-spacing: 0.06em;
+                       color: var(--pu-color, #f5a623); }
+        .rail-name   { font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase;
+                       color: #e8dfc8; opacity: 0.85; margin-top: 0.1rem; }
+        .rail-odds   { font-size: 0.68rem; color: #9b8d68; letter-spacing: 0.03em; }
+        .rail-odds b { color: #e8dfc8; font-weight: 700; }
+
+        @keyframes railPulse {
+            0%, 100% { transform: scale(1); }
+            50%      { transform: scale(1.07); }
+        }
+        .powerup-rail.live .rail-emoji { animation: railPulse 1.6s ease-in-out infinite; }
+
         /* ── Name panel ── */
 
         .name-panel {
-            width: 255px; flex-shrink: 0;
+            width: 100%; flex-shrink: 0;
             background: linear-gradient(160deg, #0d0d1a, #090910);
             border-radius: 14px; padding: 1.5rem;
             border: 1px solid #1e1a30;
@@ -94,6 +149,13 @@
             font-size: 0.62rem; font-weight: 700; color: #d4af37;
             letter-spacing: 0.22em; text-transform: uppercase;
             display: flex; align-items: center; gap: 0.6rem;
+        }
+
+        /* Running head-count: on the wheel now / everyone in the draft */
+        .panel-count {
+            font-size: 0.58rem; font-weight: 800; letter-spacing: 0.08em;
+            color: #e8dfc8; background: #171528; border: 1px solid #2a2040;
+            border-radius: 20px; padding: 0.12rem 0.5rem; white-space: nowrap;
         }
 
         .panel-title::before, .panel-title::after { content: ''; flex: 1; height: 1px; }
@@ -492,60 +554,52 @@
 
         /* ── Devil popup ── */
 
-        .devil-popup {
-            position: fixed;
-            bottom: 10%;
-            left: 50%;
-            transform: translateX(-50%) translateY(260px);
-            z-index: 1500;
-            pointer-events: none;
-            text-align: center;
-            opacity: 0;
-            will-change: transform, opacity;
+        /* ── Wind-back banner ──
+           Announces the yank at the moment it happens, and gets out of the
+           way before the wheel is released. */
+
+        .windback-popup {
+            position: fixed; bottom: 11%; left: 50%;
+            transform: translateX(-50%) translateY(60px);
+            z-index: 1500; pointer-events: none; text-align: center;
+            opacity: 0; will-change: transform, opacity;
         }
 
-        .devil-emoji {
-            font-size: 7.5rem;
-            line-height: 1;
-            display: block;
-            filter: drop-shadow(0 0 16px rgba(255,40,0,0.9)) drop-shadow(0 0 40px rgba(255,80,0,0.55));
+        .wb-kicker {
+            font-size: 0.62rem; font-weight: 700;
+            letter-spacing: 0.42em; text-transform: uppercase;
+            color: rgba(232,223,200,0.75); margin-bottom: 0.35rem;
         }
 
-        .devil-label {
+        .wb-label {
             font-family: 'Palatino Linotype', Palatino, Georgia, serif;
-            font-size: 1.25rem; font-weight: 900;
-            letter-spacing: 0.22em; text-transform: uppercase;
-            margin-top: 0.35rem;
-            background: linear-gradient(to bottom, #ff6b6b, #d4af37);
+            font-size: 3.1rem; font-weight: 900;
+            letter-spacing: 0.2em; text-transform: uppercase;
+            background: linear-gradient(to bottom, #f8ee80, #d4af37, #8b6914, #d4af37);
             -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+            filter: drop-shadow(0 0 22px rgba(212,175,55,0.45));
         }
 
-        /* Clean vertical bounce-in — no rotation to avoid jitter */
-        @keyframes devilIn {
-            0%   { transform: translateX(-50%) translateY(260px); opacity: 0; }
-            65%  { transform: translateX(-50%) translateY(-18px); opacity: 1; }
-            82%  { transform: translateX(-50%) translateY(10px);  opacity: 1; }
-            100% { transform: translateX(-50%) translateY(0);     opacity: 1; }
+        @keyframes wbIn {
+            0%   { transform: translateX(-50%) translateY(60px) scale(0.92); opacity: 0; }
+            55%  { transform: translateX(-50%) translateY(-8px) scale(1.05); opacity: 1; }
+            100% { transform: translateX(-50%) translateY(0)    scale(1);    opacity: 1; }
         }
 
-        /* Laughing bob — starts and ends at rest so switching is seamless */
-        @keyframes devilWiggle {
-            0%, 100% { transform: translateX(-50%) translateY(0)    scale(1);    }
-            18%       { transform: translateX(-50%) translateY(-14px) scale(1.07); }
-            35%       { transform: translateX(-50%) translateY(0)    scale(1);    }
-            52%       { transform: translateX(-50%) translateY(-10px) scale(1.05); }
-            68%       { transform: translateX(-50%) translateY(0)    scale(1);    }
-            84%       { transform: translateX(-50%) translateY(-6px)  scale(1.03); }
+        /* A slow drift backwards, echoing the wheel it is announcing */
+        @keyframes wbHold {
+            from { transform: translateX(-50%) translateY(0) scale(1); }
+            to   { transform: translateX(-50%) translateY(0) scale(1.03); }
         }
 
-        @keyframes devilOut {
-            0%   { transform: translateX(-50%) translateY(0);     opacity: 1; }
-            100% { transform: translateX(-50%) translateY(280px); opacity: 0; }
+        @keyframes wbOut {
+            from { transform: translateX(-50%) translateY(0)    scale(1);    opacity: 1; }
+            to   { transform: translateX(-50%) translateY(-26px) scale(0.96); opacity: 0; }
         }
 
-        .devil-popup.in     { animation: devilIn     0.55s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
-        .devil-popup.wiggle { animation: devilWiggle 0.65s ease-in-out infinite; }
-        .devil-popup.out    { animation: devilOut    0.38s ease-in forwards; }
+        .windback-popup.in   { animation: wbIn   0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .windback-popup.hold { animation: wbHold 1.1s ease-in-out infinite alternate; opacity: 1; }
+        .windback-popup.out  { animation: wbOut  0.42s ease-in forwards; }
 
         /* ── Winner overlay ── */
 
@@ -852,7 +906,7 @@
         }
 
         .marble-board {
-            width: 184px; max-height: 560px; overflow-y: auto;
+            width: 184px; max-height: 560px; overflow-y: auto; flex: 0 0 auto;
             background: #140a1e; border: 1px solid #3a1a4a; border-radius: 12px;
             padding: 0.7rem 0.8rem;
         }
@@ -899,8 +953,8 @@
 
         @media (max-width: 700px) {
             .marble-stage { flex-direction: column; align-items: center; }
-            #marbleCanvas { width: min(388px, 86vw); }
-            .marble-board { width: min(388px, 86vw); max-height: 160px; }
+            #marbleCanvas { width: auto; max-width: 100%; }
+            .marble-board { width: min(388px, 86vw); max-height: 160px !important; }
             .marble-title { font-size: 1.7rem; }
         }
 
@@ -1070,7 +1124,10 @@
 
             /* Wheel first on mobile so it's visible above the fold */
             .wheel-panel { order: 1; width: 100%; }
-            .name-panel  { order: 2; width: 100%; }
+            .side-col    { order: 2; width: 100%; }
+
+            /* No side room on a phone — the drop popup does the announcing */
+            .powerup-rail { display: none !important; }
 
             .wheel-wrap {
                 width: min(calc(100vw - 2rem), 480px);
@@ -1194,14 +1251,35 @@
 
 <div class="container">
 
+    <div class="side-col">
+
+    <div class="powerup-rail" id="powerUpRail">
+        <div class="rail-title" id="railTitle">Power-ups</div>
+        <div class="rail-slot">
+            <div class="rail-face rail-idle">Armed. One spin in three warps a slice — and the odds with it.</div>
+            <div class="rail-face rail-card">
+                <div class="rail-top">
+                    <span class="rail-emoji" id="railEmoji">🔥</span>
+                    <div>
+                        <div class="rail-label" id="railLabel">Hot Seat</div>
+                        <div class="rail-name" id="railName">Ada</div>
+                    </div>
+                </div>
+                <div class="rail-odds" id="railOdds"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="name-panel">
-        <div class="panel-title">Players</div>
+        <div class="panel-title">Players <span class="panel-count" id="playerCount">0</span></div>
         <div class="add-row">
             <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="30" autocomplete="off">
             <button class="add-btn" id="addBtn" title="Add">+</button>
         </div>
         <div class="starter-hint" id="starterHint">Add at least 2 names to spin.</div>
         <ul class="name-list" id="nameList"></ul>
+    </div>
+
     </div>
 
     <div class="wheel-panel">
@@ -1249,11 +1327,11 @@
                 </div>
                 <div class="option-row">
                     <div class="option-info">
-                        <div class="option-name">Plot Twists</div>
-                        <div class="option-desc">20% chance the wheel fakes a stop, then whips backwards before landing</div>
+                        <div class="option-name">Wind-back</div>
+                        <div class="option-desc">20% chance the wheel settles on a slice, then gets dragged back and thrown forward again</div>
                     </div>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="plotTwistToggle" checked>
+                        <input type="checkbox" id="windBackToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -1270,7 +1348,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Pop-off</div>
-                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it ricochets around the screen, drops back on and finishes the spin</div>
+                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it either ricochets around the screen or hits the floor and rolls away, then drops back on and finishes the spin</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="popOffToggle" checked>
@@ -1372,11 +1450,11 @@
             </div>
             <div class="about-chip" style="--chip-color:#6c3483">
                 <div class="about-chip-title">Spin It Yourself</div>
-                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub.</div>
+                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub, ricocheting or rolling away before it drops back on.</div>
             </div>
             <div class="about-chip" style="--chip-color:#c0392b">
-                <div class="about-chip-title">Plot Twists</div>
-                <div class="about-chip-text">Fake stops, illegal spins, and sudden boosts keep every pick theatrical.</div>
+                <div class="about-chip-title">Wind-back</div>
+                <div class="about-chip-text">The wheel lands, sits there — then gets dragged backwards and thrown forward again.</div>
             </div>
             <div class="about-chip" style="--chip-color:#1e8449">
                 <div class="about-chip-title">Zero Setup</div>
@@ -1393,8 +1471,8 @@
             <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
             <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
             <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
-            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds.</li>
-            <li>Hides a ⚠ PANIC wedge that launches a horse race where only half the drafted survive.</li>
+            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds, with the live odds shown beside the wheel.</li>
+            <li>Hides a ⚠ PANIC wedge that launches a horse race over 2–4 hurdles, each horse carrying its own posted odds of clearing them — and only half the drafted survive.</li>
             <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
         </ul>
 
@@ -1431,9 +1509,9 @@
     <div class="marble-result" id="marbleResult"></div>
 </div>
 
-<div class="devil-popup" id="devilPopup">
-    <span class="devil-emoji">😈</span>
-    <div class="devil-label">Plot Twist!</div>
+<div class="windback-popup" id="windBackPopup">
+    <div class="wb-kicker">Not so fast</div>
+    <div class="wb-label">Wind-back</div>
 </div>
 
 <div class="powerup-popup" id="powerUpPopup">
@@ -1465,6 +1543,7 @@
     const addBtn        = document.getElementById('addBtn');
     const nameListEl    = document.getElementById('nameList');
     const starterHint   = document.getElementById('starterHint');
+    const playerCount   = document.getElementById('playerCount');
     const spinBtn       = document.getElementById('spinBtn');
     const autoBtn       = document.getElementById('autoBtn');
     const spinHint      = document.getElementById('spinHint');
@@ -1601,6 +1680,12 @@
     ];
     const winnerCard    = document.getElementById('winnerCard');
     const powerUpPopup  = document.getElementById('powerUpPopup');
+    const powerUpRail   = document.getElementById('powerUpRail');
+    const railTitle     = document.getElementById('railTitle');
+    const railEmoji     = document.getElementById('railEmoji');
+    const railLabel     = document.getElementById('railLabel');
+    const railName      = document.getElementById('railName');
+    const railOdds      = document.getElementById('railOdds');
     const draftSection  = document.getElementById('draftSection');
     const draftGrid     = document.getElementById('draftGrid');
     const draftSubtitle = document.getElementById('draftSubtitle');
@@ -1624,7 +1709,7 @@
     let autoDisplay     = true;     // auto-scale winner display by table size
     let winnerSlots     = 1;
     let lastTickSection     = -1;
-    let plotTwistsEnabled   = true;
+    let windBackEnabled     = true;
     let noisEnabled         = true;
     let riggedEnabled       = false;
     let riggedValue         = '';     // name/prefix the rigged mode forces to win
@@ -1855,64 +1940,284 @@
                 redraw();
                 updateButtons();
                 // Illegal spins are a no-op retry — keep an active autospin alive
-                if (autoSpin && names.length >= 2) setTimeout(spin, 600);
+                if (autoSpin && names.length >= 2) queueAutoSpin(600);
             }, 480);
         }, 2600);
     }
 
-    function playBoostSound() {
+    /* -- Wind-back --
+       A ratchet letting go, then the wheel groaning backwards against it.
+       The peg clicks carry the clatter on their own, so these two only have
+       to supply the mechanism underneath them. */
+    function playWindBack() {
         if (!audioCtx) return;
-        // Rising whoosh
-        const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(60, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.45);
-        osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.8);
-        gain.gain.setValueAtTime(0, audioCtx.currentTime);
-        gain.gain.linearRampToValueAtTime(0.55, audioCtx.currentTime + 0.08);
-        gain.gain.setValueAtTime(0.55, audioCtx.currentTime + 0.38);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.9);
-        osc.connect(gain); gain.connect(audioCtx.destination);
-        osc.start(); osc.stop(audioCtx.currentTime + 1.0);
-        // Noise burst
-        const bufLen = Math.floor(audioCtx.sampleRate * 0.25);
-        const buf    = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
-        const data   = buf.getChannelData(0);
-        for (let i = 0; i < bufLen; i++) data[i] = Math.random() * 2 - 1;
-        const noise = audioCtx.createBufferSource(), ng = audioCtx.createGain(), nf = audioCtx.createBiquadFilter();
-        noise.buffer = buf; nf.type = 'bandpass'; nf.frequency.value = 350; nf.Q.value = 0.5;
-        ng.gain.setValueAtTime(0.4, audioCtx.currentTime);
-        ng.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.25);
-        noise.connect(nf); nf.connect(ng); ng.connect(audioCtx.destination);
-        noise.start(); noise.stop(audioCtx.currentTime + 0.3);
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+
+        // the catch releasing — one hard metallic clack
+        const c = audioCtx.createOscillator(), cg = audioCtx.createGain();
+        c.type = 'square';
+        c.frequency.setValueAtTime(340, now);
+        c.frequency.exponentialRampToValueAtTime(90, now + 0.09);
+        cg.gain.setValueAtTime(0.0001, now);
+        cg.gain.exponentialRampToValueAtTime(0.4, now + 0.006);
+        cg.gain.exponentialRampToValueAtTime(0.0006, now + 0.2);
+        c.connect(cg); cg.connect(fx.dry); cg.connect(fx.verb);
+        c.start(now); c.stop(now + 0.22);
+        noiseBurst(0.12, 1800, 0.32, 0.8);
+
+        // the groan of the wheel being dragged the wrong way
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        const lp = audioCtx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(210, now + 0.02);
+        o.frequency.exponentialRampToValueAtTime(58, now + 1.5);
+        lp.type = 'lowpass'; lp.Q.value = 5;
+        lp.frequency.setValueAtTime(1400, now + 0.02);
+        lp.frequency.exponentialRampToValueAtTime(180, now + 1.5);
+        g.gain.setValueAtTime(0.0001, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.26, now + 0.12);
+        g.gain.setValueAtTime(0.26, now + 1.0);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + 1.65);
+        o.connect(lp); lp.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+        o.start(now + 0.02); o.stop(now + 1.7);
+
+        // a slow wobble on the groan, so it sounds strained rather than synthy
+        const lfo = audioCtx.createOscillator(), lg = audioCtx.createGain();
+        lfo.type = 'sine'; lfo.frequency.setValueAtTime(6.5, now);
+        lg.gain.setValueAtTime(9, now);
+        lfo.connect(lg); lg.connect(o.frequency);
+        lfo.start(now); lfo.stop(now + 1.7);
     }
 
-    function playFanfare() {
+    /* -- Release --
+       The tension going out of it: a sub thump and a whoosh sweeping up as
+       the wheel is thrown forward again. */
+    function playRelease() {
         if (!audioCtx) return;
-        const notes = [
-            { freq: 523.25, t: 0,    dur: 0.16 },
-            { freq: 659.25, t: 0.13, dur: 0.16 },
-            { freq: 783.99, t: 0.26, dur: 0.16 },
-            { freq: 1046.5, t: 0.39, dur: 0.6  },
-            { freq: 523.25, t: 0.45, dur: 0.55 },
-            { freq: 659.25, t: 0.45, dur: 0.55 },
-            { freq: 783.99, t: 0.45, dur: 0.55 },
-            { freq: 2093,   t: 0.55, dur: 0.07 },
-            { freq: 2637,   t: 0.62, dur: 0.07 },
-            { freq: 2093,   t: 0.69, dur: 0.07 },
-            { freq: 3136,   t: 0.74, dur: 0.1  },
-        ];
-        notes.forEach(({ freq, t, dur }) => {
-            const now = audioCtx.currentTime;
-            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
-            o.type = 'sine'; o.frequency.setValueAtTime(freq, now + t);
-            g.gain.setValueAtTime(0, now + t);
-            g.gain.linearRampToValueAtTime(freq > 1500 ? 0.18 : 0.32, now + t + 0.02);
-            g.gain.setValueAtTime(freq > 1500 ? 0.18 : 0.32, now + t + dur - 0.04);
-            g.gain.exponentialRampToValueAtTime(0.001, now + t + dur);
-            o.connect(g); g.connect(audioCtx.destination);
-            o.start(now + t); o.stop(now + t + dur + 0.05);
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+
+        const thump = audioCtx.createOscillator(), tg = audioCtx.createGain();
+        thump.type = 'sine';
+        thump.frequency.setValueAtTime(180, now);
+        thump.frequency.exponentialRampToValueAtTime(42, now + 0.3);
+        tg.gain.setValueAtTime(0.7, now);
+        tg.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+        thump.connect(tg); tg.connect(fx.dry);
+        thump.start(now); thump.stop(now + 0.5);
+
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        const bp = audioCtx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(70, now);
+        o.frequency.exponentialRampToValueAtTime(1100, now + 0.42);
+        bp.type = 'bandpass'; bp.Q.value = 1.4;
+        bp.frequency.setValueAtTime(300, now);
+        bp.frequency.exponentialRampToValueAtTime(3200, now + 0.42);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.4, now + 0.08);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + 0.62);
+        o.connect(bp); bp.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+        o.start(now); o.stop(now + 0.65);
+
+        // air moving with it
+        const n = audioCtx.createBufferSource();
+        n.buffer = getNoiseBuffer(); n.loop = true;
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass'; nf.Q.value = 0.7;
+        nf.frequency.setValueAtTime(500, now);
+        nf.frequency.exponentialRampToValueAtTime(5200, now + 0.4);
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(0.3, now + 0.1);
+        ng.gain.exponentialRampToValueAtTime(0.0006, now + 0.6);
+        n.connect(nf); nf.connect(ng); ng.connect(fx.dry); ng.connect(fx.verb);
+        n.start(now); n.stop(now + 0.65);
+    }
+
+    /* ------------------------------------------------------------------
+       Winner fanfare
+       ------------------------------------------------------------------
+       Bare sine tones are the sound of a test signal, which is why the old
+       one felt cheap. This one is arranged instead of beeped:
+
+         impact  - a sub thump and a cymbal splash, so the win lands
+         stabs   - detuned sawtooths through a resonant filter that snaps
+                   open: harmonics and movement, roughly brass-shaped
+         bells   - FM voices (inharmonic modulator) for glockenspiel shine
+         room    - everything sits in a generated hall reverb
+
+       Voices are spread across the stereo field and share a limiter, so all
+       the layers can pile up without turning into a clipped mush.
+    ------------------------------------------------------------------ */
+    let winFx = null;
+
+    // Exponentially decaying noise makes a serviceable hall impulse.
+    function makeHallIR(seconds, decay) {
+        const len = Math.floor(audioCtx.sampleRate * seconds);
+        const buf = audioCtx.createBuffer(2, len, audioCtx.sampleRate);
+        for (let ch = 0; ch < 2; ch++) {
+            const d = buf.getChannelData(ch);
+            for (let i = 0; i < len; i++) {
+                const room = Math.pow(1 - i / len, decay);
+                d[i] = (Math.random() * 2 - 1) * room * (i < 60 ? i / 60 : 1);
+            }
+        }
+        return buf;
+    }
+
+    function getFxBus() {
+        if (!winFx) {
+            const comp = audioCtx.createDynamicsCompressor();
+            comp.threshold.value = -15; comp.knee.value = 18; comp.ratio.value = 5;
+            comp.attack.value = 0.004; comp.release.value = 0.25;
+            const master = audioCtx.createGain(); master.gain.value = 0.95;
+            comp.connect(master); master.connect(audioCtx.destination);
+
+            const verb = audioCtx.createConvolver();
+            verb.buffer = makeHallIR(1.9, 2.6);
+            const wet = audioCtx.createGain(); wet.gain.value = 0.38;
+            verb.connect(wet); wet.connect(comp);
+
+            winFx = { dry: comp, verb };
+        }
+        return winFx;
+    }
+
+    // Send one voice to the room and the front at once.
+    function winOut(node, pan) {
+        const fx = getFxBus();
+        const p = audioCtx.createStereoPanner();
+        p.pan.value = Math.max(-1, Math.min(1, pan || 0));
+        node.connect(p);
+        p.connect(fx.dry);
+        p.connect(fx.verb);
+    }
+
+    // Brass-ish stab: two detuned saws through a resonant lowpass that opens
+    // hard on the attack and closes as the note decays.
+    function winStab(t, freq, dur, level, pan) {
+        const filt = audioCtx.createBiquadFilter();
+        filt.type = 'lowpass'; filt.Q.value = 6;
+        filt.frequency.setValueAtTime(420, t);
+        filt.frequency.exponentialRampToValueAtTime(Math.min(freq * 8, 7500), t + 0.055);
+        filt.frequency.exponentialRampToValueAtTime(Math.max(freq * 2.2, 500), t + dur);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(level, t + 0.018);
+        g.gain.setValueAtTime(level, t + dur * 0.5);
+        g.gain.exponentialRampToValueAtTime(0.0006, t + dur);
+
+        filt.connect(g);
+        winOut(g, pan);
+
+        [-8, 8].forEach(cents => {
+            const o = audioCtx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(freq, t);
+            o.detune.setValueAtTime(cents, t);
+            o.connect(filt);
+            o.start(t); o.stop(t + dur + 0.06);
         });
+    }
+
+    // FM bell — a sine carrier bent by an inharmonic sine, which is what makes
+    // metal sound like metal rather than like a flute.
+    function winBell(t, freq, dur, level, pan, ratio) {
+        const car = audioCtx.createOscillator();
+        car.type = 'sine'; car.frequency.setValueAtTime(freq, t);
+
+        const mod = audioCtx.createOscillator();
+        mod.type = 'sine'; mod.frequency.setValueAtTime(freq * (ratio || 3.47), t);
+        const mg = audioCtx.createGain();
+        mg.gain.setValueAtTime(freq * 2.4, t);
+        mg.gain.exponentialRampToValueAtTime(freq * 0.02, t + dur * 0.45);
+        mod.connect(mg); mg.connect(car.frequency);
+
+        const g = audioCtx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(level, t + 0.005);
+        g.gain.exponentialRampToValueAtTime(0.0004, t + dur);
+
+        car.connect(g);
+        winOut(g, pan);
+        car.start(t); car.stop(t + dur + 0.05);
+        mod.start(t); mod.stop(t + dur + 0.05);
+    }
+
+    // The hit itself: sub drop plus a splash, so the chord has something to
+    // land on instead of just appearing.
+    function winImpact(t) {
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(155, t);
+        o.frequency.exponentialRampToValueAtTime(44, t + 0.26);
+        g.gain.setValueAtTime(0.7, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.45);
+        o.connect(g); g.connect(getFxBus().dry);
+        o.start(t); o.stop(t + 0.5);
+
+        const n = audioCtx.createBufferSource();
+        n.buffer = getNoiseBuffer(); n.loop = true;
+        const hp = audioCtx.createBiquadFilter();
+        hp.type = 'highpass'; hp.frequency.value = 5000;
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.3, t);
+        ng.gain.exponentialRampToValueAtTime(0.0005, t + 0.9);
+        n.connect(hp); hp.connect(ng);
+        winOut(ng, 0);
+        n.start(t); n.stop(t + 1.0);
+    }
+
+    // windowMs = how long the winner card is up for. Big tables autospin
+    // through in 600ms, so the tail is trimmed rather than left ringing over
+    // the next spin.
+    function playFanfare(windowMs) {
+        if (!audioCtx) return;
+        const t0   = audioCtx.currentTime + 0.02;
+        const room = Math.max(600, windowMs || 2000);
+        const full = room >= 1200;
+
+        winImpact(t0);
+
+        // Rising call into the chord: G C E G, alternating across the stereo.
+        [392.00, 523.25, 659.25, 783.99].forEach((f, i) => {
+            winStab(t0 + i * 0.085, f, 0.14, 0.2, i % 2 ? 0.28 : -0.28);
+        });
+
+        // Landing chord: C major add9 — the 9th is what stops it sounding
+        // like a doorbell.
+        const chordT = t0 + 0.36;
+        const hold   = full ? 1.5 : 0.8;
+        [261.63, 329.63, 392.00, 523.25, 587.33].forEach((f, i) => {
+            winStab(chordT, f, hold, 0.15, (i - 2) * 0.16);
+        });
+        const sub = audioCtx.createOscillator(), sg = audioCtx.createGain();
+        sub.type = 'sine'; sub.frequency.setValueAtTime(130.81, chordT);
+        sg.gain.setValueAtTime(0.0001, chordT);
+        sg.gain.exponentialRampToValueAtTime(0.42, chordT + 0.03);
+        sg.gain.exponentialRampToValueAtTime(0.0006, chordT + hold);
+        sub.connect(sg); sg.connect(getFxBus().dry);
+        sub.start(chordT); sub.stop(chordT + hold + 0.05);
+
+        // Bells doubling the chord an octave up, struck in a quick roll.
+        [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => {
+            winBell(chordT + i * 0.025, f, full ? 1.5 : 0.85, 0.15, (i - 1.5) * 0.34);
+        });
+
+        // Coin shower over the tail — a payout trickling out of the machine.
+        if (full) {
+            const scale  = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349, 2637];
+            const spread = Math.min(1.25, room / 1000 - 0.45);
+            for (let i = 0; i < 15; i++) {
+                const t = chordT + 0.22 + Math.random() * spread;
+                const f = scale[Math.floor(Math.random() * scale.length)] * (Math.random() < 0.3 ? 2 : 1);
+                winBell(t, f, 0.26, 0.05 + Math.random() * 0.045,
+                        (Math.random() * 2 - 1) * 0.85, 5.4);   // clinkier ratio
+            }
+        }
     }
 
     /* ══════════════════════════════════════
@@ -1921,7 +2226,7 @@
     function saveState() {
         try { localStorage.setItem('spinpage', JSON.stringify({
             names, draftOrder, undoStack, winnerSlots, nameColors,
-            noisEnabled, powerUpsEnabled, panicEnabled, plotTwistsEnabled, popOffEnabled, displayDuration, autoDisplay, riggedValue
+            noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, popOffEnabled, displayDuration, autoDisplay, riggedValue
         })); } catch(e) {}
     }
 
@@ -1936,7 +2241,9 @@
                 if (typeof s.noisEnabled === 'boolean') noisEnabled = s.noisEnabled;
                 if (typeof s.powerUpsEnabled === 'boolean') powerUpsEnabled = s.powerUpsEnabled;
                 if (typeof s.panicEnabled === 'boolean') panicEnabled = s.panicEnabled;
-                if (typeof s.plotTwistsEnabled === 'boolean') plotTwistsEnabled = s.plotTwistsEnabled;
+                // plotTwistsEnabled was this setting's name before the makeover
+                if (typeof s.plotTwistsEnabled === 'boolean') windBackEnabled = s.plotTwistsEnabled;
+                if (typeof s.windBackEnabled === 'boolean') windBackEnabled = s.windBackEnabled;
                 if (typeof s.popOffEnabled === 'boolean') popOffEnabled = s.popOffEnabled;
                 if (typeof s.displayDuration === 'number' && s.displayDuration >= 500 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
                 if (typeof s.autoDisplay === 'boolean') autoDisplay = s.autoDisplay;
@@ -2162,7 +2469,7 @@
         const W=fireCanvas.width, H=fireCanvas.height;
         fctx.clearRect(0,0,W,H);
 
-        // Idle flames removed — fire only spawns via triggerBoost()
+        // Idle flames removed — fire only spawns via triggerRelease()
 
         // Solid fill + globalAlpha — CSS blur on the canvas handles the glow
         fireParticles = fireParticles.filter(p => {
@@ -2320,13 +2627,25 @@
     function updateButtons() {
         const canSpin = names.length >= 2;
         spinBtn.disabled  = !canSpin || isSpinning || isBusy;
-        autoBtn.disabled  = !canSpin || isSpinning || isBusy;
+        // While autospin is running it stays clickable, so it can be called off
+        // mid-spin — otherwise you have to sit through the rest of the draft.
+        autoBtn.disabled  = autoSpin ? false : (!canSpin || isSpinning || isBusy);
         undoBtn.disabled  = undoStack.length === 0 || isSpinning || isBusy;
         resetBtn.disabled = isSpinning || isBusy;
         namePanel.classList.toggle('needs-players', names.length < 2);
-        starterHint.textContent = names.length === 0 ? 'Add at least 2 names to spin.' :
-                                  names.length === 1 ? 'Add 1 more name to unlock the wheel.' :
-                                  'Ready to spin.';
+        // Head-count: the chip carries the total, the hint splits it up.
+        const total = totalEntrants();
+        playerCount.textContent = draftOrder.length
+            ? names.length + ' of ' + total
+            : String(total);
+        playerCount.title = total + ' player' + (total === 1 ? '' : 's') + ' in total' +
+            (draftOrder.length ? ' — ' + names.length + ' still on the wheel, ' + draftOrder.length + ' drafted' : '');
+
+        starterHint.textContent =
+            names.length === 0 ? (total ? total + ' drafted — the wheel is empty.' : 'Add at least 2 names to spin.') :
+            names.length === 1 ? 'Add 1 more name to unlock the wheel.' :
+            draftOrder.length  ? names.length + ' left on the wheel, ' + draftOrder.length + ' drafted.' :
+                                 names.length + ' players ready to spin.';
         spinHint.textContent = names.length === 0 ? 'Add at least 2 names to spin' :
                                names.length === 1 ? 'Add 1 more name to spin' :
                                'Drag the wheel and let go — or hit SPIN.';
@@ -2528,28 +2847,43 @@
     function redraw() { drawWheel(); if (!popOff.active) drawPointer(); }
 
     /* ══════════════════════════════════════
-       Plot-twist easing — the REVERSE twist
+       Wind-back easing
        ─────────────────────────────────────
-       t 0.00→0.30 : fast forward spin            (→ 72% of totalRot)
-       t 0.30→0.40 : FAKE slowdown (nearly stops)
-       t 0.40→0.68 : REVERSE — wheel whips backwards (un-spins ~43%)
-       t 0.68→1.00 : settle forwards onto the winner, decelerating
-       The net rotation still ends exactly on target, so only the route
-       reverses — the landing slice is unchanged.
-    ══════════════════════════════════════ */
-    function dramaticEase(t) {
-        function eOut(u, p) { return 1 - Math.pow(1 - u, p); }
-        function smooth(u)  { return u * u * (3 - 2 * u); }   // ease in-out
+       The whole trick is that nothing gives it away. Up to the false stop
+       this is an ordinary spin on the ordinary curve — same shape, same
+       slowing, same creep to a halt — so it reads as a spin that has
+       landed. Only once it is sat still does the wheel get dragged
+       backwards, held, and fired forward again.
 
-        if (t < 0.30) {            // forward burst
-            return eOut(t / 0.30, 4) * 0.72;
-        } else if (t < 0.40) {     // fake stop — barely moves
-            return 0.72 + eOut((t - 0.30) / 0.10, 2) * 0.01;
-        } else if (t < 0.68) {     // REVERSE — spin backwards
-            return 0.73 - smooth((t - 0.40) / 0.28) * 0.43;
-        } else {                   // settle forwards onto the winner, decelerating
-            return 0.30 + eOut((t - 0.68) / 0.32, 6) * 0.70;
+       The old version rushed the first leg to buy time for the reversal,
+       which is exactly what tipped it off before it happened.
+
+       t 0.00-0.40 : an ordinary spin, decelerating to a stop  (→ 52%)
+       t 0.40-0.48 : sat on a slice, rocking a couple of degrees
+       t 0.48-0.63 : SNAPPED backwards, then winding down       (→ 26%)
+       t 0.63-0.67 : held, wound tight
+       t 0.67-1.00 : released, and settling on the real winner
+       Net rotation is unchanged, so only the route differs — the landing
+       slice is the one that was drawn before the wheel ever moved.
+    ══════════════════════════════════════ */
+    const WB = { stop: 0.40, hold: 0.48, wound: 0.63, load: 0.67, at: 0.52, back: 0.26 };
+
+    function windBackEase(t) {
+        const eOut = (u, p) => 1 - Math.pow(1 - u, p);
+
+        if (t < WB.stop) {                      // an ordinary spin, to an ordinary stop
+            return easeOut(t / WB.stop) * WB.at;
         }
+        if (t < WB.hold) {                      // a wheel that has just stopped rocks
+            const u = (t - WB.stop) / (WB.hold - WB.stop);
+            return WB.at + Math.sin(u * Math.PI * 3) * Math.exp(-u * 5) * 0.0012;
+        }
+        if (t < WB.wound) {                     // yanked back, then winding down
+            const u = (t - WB.hold) / (WB.wound - WB.hold);
+            return WB.at - eOut(u, 2.2) * (WB.at - WB.back);
+        }
+        if (t < WB.load) return WB.back;        // wound tight, dead still
+        return WB.back + eOut((t - WB.load) / (1 - WB.load), 5) * (1 - WB.back);
     }
 
     /* ══════════════════════════════════════
@@ -2565,7 +2899,7 @@
         if (isSpinning||isBusy||names.length<2) return;
         // Hands on the wheel win: an autospin tick that lands mid-drag waits
         // its turn instead of fighting the player for the rotation.
-        if (drag.active && !launch) { if (autoSpin) setTimeout(spin, 900); return; }
+        if (drag.active && !launch) { if (autoSpin) queueAutoSpin(900); return; }
         ensureAudio();
 
         isSpinning = true;
@@ -2574,6 +2908,7 @@
         // Maybe drop a power-up: a slice swells/shrinks before the spin, which
         // both looks dramatic AND shifts the real odds (winner is weighted).
         const pu = rollPowerUp();
+        setPowerUpRail(pu);
         if (pu) {
             playPowerUpSound();
             showPowerUpPopup(pu);
@@ -2622,6 +2957,54 @@
             if (t < 1) requestAnimationFrame(step);
             else { sliceWeights = targetW.slice(); redraw(); done && done(); }
         })(performance.now());
+    }
+
+    /* ------------------------------------------------------------------
+       Power-up rail
+       ------------------------------------------------------------------
+       The drop popup is gone in a second and the slice it warped is a blur
+       once the wheel is moving, so the rail keeps the active power-up — and
+       what it did to the real odds — on screen beside the wheel until the
+       next spin. Desktop only; a phone has no side to put it on.
+    ------------------------------------------------------------------ */
+
+    // Actual chance for one player, straight off the same segment weights the
+    // draw uses — so it accounts for the PANIC wedge eating into the wheel.
+    function chanceOf(weights, idx) {
+        const seg   = buildSegments(weights);
+        const total = seg.weights.reduce((a, b) => a + b, 0) || 1;
+        return seg.weights[idx] / total;
+    }
+    const pct = v => Math.round(v * 100) + '%';
+
+    function setPowerUpRail(pu) {
+        railTitle.textContent = pu ? 'Active this spin' : 'Power-ups';
+        if (!pu) { powerUpRail.classList.remove('live'); syncPowerUpRail(); return; }
+
+        powerUpRail.style.setProperty('--pu-color', pu.color);
+        railEmoji.textContent = pu.emoji;
+        railLabel.textContent = pu.label;
+        railName.textContent  = pu.name;
+
+        if (pu.type === 'wildcard') {
+            const flat = names.map(() => 1);
+            const best = pu.weights.indexOf(Math.max(...pu.weights));
+            railOdds.innerHTML = 'Every slice re-rolled. Best odds: <b>' +
+                names[best] + ' ' + pct(chanceOf(pu.weights, best)) + '</b> (was ' +
+                pct(chanceOf(flat, best)) + ')';
+        } else {
+            const flat = names.map(() => 1);
+            railOdds.innerHTML = 'Odds <b>' + pct(chanceOf(flat, pu.idx)) + ' → ' +
+                pct(chanceOf(pu.weights, pu.idx)) + '</b> to win this spin';
+        }
+        powerUpRail.classList.add('live');
+        syncPowerUpRail();
+    }
+
+    function syncPowerUpRail() {
+        // Hidden outright when the feature is off — one steady state, so
+        // nothing below it ever jumps around mid-draft.
+        powerUpRail.classList.toggle('on', powerUpsEnabled);
     }
 
     function showPowerUpPopup(pu) {
@@ -2680,11 +3063,11 @@
         const manual    = launch || null;
         // The reverse-twist choreography assumes a forward, machine-paced spin,
         // so it sits out backwards flicks, hard flicks and pop-offs.
-        const twistOk   = !isIllegal && plotTwistsEnabled &&
-                          !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
-        const plotTwist = twistOk && Math.random() < 0.20;
+        const windBackOk = !isIllegal && windBackEnabled &&
+                           !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
+        const windBack   = windBackOk && Math.random() < 0.20;
 
-        const dir = (manual && !plotTwist) ? manual.dir : 1;
+        const dir = (manual && !windBack) ? manual.dir : 1;
 
         // Shortest trip to the landing angle, taken the way the wheel is turning.
         let delta = targetNorm - currentNorm;
@@ -2692,11 +3075,12 @@
         else         { if (delta > 0) delta -= TAU; }
 
         let extraSpins, duration, ease;
-        if (plotTwist) {
-            // Plot twist needs more spins to accommodate the fake-stop + boost phases
-            extraSpins = 10 + Math.floor(Math.random()*4);
-            duration   = 7000 + Math.random()*2000;
-            ease       = dramaticEase;
+        if (windBack) {
+            // Sized so the first leg alone reads as a normal spin: ~3.4 laps
+            // over ~4.6s, which is squarely in the range of an ordinary one.
+            extraSpins = 6 + Math.floor(Math.random()*2);
+            duration   = 10800 + Math.random()*1600;
+            ease       = windBackEase;
         } else if (manual) {
             // Hand-off: the animation must leave your fingers at the speed you
             // let go. Pick a lap count from the flick strength, then solve the
@@ -2731,11 +3115,11 @@
         lastTickSection = Math.floor(rotation/tickArc);
         let tickPrevTime = startTime, tickPrevRot = rotation;
 
-        let boostTriggered = false;
+        let wbFired = false, releaseFired = false;
 
         // Whole wheel torn off its hub — bounces around the viewport, drops back
         // on and finishes the very same spin, landing exactly where it would have.
-        if (manual && manual.popOff) startPopOff(duration);
+        if (manual && manual.popOff) startPopOff(duration, { stunt: manual.stunt, dir });
 
         function frame(now) {
             const t = Math.min((now-startTime)/duration, 1);
@@ -2754,10 +3138,14 @@
                 lastTickSection = sectionIdx;
             }
 
-            // PLOT TWIST — boost phase (only when active)
-            if (plotTwist && !boostTriggered && t>=0.40) {
-                boostTriggered = true;
-                triggerBoost();
+            // WIND-BACK — two beats: the yank, then the release
+            if (windBack && !wbFired && t >= WB.hold) {
+                wbFired = true;
+                triggerWindBack();
+            }
+            if (windBack && !releaseFired && t >= WB.load) {
+                releaseFired = true;
+                triggerRelease();
             }
 
             if (t<1) {
@@ -2892,7 +3280,8 @@
             vel:    Math.max(speed, FLICK.minVel),
             dir:    vel < 0 ? -1 : 1,
             power,
-            popOff: pop
+            popOff: pop,
+            stunt:  Math.random() < 0.5 ? 'roll' : 'bounce'
         });
     }
 
@@ -2915,20 +3304,42 @@
     ══════════════════════════════════════ */
     const popOff = { active: false };
 
-    function startPopOff(spinDuration) {
+    // Two ways off the hub, picked at the moment of release:
+    //   bounce - the wheel pinballs around the viewport
+    //   roll   - it drops to the floor and rolls away the way it was spinning
+    function startPopOff(spinDuration, opts) {
         if (popOff.active) return;
-        const ang   = -Math.PI/2 + (Math.random() - 0.5) * 2.2;      // mostly upward
-        const speed = 1.15 + Math.random() * 0.75;                   // px/ms
-        Object.assign(popOff, {
-            active: true, phase: 'fly',
-            x: 0, y: 0,
-            vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
-            scale: 1, targetScale: 0.6 + Math.random() * 0.14,
-            tilt: 0, vtilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05),
+        const stunt = (opts && opts.stunt) === 'roll' ? 'roll' : 'bounce';
+        const now   = performance.now();
+        const base  = {
+            active: true, stunt,
+            x: 0, y: 0, scale: 1, sx: 1, sy: 1,
+            tilt: 0, squashT: 0,
             rect: wheelWrap.getBoundingClientRect(),
-            t0: performance.now(), last: performance.now(),
+            t0: now, last: now,
             flight: Math.min(2300, Math.max(1200, spinDuration * 0.34))
-        });
+        };
+
+        if (stunt === 'roll') {
+            const dir = (opts && opts.dir < 0) ? -1 : 1;   // rolls the way it spins
+            Object.assign(popOff, base, {
+                phase: 'drop',
+                vx: dir * (0.85 + Math.random() * 0.55),
+                vy: 0.05,
+                baseScale: 0.74 + Math.random() * 0.08,
+                vtilt: 0
+            });
+        } else {
+            const ang   = -Math.PI/2 + (Math.random() - 0.5) * 2.2;  // mostly upward
+            const speed = 1.15 + Math.random() * 0.75;               // px/ms
+            Object.assign(popOff, base, {
+                phase: 'fly',
+                vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed,
+                baseScale: 0.6 + Math.random() * 0.14,
+                vtilt: (Math.random() < 0.5 ? -1 : 1) * (0.05 + Math.random() * 0.05)
+            });
+        }
+
         wheelWrap.classList.add('flying');
         canvas.style.willChange = 'transform';
         playPopSound();
@@ -2936,24 +3347,117 @@
         requestAnimationFrame(popFrame);
     }
 
+    // Where the wheel's edges are right now, in transform-offset space, so both
+    // stunts can be kept inside the viewport.
+    function popBounds() {
+        const r = popOff.rect, m = 12;
+        // The wheel is a circle inside a square canvas, so the transparent
+        // corners are not part of it — bound the drawn radius instead, or it
+        // stops short of every edge and tilting makes it worse.
+        const halfW = (r.width  / 2 - 12) * popOff.sx;
+        const halfH = (r.height / 2 - 12) * popOff.sy;
+        return {
+            halfW, halfH,
+            left:  m + halfW - (r.left + r.width/2),
+            right: window.innerWidth  - m - halfW - (r.left + r.width/2),
+            floor: window.innerHeight - m - halfH - (r.top  + r.height/2)
+        };
+    }
+
+    // A decaying squash on impact: fat and short, springing back to round.
+    function popSquash(now) {
+        if (!popOff.squashT) return 0;
+        const u = (now - popOff.squashT) / 220;
+        if (u >= 1) return 0;
+        return Math.sin(Math.PI * u) * Math.exp(-2.4 * u) * 0.17;
+    }
+
     function popFrame(now) {
         if (!popOff.active) return;
         const dt = Math.min(now - popOff.last, 34);   // clamp so a stalled tab can't teleport it
         popOff.last = now;
+
+        if (popOff.stunt === 'roll') stepRoll(now, dt);
+        else                         stepBounce(now, dt);
+        if (!popOff.active) return;                   // the step may have finished it
+
+        canvas.style.transform =
+            'translate3d(' + popOff.x.toFixed(2) + 'px,' + popOff.y.toFixed(2) + 'px,0) ' +
+            'rotate(' + popOff.tilt.toFixed(2) + 'deg) ' +
+            'scale(' + popOff.sx.toFixed(3) + ',' + popOff.sy.toFixed(3) + ')';
+        requestAnimationFrame(popFrame);
+    }
+
+    /* -- Stunt: roll --
+       The wheel is already spinning flat out, so a wheel-shaped thing running
+       along the floor reads as rolling without faking any wheel rotation. It
+       rolls out, runs out of momentum, and comes back the way it came, which
+       is also what carries it home. */
+    function stepRoll(now, dt) {
+        const b = popBounds();
+
+        if (popOff.phase === 'drop') {
+            popOff.vy    += 0.0055 * dt;              // real gravity this time
+            popOff.y     += popOff.vy * dt;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.08;
+            if (popOff.y >= b.floor) {                // touchdown
+                popOff.y       = b.floor;
+                popOff.phase   = 'roll';
+                popOff.rollT0  = now;
+                popOff.squashT = now;
+                playThud();
+                shakeWheel();
+                startRumble();
+            }
+        } else if (popOff.phase === 'roll') {
+            popOff.x     += popOff.vx * dt;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.08;
+            // Rolling friction, so it visibly runs out of steam.
+            const drag = 0.00042 * dt;
+            popOff.vx = Math.abs(popOff.vx) <= drag ? 0 : popOff.vx - Math.sign(popOff.vx) * drag;
+            if (popOff.x < b.left)  { popOff.x = b.left;  popOff.vx =  Math.abs(popOff.vx) * 0.6; popOff.squashT = now; playClank(); }
+            if (popOff.x > b.right) { popOff.x = b.right; popOff.vx = -Math.abs(popOff.vx) * 0.6; popOff.squashT = now; playClank(); }
+            popOff.y = b.floor;
+            setRumble(popOff.vx);
+            if (popOff.vx === 0 || now - popOff.rollT0 > popOff.flight) {
+                popOff.phase = 'home';
+                popOff.rt0   = now;
+                popOff.from  = { x: popOff.x, y: popOff.y, s: popOff.scale };
+                stopRumble();
+            }
+        } else {                                      // home - one hop back on
+            const t = Math.min((now - popOff.rt0) / 540, 1);
+            const e = t * t * (3 - 2 * t);
+            popOff.x     = popOff.from.x * (1 - e);
+            popOff.y     = popOff.from.y * (1 - e) - Math.sin(Math.PI * t) * 110;   // arcs over
+            popOff.scale = popOff.from.s + (1 - popOff.from.s) * e;
+            popOff.tilt  = 0;
+            popOff.sx    = popOff.sy = popOff.scale;
+            if (t >= 1) endPopOff();
+            return;
+        }
+
+        const k = popSquash(now);
+        popOff.sx = popOff.scale * (1 + k * 0.75);
+        popOff.sy = popOff.scale * (1 - k);
+    }
+
+    /* -- Stunt: bounce -- */
+    function stepBounce(now, dt) {
         const r = popOff.rect;
 
         if (popOff.phase === 'fly') {
             popOff.x     += popOff.vx * dt;
             popOff.y     += popOff.vy * dt;
             popOff.vy    += 0.0014 * dt;              // a whisper of gravity, just to arc it
-            popOff.scale += (popOff.targetScale - popOff.scale) * 0.06;
+            popOff.scale += (popOff.baseScale - popOff.scale) * 0.06;
             popOff.tilt  += popOff.vtilt * dt;
 
-            const halfW = r.width  * popOff.scale / 2;
-            const halfH = r.height * popOff.scale / 2;
+            const halfW = (r.width  / 2 - 12) * popOff.scale;
+            const halfH = (r.height / 2 - 12) * popOff.scale;
             const px    = r.left + r.width/2  + popOff.x;
             const py    = r.top  + r.height/2 + popOff.y;
-            const m     = 8;
+            const m     = 12;
             let hit = false;
             if (px - halfW < m) {
                 popOff.x += m - (px - halfW);
@@ -2985,16 +3489,13 @@
             popOff.tilt  = popOff.from.tilt * (1 - e);
             if (t >= 1) { endPopOff(); return; }
         }
-
-        canvas.style.transform =
-            'translate3d(' + popOff.x.toFixed(2) + 'px,' + popOff.y.toFixed(2) + 'px,0) ' +
-            'scale(' + popOff.scale.toFixed(3) + ') rotate(' + popOff.tilt.toFixed(2) + 'deg)';
-        requestAnimationFrame(popFrame);
+        popOff.sx = popOff.sy = popOff.scale;
     }
 
     function endPopOff() {
         if (!popOff.active) return;
         popOff.active = false;
+        stopRumble();
         canvas.style.transform  = '';
         canvas.style.willChange = '';
         wheelWrap.classList.remove('flying');
@@ -3051,6 +3552,50 @@
             o.start(now); o.stop(now + 0.18);
         });
         noiseBurst(0.06, 3400, 0.2, 1.4);
+    }
+
+    // Heavy, wooden landing when the wheel meets the floor.
+    function playThud() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(120, now);
+        o.frequency.exponentialRampToValueAtTime(34, now + 0.22);
+        g.gain.setValueAtTime(0.6, now);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        o.connect(g); g.connect(audioCtx.destination);
+        o.start(now); o.stop(now + 0.42);
+        noiseBurst(0.09, 260, 0.4, 0.6);
+    }
+
+    // Low looping rumble while it rolls, tracked to how fast it is going.
+    function startRumble() {
+        if (!audioCtx || popOff.rumble) return;
+        const src = audioCtx.createBufferSource();
+        src.buffer = getNoiseBuffer(); src.loop = true;
+        const lp = audioCtx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 210; lp.Q.value = 0.8;
+        const g = audioCtx.createGain(); g.gain.value = 0;
+        src.connect(lp); lp.connect(g); g.connect(audioCtx.destination);
+        src.start();
+        popOff.rumble = { src, g };
+    }
+
+    function setRumble(speed) {
+        if (!popOff.rumble) return;
+        const target = Math.min(Math.abs(speed) * 0.42, 0.4);
+        popOff.rumble.g.gain.setTargetAtTime(target, audioCtx.currentTime, 0.04);
+    }
+
+    function stopRumble() {
+        if (!popOff.rumble) return;
+        const { src, g } = popOff.rumble;
+        popOff.rumble = null;
+        try {
+            g.gain.setTargetAtTime(0, audioCtx.currentTime, 0.05);
+            src.stop(audioCtx.currentTime + 0.3);
+        } catch (err) {}
     }
 
     function playReseatSound() {
@@ -3233,11 +3778,72 @@
     const marbleSubtitle = document.getElementById('marbleSubtitle');
     const marbleBoard    = marbleRankList.parentElement;
 
-    const CANVAS_W = marbleCanvas.width;          // 388 — lanes use the full width
-    const MH = marbleCanvas.height;               // 560
-    const SPRINT_PAD_L = 102, SPRINT_PAD_R = 24;  // left name column + right margin
-    const TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
-    const SPRINT_BASE = 0.00075;                  // tuned: majority-safe quota fills in ~12-19s
+    // The race is a full-screen takeover, so the track is sized to the screen
+    // rather than pinned to the markup's 388x560 — on a wide monitor that left
+    // the field crammed into a strip down the middle.
+    let CANVAS_W = marbleCanvas.width;
+    let MH = marbleCanvas.height;
+    let SPRINT_PAD_L = 102;
+    const SPRINT_PAD_R = 24;                      // right margin past the finish
+    let TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
+    let lastRunners = null, lastSafeCount = 0;    // so a resize can redraw a finished race
+
+    function sizeMarbleCanvas(runnerCount) {
+        const wide   = window.innerWidth > 700;
+        const boardW = wide ? 200 : 0;                       // finish-order panel + gap
+        // Lanes want about 95px each — past that a small field is just spread
+        // thin down a tall canvas.
+        const want = runnerCount ? runnerCount * 95 + 60 : 700;
+        const w = Math.round(Math.max(320, Math.min(window.innerWidth - boardW - 64, 1200)));
+        const h = Math.round(Math.max(380, Math.min(window.innerHeight - 150, want, 900)));
+        if (marbleCanvas.width === w && marbleCanvas.height === h) return;
+        marbleCanvas.width  = w;
+        marbleCanvas.height = h;
+        CANVAS_W = w; MH = h;
+        // Name column keeps its share of the width, so long names still fit.
+        SPRINT_PAD_L = Math.round(Math.min(170, Math.max(96, w * 0.2)));
+        TRACK_X0 = SPRINT_PAD_L;
+        FINISH_X = w - SPRINT_PAD_R;
+        marbleBoard.style.maxHeight = h + 'px';
+    }
+    const SPRINT_BASE = 0.00048;                  // tuned: majority-safe quota fills in ~19-30s
+
+    /* -- The hurdle --
+       One jump a quarter of the way in, with 75% of the track still to run.
+       Every horse carries its own posted chance of clearing it, and the
+       faster it is travelling relative to the rest of the field at the
+       moment it takes off, the more of that chance it gives back: coming in
+       hot is how you catch a rail. Clipping it costs momentum, not the race
+       — a stumbler can still recover and finish safe. */
+    const HURDLE_FIRST  = 0.22;   // first rail, with most of the track still to run
+    const HURDLE_LAST   = 0.74;   // last one, leaving a run-in to the line
+    const HURDLE_LEAD   = 0.022;  // half-width of the leap, in track fraction
+    const HURDLE_RISK   = 0.30;   // how hard being quicker than the field bites
+    const HURDLE_RISKMAX= 0.25;   // ...capped, so a flier is never doomed
+    const HURDLE_FLOOR  = 0.25;   // ...and never worse than one-in-four
+    const STUMBLE_MS    = 1100;   // how long a clipped rail keeps you slow
+    let   raceHurdles   = [];     // this race's rail positions along the track
+    let   hurdleFlash   = null;   // {name, color, at} for the on-canvas callout
+
+    // Two to four rails, evenly spread with a little jitter so no two races
+    // are laid out the same.
+    function makeHurdles() {
+        const n = 2 + Math.floor(Math.random() * 3);
+        const step = (HURDLE_LAST - HURDLE_FIRST) / (n - 1);
+        const out = [];
+        for (let i = 0; i < n; i++) {
+            out.push(HURDLE_FIRST + i * step + (Math.random() - 0.5) * 0.035);
+        }
+        return out;
+    }
+
+    // Posted chance, minus what the horse gives back for carrying more speed
+    // into the jump than the field around it.
+    function hurdleOdds(jump, speed, fieldSpeed) {
+        const ratio   = speed / (fieldSpeed || SPRINT_BASE);     // 1 = field average
+        const penalty = Math.min(Math.max((ratio - 1) * HURDLE_RISK, 0), HURDLE_RISKMAX);
+        return Math.max(jump - penalty, HURDLE_FLOOR);
+    }
 
     function onPanicLanded() {
         sliceWeights = null;
@@ -3267,6 +3873,25 @@
         }
     }
 
+    // Timber rattling — a clipped rail, not a clean note.
+    function playHurdleHit() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [196, 262, 147].forEach((f, i) => {
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            const t = now + i * 0.045;
+            o.type = 'square';
+            o.frequency.setValueAtTime(f * (0.9 + Math.random() * 0.2), t);
+            o.frequency.exponentialRampToValueAtTime(f * 0.6, t + 0.09);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(0.22 - i * 0.05, t + 0.005);
+            g.gain.exponentialRampToValueAtTime(0.0006, t + 0.12);
+            o.connect(g); g.connect(audioCtx.destination);
+            o.start(t); o.stop(t + 0.14);
+        });
+        noiseBurst(0.14, 900, 0.3, 0.9);
+    }
+
     function playFinishPing() {
         if (!audioCtx) return;
         const now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -3285,80 +3910,193 @@
 
     // Sprint race: lanes drawn from scripted progress (r.p in 0..1). No physics,
     // so runners always advance and always finish — nothing can stall or shaft.
-    function drawSprint(runners, safeCount) {
+    function drawSprint(runners, safeCount, now) {
         const n = runners.length;
         const laneTop = 16, laneH = (MH - 32) / n;
         const trackLen = FINISH_X - TRACK_X0;
+        const hurdleXs = raceHurdles.map(h => TRACK_X0 + h * trackLen);
+        now = now || performance.now();
+        lastRunners = runners; lastSafeCount = safeCount;
+        // Type and sprites grow with the track so a big screen isn't a small
+        // race drawn far apart.
+        const k = Math.min(Math.max(CANVAS_W / 388, 1), 1.7);
 
         const bg = mctx.createLinearGradient(0, 0, 0, MH);
         bg.addColorStop(0, '#0c0716'); bg.addColorStop(1, '#1a0f2a');
         mctx.fillStyle = bg; mctx.fillRect(0, 0, CANVAS_W, MH);
 
         // checkered finish line + glow band
-        for (let yy = 0; yy < MH; yy += 10) {
-            mctx.fillStyle = (Math.floor(yy / 10) % 2) ? '#e8e8e8' : '#15151c';
-            mctx.fillRect(FINISH_X, yy, 6, 10);
+        const sq = Math.round(10 * k);
+        for (let yy = 0; yy < MH; yy += sq) {
+            mctx.fillStyle = (Math.floor(yy / sq) % 2) ? '#e8e8e8' : '#15151c';
+            mctx.fillRect(FINISH_X, yy, 6 * k, sq);
         }
         mctx.fillStyle = 'rgba(46,204,113,0.10)';
-        mctx.fillRect(FINISH_X + 6, 0, CANVAS_W - FINISH_X - 6, MH);
+        mctx.fillRect(FINISH_X + 6 * k, 0, CANVAS_W - FINISH_X - 6 * k, MH);
+
+        // hurdle markers running the height of the track
+        mctx.save();
+        mctx.setLineDash([5, 5]);
+        mctx.strokeStyle = 'rgba(212,175,55,0.35)'; mctx.lineWidth = 1;
+        hurdleXs.forEach(hx => {
+            mctx.beginPath(); mctx.moveTo(hx, 0); mctx.lineTo(hx, MH); mctx.stroke();
+        });
+        mctx.restore();
 
         for (let i = 0; i < n; i++) {
             const r = runners[i];
             const yc = laneTop + (i + 0.5) * laneH;
-            const hs = Math.max(15, Math.min(laneH * 0.85, 32));   // horse sprite size
+            const hs = Math.max(15, Math.min(laneH * 0.85, 30 + CANVAS_W * 0.03));   // horse sprite size
 
             // lane guide
             mctx.strokeStyle = 'rgba(168,111,207,0.12)'; mctx.lineWidth = 1;
             mctx.beginPath(); mctx.moveTo(TRACK_X0, yc); mctx.lineTo(FINISH_X, yc); mctx.stroke();
 
             // pinned name chip on the left
-            const chipH = Math.min(16, laneH - 3);
-            const nm = r.pick.name.length > 11 ? r.pick.name.slice(0, 10) + '…' : r.pick.name;
+            const chipH = Math.min(16 * k, laneH - 3);
+            const maxChars = Math.round(8 * k);
+            const nm = r.pick.name.length > maxChars ? r.pick.name.slice(0, maxChars - 1) + '…' : r.pick.name;
             mctx.fillStyle = 'rgba(8,4,16,0.7)';
             mRoundRect(6, yc - chipH / 2, TRACK_X0 - 14, chipH, 4); mctx.fill();
-            mctx.strokeStyle = r.color; mctx.lineWidth = 1.5; mctx.stroke();
-            mctx.fillStyle = '#e8dfc8'; mctx.font = '700 10px Segoe UI,system-ui,sans-serif';
+            mctx.strokeStyle = now < r.stumbleUntil ? '#e74c3c' : r.color;
+            mctx.lineWidth = now < r.stumbleUntil ? 2.5 : 1.5; mctx.stroke();
+            mctx.fillStyle = '#e8dfc8'; mctx.font = `700 ${Math.round(10 * k)}px Segoe UI,system-ui,sans-serif`;
             mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
             mctx.fillText(nm, 12, yc + 0.5);
 
+            // posted jump odds — red the moment this horse clips anything
+            const anyFell = r.results.indexOf('fell') >= 0;
+            const allDone = r.next >= raceHurdles.length;
+            mctx.fillStyle = anyFell ? 'rgba(192,57,43,0.95)'
+                           : allDone ? 'rgba(46,204,113,0.75)'
+                           : 'rgba(212,175,55,0.9)';
+            mctx.font = `800 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+            mctx.textAlign = 'right';
+            mctx.fillText(Math.round(r.jump * 100) + '%', TRACK_X0 - 10, yc + 0.5);
+            mctx.textAlign = 'left';
+
             const ox = TRACK_X0 + Math.min(1, r.p) * trackLen;
 
+            // This lane's rails: upright until this horse knocks one flat.
+            const railH = Math.min(laneH * 0.5, 18 * k);
+            hurdleXs.forEach((hx, hi) => {
+                const res = r.results[hi];
+                mctx.save();
+                mctx.translate(hx, yc + railH * 0.35);
+                if (res === 'fell') mctx.rotate(1.12);                // knocked over
+                mctx.fillStyle = res === 'fell' ? '#7a2a22' : '#c9a227';
+                mctx.fillRect(-1.5 * k, -railH, 3 * k, railH);        // post
+                mctx.fillStyle = res === 'fell' ? '#a33a2c' : '#f0e6c0';
+                mctx.fillRect(-6 * k, -railH, 12 * k, 3 * k);         // top rail
+                mctx.restore();
+            });
+
+            // Airborne over the rail it is at, or pitching forward into it.
+            let yOff = 0, pitch = 0;
+            const lastIdx = r.next - 1;
+            if (lastIdx >= 0) {
+                const near = (r.p - (raceHurdles[lastIdx] - HURDLE_LEAD)) / (2 * HURDLE_LEAD);
+                if (r.results[lastIdx] === 'clear' && near >= 0 && near <= 1) {
+                    // Capped against the lane height so a leap doesn't land in
+                    // the lane above on a big screen.
+                    yOff  = -Math.sin(Math.PI * near) * Math.min(hs * 0.85, laneH * 0.42);
+                    pitch = -Math.sin(Math.PI * near) * 0.42;
+                } else if (r.results[lastIdx] === 'fell' && now - r.fellAt < 700) {
+                    const u = (now - r.fellAt) / 700;
+                    yOff  = Math.sin(Math.PI * u) * hs * 0.16;
+                    pitch = Math.sin(Math.PI * u) * 0.5;
+                }
+            }
+
+            // A clipped rail throws up dust at the point of contact.
+            if (r.fellAt && now - r.fellAt < 620 && lastIdx >= 0) {
+                const u = (now - r.fellAt) / 620;
+                mctx.save();
+                mctx.globalAlpha = (1 - u) * 0.5;
+                mctx.fillStyle = '#c0392b';
+                for (let d = 0; d < 7; d++) {
+                    const a  = d * 0.9 + (r.fellAt % 10) * 0.3;
+                    const dd = u * hs * (0.5 + (d % 3) * 0.3);
+                    mctx.beginPath();
+                    mctx.arc(hurdleXs[lastIdx] + Math.cos(a) * dd,
+                             yc + Math.sin(a) * dd * 0.6, (1 - u) * 3 * k, 0, 2 * Math.PI);
+                    mctx.fill();
+                }
+                mctx.restore();
+            }
+
+            const slowed = now < r.stumbleUntil;
+
             // dust trail behind the horse
-            const grd = mctx.createLinearGradient(ox - 30, 0, ox, 0);
+            const trail = Math.max(30, trackLen * 0.055);
+            const grd = mctx.createLinearGradient(ox - trail, 0, ox, 0);
             grd.addColorStop(0, 'rgba(0,0,0,0)'); grd.addColorStop(1, r.color);
             mctx.strokeStyle = grd; mctx.globalAlpha = 0.45; mctx.lineWidth = hs * 0.3;
-            mctx.beginPath(); mctx.moveTo(Math.max(TRACK_X0, ox - 30), yc + hs * 0.2); mctx.lineTo(ox, yc + hs * 0.2); mctx.stroke();
+            mctx.beginPath(); mctx.moveTo(Math.max(TRACK_X0, ox - trail), yc + hs * 0.2); mctx.lineTo(ox, yc + hs * 0.2); mctx.stroke();
             mctx.globalAlpha = 1;
 
             // colored glow under the horse (player ID)
-            const glow = mctx.createRadialGradient(ox, yc, 1, ox, yc, hs * 0.6);
-            glow.addColorStop(0, r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
-            mctx.globalAlpha = r.finished ? 0.55 : 0.4;
-            mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
+            const glow = mctx.createRadialGradient(ox, yc + yOff, 1, ox, yc + yOff, hs * (slowed ? 0.8 : 0.6));
+            glow.addColorStop(0, slowed ? '#e74c3c' : r.color); glow.addColorStop(1, 'rgba(0,0,0,0)');
+            mctx.globalAlpha = slowed ? 0.75 : (r.finished ? 0.55 : 0.4);
+            mctx.fillStyle = glow; mctx.beginPath(); mctx.arc(ox, yc + yOff, hs * 0.6, 0, 2 * Math.PI); mctx.fill();
             mctx.globalAlpha = 1;
 
             // horse sprite — flipped to gallop toward the finish (right)
             mctx.save();
-            mctx.translate(ox, yc); mctx.scale(-1, 1);
+            mctx.translate(ox, yc + yOff); mctx.rotate(pitch); mctx.scale(-1, 1);
             mctx.font = `${Math.round(hs)}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",serif`;
             mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
             mctx.fillText('🐎', 0, 0);
             mctx.restore();
 
+            // SLOWED tag for as long as the stumble lasts
+            if (slowed) {
+                mctx.save();
+                mctx.font = `900 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
+                mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+                const label = 'SLOWED';
+                const tw = mctx.measureText(label).width + 10 * k;
+                const ty = yc - hs * 0.75;
+                mctx.globalAlpha = 0.55 + 0.45 * Math.abs(Math.sin(now / 140));
+                mctx.fillStyle = '#c0392b';
+                mRoundRect(ox - tw / 2, ty - 7 * k, tw, 14 * k, 4); mctx.fill();
+                mctx.fillStyle = '#fff';
+                mctx.fillText(label, ox, ty + 0.5);
+                mctx.restore();
+            }
+
             // rank badge for safe finishers
             if (r.finished && r.safeRank) {
                 const bx = ox + hs * 0.42, byc = yc - hs * 0.42;
-                mctx.fillStyle = '#1e8449'; mctx.beginPath(); mctx.arc(bx, byc, 7, 0, 2 * Math.PI); mctx.fill();
+                mctx.fillStyle = '#1e8449'; mctx.beginPath(); mctx.arc(bx, byc, 7 * k, 0, 2 * Math.PI); mctx.fill();
                 mctx.strokeStyle = '#fff'; mctx.lineWidth = 1; mctx.stroke();
-                mctx.fillStyle = '#fff'; mctx.font = '900 9px Segoe UI,system-ui,sans-serif';
+                mctx.fillStyle = '#fff'; mctx.font = `900 ${Math.round(9 * k)}px Segoe UI,system-ui,sans-serif`;
                 mctx.textAlign = 'center'; mctx.textBaseline = 'middle'; mctx.fillText(r.safeRank, bx, byc + 0.5);
             }
+        }
+
+        // "X clips the hurdle!" for a moment after it happens
+        if (hurdleFlash && now - hurdleFlash.at < 1400) {
+            const fade = 1 - (now - hurdleFlash.at) / 1400;
+            mctx.save();
+            mctx.globalAlpha = Math.min(1, fade * 2.2);
+            mctx.font = `800 ${Math.round(12 * k)}px Segoe UI,system-ui,sans-serif`;
+            mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
+            const msg = hurdleFlash.name + ' clips the hurdle!';
+            const w = mctx.measureText(msg).width + 16 * k;
+            mctx.fillStyle = 'rgba(10,4,16,0.85)';
+            mRoundRect(CANVAS_W / 2 - w / 2, 4, w, 20 * k, 6); mctx.fill();
+            mctx.strokeStyle = hurdleFlash.color; mctx.lineWidth = 1.5; mctx.stroke();
+            mctx.fillStyle = '#e8dfc8';
+            mctx.fillText(msg, CANVAS_W / 2, 4 + 10 * k);
+            mctx.restore();
         }
 
         // vertical FINISH label up the right edge
         mctx.save();
         mctx.translate(FINISH_X + 16, MH - 8); mctx.rotate(-Math.PI / 2);
-        mctx.fillStyle = 'rgba(46,204,113,0.85)'; mctx.font = '800 11px Segoe UI,system-ui,sans-serif';
+        mctx.fillStyle = 'rgba(46,204,113,0.85)'; mctx.font = `800 ${Math.round(11 * k)}px Segoe UI,system-ui,sans-serif`;
         mctx.textAlign = 'left'; mctx.textBaseline = 'middle';
         mctx.fillText('FINISH', 0, 0); mctx.restore();
     }
@@ -3388,9 +4126,12 @@
         const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
         const safeCount = racers.length - outCount;
 
+        sizeMarbleCanvas(racers.length);
+        raceHurdles = makeHurdles();          // before the subtitle counts them
+        hurdleFlash = null;
         marbleRankList.innerHTML = '';
         marbleResultEl.textContent = '';
-        marbleSubtitle.textContent = `${racers.length} running — first ${safeCount} across are safe, last ${outCount} drop out`;
+        marbleSubtitle.textContent = `${racers.length} running — ${raceHurdles.length} hurdles, first ${safeCount} across are safe, last ${outCount} drop out`;
         marbleOverlay.classList.add('show');
 
         // Each runner advances by a scripted, always-positive amount whose "form"
@@ -3399,12 +4140,33 @@
             pick, color: pick.color,
             p: 0, form: (Math.random() - 0.5) * 0.3,
             talent: 0.82 + Math.random() * 0.36,        // fixed speed edge → a real field spread
+            jump: 0.62 + Math.random() * 0.33,          // posted odds at every rail
+            results: [],                                // per rail: 'clear' | 'fell'
+            next: 0,                                    // the rail it is running at
+            fellAt: 0, stumbleUntil: 0, speed: SPRINT_BASE,
             finished: false, safeRank: null,
         }));
 
         let frames = 0, lastTick = 0;
-        const MAXF = 1800;                  // ~30s hard cap (races naturally end ~13-20s)
+        const MAXF = 3900;                  // ~65s hard cap (races naturally end ~19-30s)
         const safe = [];                    // runners that claimed a SAFE spot, in finish order
+
+        // Take-off. The posted chance is what the horse is worth on a level
+        // run; the speed it is actually carrying is what it pays to get over.
+        function takeHurdle(r, fieldSpeed, now) {
+            const idx = r.next++;
+            if (Math.random() < hurdleOdds(r.jump, r.speed, fieldSpeed)) {
+                r.results[idx] = 'clear';
+                return;
+            }
+            r.results[idx] = 'fell';
+            r.fellAt       = now;
+            r.p            = Math.max(0, r.p - 0.012);   // knocked back into the rail
+            r.form         = -0.5;
+            r.stumbleUntil = now + STUMBLE_MS;
+            hurdleFlash    = { name: r.pick.name, color: r.color, at: now };
+            playHurdleHit();
+        }
 
         // Decided the instant the safe quota fills — everyone still running is OUT.
         function finishRace() {
@@ -3414,18 +4176,34 @@
                 addMarbleRankRow(r, safe.length, true, safeCount);
             }
             rest.forEach((r, i) => addMarbleRankRow(r, safeCount + 1 + i, false, safeCount));
-            drawSprint(runners, safeCount);
+            drawSprint(runners, safeCount, performance.now());
             setTimeout(() => resolveMarbleRace(safe.map(r => r.pick), rest.map(r => r.pick)), 1100);
         }
 
         function frame(now) {
             frames++;
+
+            // Work out everyone's speed for this frame first — the hurdle needs
+            // to compare a horse against the field it is actually running in.
+            let speedSum = 0, speedN = 0;
             for (const r of runners) {
                 if (r.finished) continue;
                 r.form += (Math.random() - 0.5) * 0.05;
                 if (Math.random() < 0.012) r.form += Math.random() * 0.5;   // a sudden surge
                 r.form = Math.max(-0.55, Math.min(0.9, r.form));
-                r.p += SPRINT_BASE * r.talent * (1 + r.form);               // always > 0
+                // A clipped rail costs speed, easing back to full over ~1s.
+                const left = r.stumbleUntil - now;
+                const hurt = left > 0 ? 0.45 + 0.55 * (1 - left / STUMBLE_MS) : 1;
+                r.speed = SPRINT_BASE * r.talent * (1 + r.form) * hurt;     // always > 0
+                speedSum += r.speed; speedN++;
+            }
+            const fieldSpeed = speedN ? speedSum / speedN : SPRINT_BASE;
+
+            for (const r of runners) {
+                if (r.finished) continue;
+                r.p += r.speed;
+                const rail = raceHurdles[r.next];
+                if (rail !== undefined && r.p >= rail - HURDLE_LEAD) takeHurdle(r, fieldSpeed, now);
                 if (r.p >= 1) {
                     r.p = 1; r.finished = true;
                     if (safe.length < safeCount) {                          // grabbed a safe spot
@@ -3436,7 +4214,7 @@
                 }
             }
             if (now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
-            drawSprint(runners, safeCount);
+            drawSprint(runners, safeCount, now);
 
             if (safe.length >= safeCount || frames >= MAXF) { finishRace(); return; }
             requestAnimationFrame(frame);
@@ -3448,7 +4226,7 @@
         marbleResultEl.textContent = doomed.length
             ? `${doomed.length} undrafted! ${safe.length} survive the panic.`
             : 'Everyone survived!';
-        playFanfare();
+        playFanfare(2600);
 
         setTimeout(() => {
             doomed.forEach(pick => {
@@ -3467,7 +4245,7 @@
         isBusy = false;
         if (names.length < 2 && autoSpin) setAutoSpin(false);
         renderList(); renderDraft(); redraw(); saveState(); updateButtons();
-        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
+        if (autoSpin && names.length >= 2) queueAutoSpin(1400);
     }
 
     /* ── Draft complete splash ── */
@@ -3507,31 +4285,36 @@
         setTimeout(() => splashOverlay.classList.add('show'), 500);
     }
 
-    function showDevil() {
-        const el = document.getElementById('devilPopup');
-        el.classList.remove('in', 'wiggle', 'out');
+    function showWindBackBanner() {
+        const el = document.getElementById('windBackPopup');
+        el.classList.remove('in', 'hold', 'out');
         void el.offsetWidth;
         el.classList.add('in');
         setTimeout(() => {
             el.classList.remove('in');
-            el.classList.add('wiggle');
+            el.classList.add('hold');
             setTimeout(() => {
-                el.classList.remove('wiggle');
+                el.classList.remove('hold');
                 el.classList.add('out');
-                setTimeout(() => el.classList.remove('out'), 500);
-            }, 1800);
-        }, 650);
+                setTimeout(() => el.classList.remove('out'), 460);
+            }, 1500);
+        }, 520);
     }
 
-    function triggerBoost() {
-        showDevil();
-        playBoostSound();
-        flashScreen();
+    // Beat one: the wheel had stopped, and something has just grabbed it.
+    function triggerWindBack() {
+        showWindBackBanner();
+        playWindBack();
         shakeWheel();
         launchBoostElements();
-        // Brief fire surge
-        for (let i=0;i<60;i++) {
-            const W=fireCanvas.width;
+    }
+
+    // Beat two: the tension lets go and the wheel is thrown forward again.
+    function triggerRelease() {
+        playRelease();
+        flashScreen();
+        for (let i = 0; i < 60; i++) {            // brief fire surge
+            const W = fireCanvas.width;
             spawnFlame(Math.random()*W, -(Math.random()*9+5), Math.random()*28+16);
         }
         startFire();
@@ -3565,7 +4348,7 @@
         winnerCard.style.setProperty('--win-color',c);
         winnerCard.style.setProperty('--win-glow',c+'28');
         winnerOverlay.classList.add('show');
-        playFanfare();
+        playFanfare(winnerDisplayMs());
         launchConfetti(c);
 
         setTimeout(()=>{
@@ -3584,7 +4367,7 @@
                     renderList(); renderDraft(); redraw(); saveState();
                     setTimeout(() => showNoisWheel(selectedPick, () => {
                         // After undraft: resume auto-spin if on and names remain
-                        if (autoSpin && names.length >= 2) setTimeout(spin, 1400);
+                        if (autoSpin && names.length >= 2) queueAutoSpin(1400);
                     }), 700);
                 } else {
                     undoStack.push(selectedPick);
@@ -3601,7 +4384,7 @@
                     if (!stillHasNames) {
                         showSplash();
                     } else if (autoSpin) {
-                        setTimeout(spin, 1400);
+                        queueAutoSpin(1400);
                     }
                 }
             },380);
@@ -3611,6 +4394,14 @@
     /* ══════════════════════════════════════
        Auto spin
     ══════════════════════════════════════ */
+    // A queued auto-spin asks again on the way in: switching autospin off
+    // during the winner card has to stop the next one, not just the one after.
+    function queueAutoSpin(ms) {
+        setTimeout(() => {
+            if (autoSpin && names.length >= 2 && !isSpinning && !isBusy) spin();
+        }, ms);
+    }
+
     function setAutoSpin(val) {
         autoSpin=val;
         autoBtn.classList.toggle('on',autoSpin);
@@ -3619,10 +4410,15 @@
 
     autoBtn.addEventListener('click', ()=>{
         ensureAudio();
+        if (autoSpin) {                       // calling it off is allowed at any moment
+            setAutoSpin(false);
+            updateButtons();
+            return;
+        }
         if(names.length<2||isSpinning||isBusy)return;
-        const next = !autoSpin;
-        setAutoSpin(next);
-        if (next) spin();
+        setAutoSpin(true);
+        updateButtons();
+        spin();
     });
 
     /* ══════════════════════════════════════
@@ -3631,7 +4427,8 @@
     resetBtn.addEventListener('click', ()=>{
         if(isSpinning || isBusy) return;
         names=[]; draftOrder=[]; undoStack=[]; rotation=0; nameColors={};
-        setAutoSpin(false); renderList(); renderDraft(); redraw(); saveState();
+        setAutoSpin(false); setPowerUpRail(null);
+        renderList(); renderDraft(); redraw(); saveState();
     });
 
     /* ══════════════════════════════════════
@@ -3676,15 +4473,17 @@
         saveState();
     });
 
-    const plotTwistToggle = document.getElementById('plotTwistToggle');
+    const windBackToggle = document.getElementById('windBackToggle');
 
-    plotTwistToggle.addEventListener('change', () => {
-        plotTwistsEnabled = plotTwistToggle.checked;
+    windBackToggle.addEventListener('change', () => {
+        windBackEnabled = windBackToggle.checked;
         saveState();
     });
 
     powerUpToggle.addEventListener('change', () => {
         powerUpsEnabled = powerUpToggle.checked;
+        if (!powerUpsEnabled) setPowerUpRail(null);
+        syncPowerUpRail();
         saveState();
     });
 
@@ -3731,6 +4530,11 @@
     window.addEventListener('resize', ()=>{
         resizeFire(); resizeOverlay(); refreshPopRect();
         if (!isSpinning) redraw();          // empty-wheel copy flips with the layout
+        // Keep the race fitted if the window changes shape mid-race
+        if (marbleOverlay.classList.contains('show')) {
+            sizeMarbleCanvas(lastRunners ? lastRunners.length : 0);
+            if (lastRunners) drawSprint(lastRunners, lastSafeCount, performance.now());
+        }
     });
     window.addEventListener('scroll', refreshPopRect, { passive: true });
 
@@ -3743,14 +4547,14 @@
     powerUpToggle.checked    = powerUpsEnabled;
     panicToggle.checked      = panicEnabled;
     popOffToggle.checked     = popOffEnabled;
-    plotTwistToggle.checked  = plotTwistsEnabled;
+    windBackToggle.checked   = windBackEnabled;
     riggedInput.value        = riggedValue;
     displaySlider.value      = displayDuration / 1000;
     displayDuration          = parseFloat(displaySlider.value) * 1000;   // honor step snapping
     displayValEl.textContent = displaySlider.value + 's';
     autoDisplayToggle.checked = autoDisplay;
     displayManual.style.display = autoDisplay ? 'none' : 'flex';
-    renderList(); renderDraft(); updateButtons(); redraw();
+    renderList(); renderDraft(); updateButtons(); syncPowerUpRail(); redraw();
 </script>
 </body>
 </html>
