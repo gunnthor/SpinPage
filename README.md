@@ -67,9 +67,17 @@ The options panel lets you tune winner display duration, set how many positions 
 
 ```text
 SpinPage/
-├── index.html   # HTML, CSS, and JavaScript for the full app
-└── README.md    # Project documentation
+├── index.html            # HTML, CSS, and JavaScript for the full app
+├── favicon.svg           # Browser tab icon
+├── apple-touch-icon.png  # Home-screen icon (180×180)
+├── og-image.png          # Social share card (1200×630)
+├── robots.txt            # Crawler rules, points at the sitemap
+├── sitemap.xml           # Single-page sitemap
+└── README.md             # Project documentation
 ```
+
+The social card and touch icon are generated, not hand-drawn — both are Chromium
+screenshots of a throwaway page, so re-render them if the branding changes.
 
 SpinPage is intentionally compact. The UI, styling, animation, sound effects, and app state all live in `index.html`, making it easy to host anywhere static files are supported.
 

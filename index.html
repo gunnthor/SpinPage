@@ -3,25 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spinpage — Free Spinning Wheel &amp; Random Name Picker</title>
-    <meta name="description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up required.">
-    <meta name="keywords" content="spinning wheel, random name picker, spin the wheel, wheel spinner, name picker wheel, random picker, draft order picker, wheel of fortune online, random name generator">
-    <meta name="robots" content="index, follow">
-    <link rel="canonical" href="https://www.ruglad.com">
+    <title>SpinPage — Free Spinning Wheel &amp; Random Name Picker</title>
+    <meta name="description" content="Free online spinning wheel that picks a random name or winner — and keeps spinning to build a full draft order. Drag the wheel to spin it yourself. No sign-up, no ads, works on phone and desktop.">
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+    <meta name="theme-color" content="#06060d">
+    <link rel="canonical" href="https://www.ruglad.com/">
+
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Spinpage — Free Spinning Wheel &amp; Random Name Picker">
-    <meta property="og:description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up.">
+    <meta property="og:site_name" content="SpinPage">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="SpinPage — Free Spinning Wheel &amp; Random Name Picker">
+    <meta property="og:description" content="Spin the wheel to pick a random name or winner, then keep spinning for a full draft order. Free, instant, no sign-up.">
     <meta property="og:image" content="https://www.ruglad.com/og-image.png">
-    <meta property="og:url" content="https://www.ruglad.com">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:image:alt" content="A gold casino-style spinning wheel with names on its slices, under the SpinPage wordmark.">
+    <meta property="og:url" content="https://www.ruglad.com/">
 
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Spinpage — Free Spinning Wheel &amp; Random Name Picker">
-    <meta name="twitter:description" content="Spin the wheel to pick a random name or winner. Free, instant, no sign-up.">
+    <meta name="twitter:title" content="SpinPage — Free Spinning Wheel &amp; Random Name Picker">
+    <meta name="twitter:description" content="Spin the wheel to pick a random name or winner, then keep spinning for a full draft order. Free, instant, no sign-up.">
     <meta name="twitter:image" content="https://www.ruglad.com/og-image.png">
+    <meta name="twitter:image:alt" content="A gold casino-style spinning wheel with names on its slices, under the SpinPage wordmark.">
 
     <script type="application/ld+json">
-    {"@context":"https://schema.org","@type":"WebApplication","name":"Spinpage","url":"https://www.ruglad.com","description":"Free online spinning wheel and random name picker.","applicationCategory":"UtilityApplication","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}
+    {"@context":"https://schema.org","@graph":[
+      {"@type":"WebApplication","@id":"https://www.ruglad.com/#app","name":"SpinPage","url":"https://www.ruglad.com/","description":"Free online spinning wheel and random name picker that also builds a full draft order.","applicationCategory":"UtilityApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript and a modern browser","isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Random name picker","Spinning wheel with drag-to-spin","Draft order builder","Power-up slices that change the odds","Horse race elimination round","Saves your names in the browser"],"screenshot":"https://www.ruglad.com/og-image.png"},
+      {"@type":"HowTo","name":"How to pick a random name with SpinPage","description":"Add names, spin the wheel, and read the winner.","totalTime":"PT1M","step":[
+        {"@type":"HowToStep","name":"Add the names","text":"Type each name into the box and press Enter. Two names is the minimum and there is no upper limit."},
+        {"@type":"HowToStep","name":"Spin","text":"Press SPIN, or grab the wheel with the mouse or a finger, drag it and let go. Your flick sets the speed and the number of laps, never the winner."},
+        {"@type":"HowToStep","name":"Read the result","text":"The wheel slows onto the winner and the name is announced. The winner leaves the wheel and takes the next slot in the draft order."}]},
+      {"@type":"FAQPage","@id":"https://www.ruglad.com/#faq","mainEntity":[
+        {"@type":"Question","name":"Is SpinPage free?","acceptedAnswer":{"@type":"Answer","text":"Yes. SpinPage is free, needs no account and carries no ads. Open the page, add names and spin."}},
+        {"@type":"Question","name":"Is the spinning wheel actually random?","acceptedAnswer":{"@type":"Answer","text":"Yes. The winner is drawn the moment you release the wheel, using the browser's random number generator. Spinning by hand changes how fast and how far the wheel travels, but not where it lands. The one exception is the Rigged option, which you have to switch on yourself."}},
+        {"@type":"Question","name":"Can I spin the wheel by hand?","acceptedAnswer":{"@type":"Answer","text":"Yes. Grab the wheel with the mouse or a finger, drag it round and release. A hard enough flick can knock the wheel clean off its hub to bounce or roll across the screen before it drops back on and finishes the spin."}},
+        {"@type":"Question","name":"How many names can I add?","acceptedAnswer":{"@type":"Answer","text":"Two at minimum and no fixed maximum. Names of up to 30 characters fit on a slice, and the wheel keeps subdividing as you add more."}},
+        {"@type":"Question","name":"Does SpinPage save my names?","acceptedAnswer":{"@type":"Answer","text":"Your names, draft order and settings are kept in your own browser's local storage, so they survive a refresh. Nothing is uploaded and no server holds your list."}},
+        {"@type":"Question","name":"Can I use it to make a draft order?","acceptedAnswer":{"@type":"Answer","text":"Yes. Each winner leaves the wheel and takes the next pick, so spinning until the wheel is empty gives a complete ranked order you can copy out. Autospin runs the remaining spins for you."}},
+        {"@type":"Question","name":"Does it work on a phone?","acceptedAnswer":{"@type":"Answer","text":"Yes. The layout adapts to phones and tablets and the wheel responds to touch, so you can flick it with a finger."}}]}
+    ]}
     </script>
 
     <!-- Vercel Web Analytics -->
@@ -53,6 +76,56 @@
         /* ── Header ── */
 
         header { padding: 2rem 2rem 0.8rem; text-align: center; }
+
+        .sr-only {
+            position: absolute; width: 1px; height: 1px;
+            padding: 0; margin: -1px; overflow: hidden;
+            clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+        }
+
+        /* Content footer: what the page is, for readers and for crawlers */
+
+        .site-foot {
+            width: 100%; max-width: 1080px;
+            padding: 0 2rem 3rem;
+            color: #b9ae95; font-size: 0.92rem; line-height: 1.65;
+        }
+
+        .foot-rule {
+            height: 1px; margin-bottom: 2rem;
+            background: linear-gradient(to right, transparent, rgba(212,175,55,0.45), transparent);
+        }
+
+        .site-foot h2 {
+            font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+            font-size: 1.15rem; font-weight: 700; color: #d4af37;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            margin: 2rem 0 0.7rem;
+        }
+
+        .site-foot h2:first-of-type { margin-top: 0; }
+
+        .site-foot h3 {
+            font-size: 0.95rem; font-weight: 700; color: #e8dfc8;
+            margin: 1.1rem 0 0.25rem;
+        }
+
+        .site-foot p { margin-bottom: 0.7rem; max-width: 70ch; }
+
+        .site-foot ul { margin: 0 0 0.7rem 1.1rem; max-width: 70ch; }
+
+        .site-foot li { margin-bottom: 0.3rem; }
+
+        .foot-cols {
+            display: grid; gap: 0 2.5rem;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        }
+
+        .foot-note {
+            margin-top: 2.2rem; padding-top: 1rem;
+            border-top: 1px solid rgba(212,175,55,0.18);
+            font-size: 0.82rem; color: #8e8571;
+        }
 
         h1 {
             font-family: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
@@ -1113,6 +1186,10 @@
 
             header { padding: 1.2rem 1rem 0.5rem; }
 
+            .site-foot { padding: 0 1rem 2.5rem; font-size: 0.88rem; }
+
+            .site-foot h2 { font-size: 1.05rem; }
+
             h1 { font-size: 2rem; letter-spacing: 0.08em; }
 
             .container {
@@ -1245,9 +1322,17 @@
 <canvas id="fireCanvas"></canvas>
 
 <header>
-    <h1 aria-label="SpinPage — Spinning Wheel &amp; Random Name Picker">♦ SpinPage ♦</h1>
-    <div class="subtitle">Free Spinning Wheel &amp; Random Name Picker</div>
+    <h1>♦ SpinPage ♦<span class="sr-only"> — free spinning wheel and random name picker</span></h1>
+    <p class="subtitle">Free Spinning Wheel &amp; Random Name Picker</p>
 </header>
+
+<noscript>
+    <p style="max-width:70ch;margin:0 auto 1.5rem;padding:0.9rem 1.1rem;text-align:center;
+              border:1px solid rgba(212,175,55,0.35);border-radius:10px;color:#e8dfc8;">
+        The wheel needs JavaScript to spin. Turn it on and reload — nothing is installed and
+        nothing leaves your browser. What SpinPage does is described below.
+    </p>
+</noscript>
 
 <div class="container">
 
@@ -1408,6 +1493,84 @@
     </section>
 
 </div>
+
+<footer class="site-foot">
+    <div class="foot-rule"></div>
+
+    <h2>A spinning wheel that picks a name — and then a whole order</h2>
+    <p>
+        SpinPage is a free online wheel spinner and random name picker. Type in the names,
+        press SPIN, and the wheel lands on one of them. Where most wheel spinners stop there,
+        SpinPage keeps going: the winner steps off the wheel and takes the next slot in the
+        draft order, so spinning until the wheel is empty leaves you with a complete ranked
+        list you can copy straight out. Nothing to install, no account, and no ads.
+    </p>
+
+    <div class="foot-cols">
+        <div>
+            <h2>How to use it</h2>
+            <h3>1. Add the names</h3>
+            <p>Type a name and press Enter. Two is the minimum; there is no upper limit, and the wheel keeps subdividing as the list grows.</p>
+            <h3>2. Spin</h3>
+            <p>Press SPIN, or grab the wheel with the mouse or a finger, drag it round and let go. Your flick decides how fast it goes and how many laps it turns — never where it stops. Flick it hard enough and the wheel can come off its hub entirely, bouncing or rolling across the screen before it drops back on to finish the spin.</p>
+            <h3>3. Take the result</h3>
+            <p>The winner is announced, then leaves the wheel for the next pick in the draft order. Turn on autospin and the remaining rounds run themselves.</p>
+        </div>
+
+        <div>
+            <h2>What people use it for</h2>
+            <ul>
+                <li><strong>Draft orders</strong> — fantasy leagues, five-a-side sides, tournament seeding, who picks first.</li>
+                <li><strong>Random name picker for class</strong> — who answers, who presents, who goes next.</li>
+                <li><strong>Giveaway and raffle draws</strong> — a visible, watchable draw instead of a number out of a script.</li>
+                <li><strong>Deciding as a group</strong> — where to eat, who does the washing up, who takes the last shift.</li>
+                <li><strong>Game night order</strong> — turn order, team splits, dramatic tie-breakers.</li>
+            </ul>
+
+            <h2>Extras, if you want them</h2>
+            <ul>
+                <li><strong>Power-up slices</strong> — Hot Seat, Cursed and Wildcard swell or shrink somebody's real odds, with the live percentage shown beside the wheel.</li>
+                <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles. Only half of them survive.</li>
+                <li><strong>Wind-back</strong> — the wheel lands, settles, then gets dragged backwards and thrown forward for a different answer.</li>
+                <li>Every extra is a switch in the options panel. Turn them all off and you have a plain, fast wheel spinner.</li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Questions</h2>
+
+    <div class="foot-cols">
+        <div>
+            <h3>Is SpinPage free?</h3>
+            <p>Yes — free, no account, no ads. Open the page, add names, spin.</p>
+
+            <h3>Is the wheel actually random?</h3>
+            <p>Yes. The winner is drawn the moment you release the wheel, from the browser's random number generator. Spinning by hand changes the speed and the number of laps, but not where it lands, so the person spinning cannot steer it. The one exception is the Rigged option, which you have to switch on yourself.</p>
+
+            <h3>How many names can I add?</h3>
+            <p>Two at minimum, no fixed maximum. Names of up to 30 characters fit on a slice.</p>
+
+            <h3>Does it work on a phone?</h3>
+            <p>Yes. The layout adapts to phones and tablets, and the wheel takes touch — flick it with a finger.</p>
+        </div>
+
+        <div>
+            <h3>Does it save my names?</h3>
+            <p>Your names, draft order and settings live in your own browser's local storage, so they survive a refresh. Nothing is uploaded and no server holds your list.</p>
+
+            <h3>Can I get a full draft order rather than one winner?</h3>
+            <p>That is the default. Each winner leaves the wheel and takes the next pick, and COPY puts the finished order on your clipboard.</p>
+
+            <h3>Do I need to install anything?</h3>
+            <p>No. SpinPage is a single web page — it runs in the browser, offline once loaded, with no sign-up and no download.</p>
+
+            <h3>Can I undo a spin?</h3>
+            <p>Yes. RESTORE puts the last winner back on the wheel; CLEAR empties the draft order and starts again.</p>
+        </div>
+    </div>
+
+    <p class="foot-note">SpinPage — a free spinning wheel, random name picker and draft order generator. Runs entirely in your browser.</p>
+</footer>
 
 <div class="draft-dock" id="draftDock" role="button" tabindex="0" aria-label="Show the full draft order">
     <div class="dock-head">
