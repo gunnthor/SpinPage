@@ -1800,7 +1800,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Wind-back</div>
-                        <div class="option-desc">20% chance the wheel settles on a slice, then gets dragged back and thrown forward again</div>
+                        <div class="option-desc">20% chance the wheel settles on a slice, then gets shoved into a full spin the other way</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="windBackToggle" checked>
@@ -1936,7 +1936,7 @@
             <ul>
                 <li><strong>Power-up slices</strong> — Hot Seat, Cursed and Wildcard swell or shrink somebody's real odds, with the live percentage shown beside the wheel.</li>
                 <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles. Only half of them survive.</li>
-                <li><strong>Wind-back</strong> — the wheel lands, settles, then gets dragged backwards and thrown forward for a different answer.</li>
+                <li><strong>Wind-back</strong> — the wheel lands, settles, then gets shoved into a whole second spin the other way for a different answer.</li>
                 <li>Every extra is a switch in the options panel. Turn them all off and you have a plain, fast wheel spinner.</li>
             </ul>
         </div>
@@ -2022,7 +2022,7 @@
             </div>
             <div class="about-chip" style="--chip-color:#c0392b">
                 <div class="about-chip-title">Wind-back</div>
-                <div class="about-chip-text">The wheel lands, sits there — then gets dragged backwards and thrown forward again.</div>
+                <div class="about-chip-text">The wheel lands, sits there — then gets shoved into a whole second spin, the other way.</div>
             </div>
             <div class="about-chip" style="--chip-color:#1e8449">
                 <div class="about-chip-title">Zero Setup</div>
@@ -2565,10 +2565,10 @@
         lfo.start(now); lfo.stop(now + 1.7);
     }
 
-    /* -- Release --
-       The tension going out of it: a sub thump and a whoosh sweeping up as
-       the wheel is thrown forward again. */
-    function playRelease() {
+    /* -- The shove --
+       What the wind-back is given to send it the other way: a sub thump and
+       a whoosh sweeping up under the groan of the reversal. */
+    function playShove() {
         if (!audioCtx) return;
         const fx  = getFxBus();
         const now = audioCtx.currentTime;
@@ -3229,7 +3229,7 @@
         const W=fireCanvas.width, H=fireCanvas.height;
         fctx.clearRect(0,0,W,H);
 
-        // Idle flames removed — fire only spawns via triggerRelease()
+        // Idle flames removed — fire only spawns via triggerWindBack()
 
         // Solid fill + globalAlpha — CSS blur on the canvas handles the glow
         fireParticles = fireParticles.filter(p => {
@@ -3627,38 +3627,37 @@
        The whole trick is that nothing gives it away. Up to the false stop
        this is an ordinary spin on the ordinary curve — same shape, same
        slowing, same creep to a halt — so it reads as a spin that has
-       landed. Only once it is sat still does the wheel get dragged
-       backwards, held, and fired forward again.
+       landed. Then it is shoved the other way and does a second, equally
+       ordinary spin backwards, coasting to a halt on the real winner. One
+       reversal, no yank-and-release.
 
-       The old version rushed the first leg to buy time for the reversal,
-       which is exactly what tipped it off before it happened.
+       The first leg deliberately overshoots the landing by exactly the
+       ground the backwards leg will give back, so the net rotation is
+       untouched: the slice it finishes on is the one that was drawn before
+       the wheel ever moved.
 
-       t 0.00-0.40 : an ordinary spin, decelerating to a stop  (→ 52%)
-       t 0.40-0.48 : sat on a slice, rocking a couple of degrees
-       t 0.48-0.63 : SNAPPED backwards, then winding down       (→ 26%)
-       t 0.63-0.67 : held, wound tight
-       t 0.67-1.00 : released, and settling on the real winner
-       Net rotation is unchanged, so only the route differs — the landing
-       slice is the one that was drawn before the wheel ever moved.
+       t 0.00-0.44 : an ordinary spin, decelerating to a stop  (→ 1 + over)
+       t 0.44-0.53 : sat on a slice, rocking a couple of degrees
+       t 0.53-1.00 : shoved the other way, an ordinary spin back to the winner
     ══════════════════════════════════════ */
-    const WB = { stop: 0.40, hold: 0.48, wound: 0.63, load: 0.67, at: 0.52, back: 0.26 };
+    const WB = { stop: 0.44, hold: 0.53 };
 
-    function windBackEase(t) {
-        const eOut = (u, p) => 1 - Math.pow(1 - u, p);
-
-        if (t < WB.stop) {                      // an ordinary spin, to an ordinary stop
-            return easeOut(t / WB.stop) * WB.at;
-        }
-        if (t < WB.hold) {                      // a wheel that has just stopped rocks
-            const u = (t - WB.stop) / (WB.hold - WB.stop);
-            return WB.at + Math.sin(u * Math.PI * 3) * Math.exp(-u * 5) * 0.0012;
-        }
-        if (t < WB.wound) {                     // yanked back, then winding down
-            const u = (t - WB.hold) / (WB.wound - WB.hold);
-            return WB.at - eOut(u, 2.2) * (WB.at - WB.back);
-        }
-        if (t < WB.load) return WB.back;        // wound tight, dead still
-        return WB.back + eOut((t - WB.load) / (1 - WB.load), 5) * (1 - WB.back);
+    // `over` is how far past the landing the first leg runs, as a fraction of
+    // the net rotation; `totalRot` only sizes the rock, which wants to be a
+    // couple of degrees whatever the trip works out to.
+    function makeWindBackEase(over, totalRot) {
+        const at   = 1 + over;
+        const rock = (2.5 * Math.PI/180) / Math.abs(totalRot);
+        return function (t) {
+            if (t < WB.stop) {                  // an ordinary spin, to an ordinary stop
+                return easeOut(t / WB.stop) * at;
+            }
+            if (t < WB.hold) {                  // a wheel that has just stopped rocks
+                const u = (t - WB.stop) / (WB.hold - WB.stop);
+                return at + Math.sin(u * Math.PI * 3) * Math.exp(-u * 5) * rock;
+            }
+            return at - easeOut((t - WB.hold) / (1 - WB.hold)) * over;  // and away the other way
+        };
     }
 
     /* ══════════════════════════════════════
@@ -4111,7 +4110,7 @@
         if (dir > 0) { if (delta < 0) delta += TAU; }
         else         { if (delta > 0) delta -= TAU; }
 
-        let extraSpins, duration, ease, goblinRun = null;
+        let extraSpins, duration, ease, wbOver = 0, goblinRun = null;
         if (goblin) {
             // The creep is sized first, then the laps are chosen to sit on top of
             // it, so the opening leg is always ~4-5 laps however long the gremlin
@@ -4125,11 +4124,13 @@
             duration     = goblinRun.duration;
             ease         = goblinRun.ease;
         } else if (windBack) {
-            // Sized so the first leg alone reads as a normal spin: ~3.4 laps
-            // over ~4.6s, which is squarely in the range of an ordinary one.
-            extraSpins = 6 + Math.floor(Math.random()*2);
-            duration   = 10800 + Math.random()*1600;
-            ease       = windBackEase;
+            // Two ordinary-looking spins back to back: ~3.5 laps out, a beat of
+            // stillness, then a couple of laps the other way. The laps are split
+            // that way round so the first leg alone reads as a normal spin —
+            // ~3.5 laps over ~4.6s — and the backwards one is no faster.
+            extraSpins = 1 + Math.floor(Math.random()*2);
+            wbOver     = (2 + Math.random()*1.2) * TAU;
+            duration   = 9800 + Math.random()*1400;
         } else if (manual) {
             // Hand-off: the animation must leave your fingers at the speed you
             // let go. Pick a lap count from the flick strength, then solve the
@@ -4152,6 +4153,9 @@
             ease       = easeOut;
         }
         const totalRot = dir*extraSpins*TAU + delta;
+        // The overshoot is only knowable once the trip is, so the curve is
+        // solved here rather than above with the rest of them.
+        if (windBack) ease = makeWindBackEase(wbOver / Math.abs(totalRot), totalRot);
 
         const startRot  = rotation;
         const endRot    = rotation + totalRot;
@@ -4164,7 +4168,7 @@
         lastTickSection = Math.floor(rotation/tickArc);
         let tickPrevTime = startTime, tickPrevRot = rotation;
 
-        let wbFired = false, releaseFired = false, gobBeat = 0;
+        let wbFired = false, gobBeat = 0;
 
         // Whole wheel torn off its hub — bounces around the viewport, drops back
         // on and finishes the very same spin, landing exactly where it would have.
@@ -4187,14 +4191,10 @@
                 lastTickSection = sectionIdx;
             }
 
-            // WIND-BACK — two beats: the yank, then the release
+            // WIND-BACK — one beat: the shove that sends it the other way
             if (windBack && !wbFired && t >= WB.hold) {
                 wbFired = true;
                 triggerWindBack();
-            }
-            if (windBack && !releaseFired && t >= WB.load) {
-                releaseFired = true;
-                triggerRelease();
             }
 
             // GREMLIN — he turns up, then jerks once per shove he gives it
@@ -5449,18 +5449,14 @@
         setTimeout(() => goblinEl.classList.remove('out'), 560);
     }
 
-    // Beat one: the wheel had stopped, and something has just grabbed it.
+    // The wheel had stopped, and something has just shoved it the other way.
     function triggerWindBack() {
         showWindBackBanner();
         playWindBack();
+        playShove();
         shakeWheel();
-        launchBoostElements();
-    }
-
-    // Beat two: the tension lets go and the wheel is thrown forward again.
-    function triggerRelease() {
-        playRelease();
         flashScreen();
+        launchBoostElements();
         for (let i = 0; i < 60; i++) {            // brief fire surge
             const W = fireCanvas.width;
             spawnFlame(Math.random()*W, -(Math.random()*9+5), Math.random()*28+16);
