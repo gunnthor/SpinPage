@@ -255,6 +255,72 @@
             letter-spacing: 0.04em;
         }
 
+        /* ── First-run setup guide ──
+           With no names on the page there is nothing to look at and nothing to
+           press, so the empty state carries the whole how-to: the input glows,
+           and numbered steps sit under it with the current one lit. */
+
+        .name-panel.first-run {
+            border-color: rgba(212,175,55,0.6);
+            box-shadow: 0 0 60px rgba(212,175,55,0.16), 0 0 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(212,175,55,0.2);
+        }
+
+        @keyframes beckon {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.0); }
+            50%      { box-shadow: 0 0 0 5px rgba(212,175,55,0.14); }
+        }
+
+        .name-panel.first-run .add-row input {
+            border-color: rgba(212,175,55,0.55);
+            animation: beckon 2.4s ease-in-out infinite;
+        }
+
+        .name-panel.first-run .add-row input:focus { animation: none; }
+        .name-panel.first-run .add-row input::placeholder { color: #a08f63; }
+        .name-panel.first-run .add-btn { box-shadow: 0 0 16px rgba(212,175,55,0.35); }
+
+        .setup-steps { display: none; }
+        .name-panel.first-run .setup-steps {
+            display: flex; flex-direction: column; gap: 0.3rem;
+            margin-top: -0.5rem; list-style: none;
+        }
+
+        .setup-step {
+            display: flex; align-items: flex-start; gap: 0.6rem; width: 100%;
+            padding: 0.45rem 0.55rem; border-radius: 8px;
+            border: 1px solid transparent; background: none;
+            font: inherit; font-size: 0.72rem; line-height: 1.35; text-align: left;
+            letter-spacing: 0.02em; color: #6b6352;
+            transition: color 0.2s, border-color 0.2s, background 0.2s;
+        }
+
+        .setup-step .step-num {
+            flex-shrink: 0; width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.6rem; font-weight: 900;
+            background: #171528; border: 1px solid #2a2040; color: #6b6352;
+            transition: background 0.2s, border-color 0.2s, color 0.2s;
+        }
+
+        .setup-step .step-text b {
+            color: inherit; font-weight: 800; letter-spacing: 0.06em;
+            text-transform: uppercase; font-size: 0.66rem;
+        }
+
+        .setup-step.current { border-color: rgba(212,175,55,0.4); background: rgba(212,175,55,0.07); color: #e8dfc8; }
+        .setup-step.current .step-num { background: linear-gradient(145deg, #d4af37, #8b6914); border-color: #d4af37; color: #060608; }
+
+        .setup-step.done { color: #4f6b52; }
+        .setup-step.done .step-num { background: #123d24; border-color: #1e8449; color: #46c07a; }
+        .setup-step.done .step-num::before { content: '✓'; }
+        .setup-step.done .step-num span { display: none; }
+
+        .setup-step.optional .step-num { border-style: dashed; }
+
+        button.setup-step { cursor: pointer; }
+        button.setup-step:hover { border-color: rgba(212,175,55,0.45); color: #e8dfc8; }
+        button.setup-step:focus-visible { outline: 2px solid #d4af37; outline-offset: 2px; }
+
         .add-btn {
             width: 36px; height: 36px; flex-shrink: 0; border: none; border-radius: 8px;
             background: linear-gradient(145deg, #d4af37, #8b6914);
@@ -1185,10 +1251,10 @@
 
         /* ── Draft ── */
 
-        .draft-section { flex: 1 1 100%; width: 100%; padding: 0.5rem 0 1rem; display: none; flex-direction: column; gap: 1rem; }
-        .draft-section.visible { display: flex; }
+        .draft-section { flex: 1 1 100%; width: 100%; padding: 0.5rem 0 1rem; display: flex; flex-direction: column; gap: 1rem; }
         .draft-actions { display: flex; align-items: center; gap: 0.7rem; }
         .draft-section.empty .draft-actions { display: none; }
+        .draft-section.empty .draft-title  { color: #8a7433; }
 
         /* Wide screens: the draft stands as its own column next to the wheel,
            always on show — no scrolling, and no dock needed. */
@@ -1251,6 +1317,53 @@
         .draft-copy:hover    { border-color: #d4af37; color: #d4af37; }
         .draft-restore:hover { border-color: #1e8449; color: #1e8449; }
         .draft-clear:hover   { border-color: #c0392b; color: #c0392b; }
+
+        /* ── Winner slots, on the board ──
+           The same setting as the one in Options, sitting where its effect is:
+           right above the picks it paints gold. Both inputs stay in step. */
+        .slots-control {
+            display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0;
+            padding: 0.35rem 0.5rem;
+            background: #0d0d1a; border: 1px solid #2a2040; border-radius: 10px;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .slots-control:hover { border-color: rgba(212,175,55,0.4); }
+
+        .slots-label {
+            font-size: 0.58rem; font-weight: 700; color: #9b8d68;
+            letter-spacing: 0.16em; text-transform: uppercase; white-space: nowrap;
+        }
+
+        .slots-stepper { display: flex; align-items: center; gap: 0.3rem; }
+
+        .slots-btn {
+            width: 26px; height: 26px; flex-shrink: 0; padding: 0;
+            border: 1px solid #3a3555; border-radius: 7px;
+            background: #09090f; color: #d4af37;
+            font-size: 1rem; font-weight: 900; line-height: 1; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: border-color 0.15s, color 0.15s, background 0.15s;
+        }
+        .slots-btn:hover:not(:disabled) { border-color: #d4af37; background: #171528; }
+        .slots-btn:active:not(:disabled) { transform: scale(0.92); }
+        .slots-btn:disabled { opacity: 0.3; cursor: default; }
+
+        .slots-input {
+            width: 46px; padding: 0.3rem 0.2rem;
+            background: #09090f; border: 1px solid #3a3555; border-radius: 7px;
+            color: #f5e070; font-size: 0.85rem; font-weight: 800; text-align: center;
+            outline: none; -moz-appearance: textfield;
+        }
+        .slots-input::-webkit-outer-spin-button,
+        .slots-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+        .slots-input:focus { border-color: #d4af37; box-shadow: 0 0 0 2px rgba(212,175,55,0.12); }
+
+        /* Flash when step 2 of the setup guide sends you here */
+        @keyframes slotsFlash {
+            0%, 100% { border-color: #2a2040; box-shadow: none; }
+            30%, 70% { border-color: #d4af37; box-shadow: 0 0 0 4px rgba(212,175,55,0.16); }
+        }
+        .slots-control.flash { animation: slotsFlash 1.4s ease-in-out 2; }
 
         .draft-grid { display: flex; flex-wrap: wrap; gap: 0.65rem; }
 
@@ -1351,6 +1464,7 @@
             .name-list { max-height: 220px; }
 
             .draft-section { order: 3; padding: 0 0 1.5rem; }
+            .draft-section.empty .draft-grid { display: none; }
 
             .draft-dock { left: 0.6rem; right: 0.6rem; bottom: 0.6rem; width: auto; }
 
@@ -1475,6 +1589,12 @@
             <button class="add-btn" id="addBtn" title="Add">+</button>
         </div>
         <div class="starter-hint" id="starterHint">Add at least 2 names to spin.</div>
+        <ol class="setup-steps" id="setupSteps">
+            <li><div class="setup-step" id="step1"><span class="step-num"><span>1</span></span><span class="step-text"><b>Add names</b><br>Type a name and hit Enter. Two or more and the wheel unlocks.</span></div></li>
+            <li><button type="button" class="setup-step" id="step2"><span class="step-num"><span>2</span></span><span class="step-text"><b>Pick winner slots</b><br>How many of the picks count as winners — set it on the draft board. Tap to jump there.</span></button></li>
+            <li><div class="setup-step" id="step3"><span class="step-num"><span>3</span></span><span class="step-text"><b>Spin the wheel</b><br>Press SPIN, or grab the wheel and fling it.</span></div></li>
+            <li><button type="button" class="setup-step optional" id="step4"><span class="step-num"><span>+</span></span><span class="step-text"><b>Tweak the options</b><br>Optional — gremlins, power-ups, panic slices and the rest.</span></button></li>
+        </ol>
         <ul class="name-list" id="nameList"></ul>
     </div>
 
@@ -1673,7 +1793,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Winner slots</div>
-                        <div class="option-desc">First X draft positions count as winners. Everyone after that is a loser.</div>
+                        <div class="option-desc">First X draft positions count as winners. Everyone after that is a loser. Also set straight on the draft board.</div>
                     </div>
                     <input class="winner-slots-input" type="number" id="winnerSlotsInput" min="1" max="99" step="1" value="1" aria-label="Number of winning positions">
                 </div>
@@ -1760,6 +1880,14 @@
                 <span class="draft-subtitle" id="draftSubtitle">First position counts as winner. Everyone after that is a loser.</span>
             </div>
             <div class="draft-rule"></div>
+            <div class="slots-control" id="slotsControl">
+                <span class="slots-label">Winner slots</span>
+                <div class="slots-stepper">
+                    <button type="button" class="slots-btn" id="slotsMinus" aria-label="One fewer winning position">−</button>
+                    <input class="slots-input" type="number" id="draftSlotsInput" min="1" max="99" step="1" value="1" aria-label="Number of winning positions">
+                    <button type="button" class="slots-btn" id="slotsPlus" aria-label="One more winning position">+</button>
+                </div>
+            </div>
             <div class="draft-actions">
                 <button class="draft-copy" id="copyBtn">COPY</button>
                 <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
@@ -2006,6 +2134,12 @@
         return Math.max(600, Math.round(2000 - (total - 4) * 100));
     }
     const winnerSlotsInput = document.getElementById('winnerSlotsInput');
+    // The board's copy of the same setting, plus its stepper buttons
+    const draftSlotsInput  = document.getElementById('draftSlotsInput');
+    const slotsControl     = document.getElementById('slotsControl');
+    const slotsMinus       = document.getElementById('slotsMinus');
+    const slotsPlus        = document.getElementById('slotsPlus');
+    const setupSteps       = [1,2,3,4].map(n => document.getElementById('step' + n));
     const winnerOverlay = document.getElementById('winnerOverlay');
     const winnerNameEl  = document.getElementById('winnerName');
     const winnerSubEl   = document.getElementById('winnerSub');
@@ -2902,10 +3036,27 @@
     function syncWinnerSlotsInput() {
         const max = Math.max(1, totalEntrants());
         winnerSlots = Math.max(1, Math.min(winnerSlots, max));
-        winnerSlotsInput.max = max;
-        winnerSlotsInput.value = winnerSlots;
+        // Two inputs, one number: the Options row and the one on the board.
+        // Don't stomp on whichever one is being typed into.
+        [winnerSlotsInput, draftSlotsInput].forEach(input => {
+            input.max = max;
+            // A field cleared mid-edit is left alone; anything else gets the
+            // clamped number back, so typing 99 with 5 players shows 5.
+            if (document.activeElement === input && input.value === '') return;
+            input.value = winnerSlots;
+        });
+        slotsMinus.disabled = winnerSlots <= 1;
+        slotsPlus.disabled  = winnerSlots >= max;
         const label = winnerSlots === 1 ? 'First position counts as winner.' : `First ${winnerSlots} positions count as winners.`;
         draftSubtitle.textContent = `${label} Everyone after that is a loser.`;
+    }
+
+    // Single path in for both inputs and the +/- buttons.
+    function setWinnerSlots(value) {
+        winnerSlots = normalizeWinnerSlots(value);
+        syncWinnerSlotsInput();
+        renderDraft();
+        saveState();
     }
 
     /* ══════════════════════════════════════
@@ -3103,7 +3254,6 @@
     ══════════════════════════════════════ */
     function renderDraft() {
         syncWinnerSlotsInput();
-        draftSection.classList.toggle('visible', draftOrder.length > 0);
         draftSection.classList.toggle('empty', draftOrder.length === 0);
         draftGrid.innerHTML = '';
         const slots = getWinnerSlots();
@@ -3242,6 +3392,22 @@
         undoBtn.disabled  = undoStack.length === 0 || isSpinning || isBusy;
         resetBtn.disabled = isSpinning || isBusy;
         namePanel.classList.toggle('needs-players', names.length < 2);
+        // Cold start: nothing added, nothing drafted. The panel turns itself
+        // into a walkthrough until the wheel is usable.
+        const firstRun = names.length < 2 && draftOrder.length === 0;
+        namePanel.classList.toggle('first-run', firstRun);
+        if (firstRun) {
+            const state = [
+                canSpin ? 'done' : 'current',   // 1 - add names
+                canSpin ? 'current' : '',       // 2 - winner slots
+                canSpin ? 'current' : '',       // 3 - spin
+                ''                              // 4 - options, always optional
+            ];
+            setupSteps.forEach((el, i) => {
+                el.classList.toggle('done',    state[i] === 'done');
+                el.classList.toggle('current', state[i] === 'current');
+            });
+        }
         // Head-count: the chip carries the total, the hint splits it up.
         const total = totalEntrants();
         playerCount.textContent = draftOrder.length
@@ -5444,6 +5610,23 @@
         optionsBtn.classList.toggle('open', open);
     });
 
+    // Setup guide: step 2 walks you to the slots control and makes it blink,
+    // step 4 just opens the options drawer.
+    document.getElementById('step2').addEventListener('click', () => {
+        const smooth = prefersReducedMotion() ? 'auto' : 'smooth';
+        slotsControl.scrollIntoView({ behavior: smooth, block: 'center' });
+        slotsControl.classList.remove('flash');
+        void slotsControl.offsetWidth;           // restart the animation
+        slotsControl.classList.add('flash');
+        draftSlotsInput.focus({ preventScroll: true });
+        draftSlotsInput.select();
+    });
+
+    document.getElementById('step4').addEventListener('click', () => {
+        if (!optionsPanel.classList.contains('open')) optionsBtn.click();
+        optionsPanel.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'nearest' });
+    });
+
     riggedToggle.addEventListener('change', () => {
         riggedEnabled = riggedToggle.checked;
     });
@@ -5504,12 +5687,12 @@
         saveState();
     });
 
-    winnerSlotsInput.addEventListener('input', ()=>{
-        winnerSlots = normalizeWinnerSlots(winnerSlotsInput.value);
-        syncWinnerSlotsInput();
-        renderDraft();
-        saveState();
-    });
+    winnerSlotsInput.addEventListener('input', ()=>{ setWinnerSlots(winnerSlotsInput.value); });
+    draftSlotsInput.addEventListener('input',  ()=>{ setWinnerSlots(draftSlotsInput.value);  });
+    // A half-typed value leaves the field empty; snap it back on the way out.
+    draftSlotsInput.addEventListener('blur',   ()=>{ syncWinnerSlotsInput(); });
+    slotsMinus.addEventListener('click', ()=>{ setWinnerSlots(winnerSlots - 1); });
+    slotsPlus .addEventListener('click', ()=>{ setWinnerSlots(winnerSlots + 1); });
 
     /* ══════════════════════════════════════
        Resize
