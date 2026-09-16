@@ -18,6 +18,7 @@ SpinPage is a single-file web app that turns a simple random picker into a polis
 - **Autospin** for hands-free draft generation — and it can be called off mid-spin, without waiting for the draft to finish.
 - **Undo, restore, clear, and copy** controls for managing draft results.
 - **Wind-back**: the wheel runs an ordinary spin, creeps to a stop on a slice — and then gets dragged backwards, held, and thrown forward again onto the real winner. Nothing about the first leg telegraphs it.
+- **The Gremlin**: as the wheel crawls through its last degree, something climbs onto the rim and takes hold of it. It creeps the wheel round by hand — a shove, a dead-still hold parked on somebody's name, another shove, and every so often a yank the *wrong* way — and then it gives the wheel one last nudge, takes its hands off and looks innocently away while the wheel settles. It has landed. It is over. Then it grabs the wheel again. It is a slow burn: every round takes more of the wheel and sits on it longer than the one before, so the first is a few nudges and a short stall and the sixth is long grinding sweeps across several names with five seconds of silence at the end of them. Ten seconds to a minute and a half, likelier the emptier the wheel gets — 5% at a full table, 30% with three names left.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) that swell or shrink a slice before a spin and genuinely shift the odds, with the resulting chance spelled out beside the wheel.
 - **PANIC slice** that drops every drafted player into a horse race where only half survive — the rest are undrafted back onto the wheel.
 - **Hurdles**: every race lays out 2-4 rails across the track. Each horse carries its own posted chance of clearing them, and the more speed it is carrying relative to the field at take-off, the more of that chance it gives back. Clip one and you lose momentum, not the race: the horse pitches forward, knocks the rail flat, glows red and runs SLOWED for a second before recovering.
@@ -61,7 +62,9 @@ http://localhost:8000
 
 **Spinning by hand.** Press anywhere on the wheel, drag it around and release. The wheel hands off at exactly the speed it left your fingers: a lazy nudge creeps through its minimum three laps, a hard flick rips through twenty. Flick it backwards and it spins backwards. Because the winner is drawn *after* you let go, no amount of practice lets the person holding the wheel aim it.
 
-The options panel lets you tune winner display duration, set how many positions count as winners, toggle plot twists, power-up slices and wheel pop-off, enable the second-chance "No One Is Safe" wheel, and turn on the rigged mode used for local jokes or demos. All of these preferences persist across refreshes.
+The options panel lets you tune winner display duration, set how many positions count as winners, toggle plot twists, the gremlin, power-up slices and wheel pop-off, enable the second-chance "No One Is Safe" wheel, and turn on the rigged mode used for local jokes or demos. All of these preferences persist across refreshes.
+
+**A note on the stunts.** The wind-back and the gremlin look like they are changing the result. They are not. Every spin draws its winner before the wheel has moved a degree, and a stunt only changes the *route* the wheel takes to get there — the creep is measured backwards from the landing so it arrives exactly where the draw said it would. The gremlin is a passenger with a sense of timing, not a thumb on the scale.
 
 ## Project Structure
 

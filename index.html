@@ -625,7 +625,113 @@
 
         .wheel-wrap.shaking { animation: wheelShake 0.55s ease-in-out; }
 
-        /* ── Devil popup ── */
+        /* ── The gremlin ──
+           He hangs off the outside of the lower-right rim, so the pointer and
+           the slice under it are never covered. Everything is sized in % of
+           the wheel wrapper so he stays glued to the rim as it scales down. */
+
+        .goblin {
+            /* Solved, not eyeballed: at 40% of the wrap the two hands in the
+               SVG land on the rim's 45-degree tangent, r=229.8 against a drawn
+               radius of 228. Every offset is a %, so it holds as it scales. */
+            position: absolute; right: -8.6%; bottom: -7.8%;
+            width: 40%; height: 40%; z-index: 6;
+            opacity: 0; pointer-events: none; transform: scale(0.25) translateY(40%);
+            filter: drop-shadow(0 6px 14px rgba(0,0,0,0.75)) drop-shadow(0 0 18px rgba(120,220,60,0.28));
+        }
+        .gob-sway, .gob-jerk { width: 100%; height: 100%; }
+        .goblin svg { display: block; overflow: visible; }
+
+        /* Up over the rim, overshooting, the way something climbing lands */
+        @keyframes gobIn {
+            0%   { opacity: 0; transform: scale(0.25) translate(14%, 62%) rotate(16deg); }
+            55%  { opacity: 1; transform: scale(1.10) translate(-3%, -7%) rotate(-5deg); }
+            78%  { opacity: 1; transform: scale(0.97) translate(1%,  2%)  rotate(2deg); }
+            100% { opacity: 1; transform: scale(1)    translate(0, 0)     rotate(0deg); }
+        }
+        /* Dropping off the rim once he has had his fun */
+        @keyframes gobOut {
+            0%   { opacity: 1; transform: scale(1)    translate(0, 0)      rotate(0deg); }
+            25%  { opacity: 1; transform: scale(1.12) translate(2%, -9%)   rotate(7deg); }
+            100% { opacity: 0; transform: scale(0.72) translate(11%, 58%)  rotate(26deg); }
+        }
+        /* Never quite still: he is holding a wheel that wants to move */
+        @keyframes gobSway {
+            0%   { transform: translate(0, 0)         rotate(-1.1deg); }
+            50%  { transform: translate(-0.6%, -1.2%) rotate(1.4deg); }
+            100% { transform: translate(0, 0)         rotate(-1.1deg); }
+        }
+        /* One shove. The rim runs down-left here, so he does too. */
+        @keyframes gobJerk {
+            0%   { transform: translate(0, 0)      rotate(0deg)   scale(1); }
+            22%  { transform: translate(4%, -3%)   rotate(5deg)   scale(1.05); }
+            55%  { transform: translate(-7%, 5.5%) rotate(-8deg)  scale(0.97); }
+            100% { transform: translate(0, 0)      rotate(0deg)   scale(1); }
+        }
+        /* ...and the one where he hauls it the wrong way */
+        @keyframes gobJerkBack {
+            0%   { transform: translate(0, 0)      rotate(0deg)   scale(1); }
+            30%  { transform: translate(-4%, 3%)   rotate(-4deg)  scale(0.98); }
+            65%  { transform: translate(7%, -5%)   rotate(9deg)   scale(1.06); }
+            100% { transform: translate(2%, -1.5%) rotate(3deg)   scale(1.02); }
+        }
+        /* The last one: a two-handed shove, and he is gone */
+        @keyframes gobHeave {
+            0%   { transform: translate(0, 0)        rotate(0deg)   scale(1); }
+            18%  { transform: translate(7%, -5%)     rotate(9deg)   scale(1.1); }
+            50%  { transform: translate(-12%, 9%)    rotate(-14deg) scale(0.94); }
+            100% { transform: translate(-4%, 3%)     rotate(-5deg)  scale(1); }
+        }
+
+        .goblin.in  { animation: gobIn  0.46s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .goblin.out { animation: gobOut 0.52s cubic-bezier(0.55, 0, 0.85, 0.35) forwards; }
+        .goblin.in .gob-sway,
+        .goblin.out .gob-sway { animation: gobSway 1.9s ease-in-out infinite; }
+
+        .gob-jerk.shove   { animation: gobJerk     0.42s cubic-bezier(0.3, 1.4, 0.5, 1); }
+        .gob-jerk.tease   { animation: gobJerkBack 0.5s  cubic-bezier(0.3, 1.2, 0.5, 1); }
+        .gob-jerk.release { animation: gobHeave    0.6s  cubic-bezier(0.25, 1.5, 0.45, 1); }
+
+        /* Eyes flick to whatever name the pointer is sitting on */
+        @keyframes gobLeer {
+            0%, 100% { transform: translate(0, 0); }
+            40%      { transform: translate(-2.5px, 1px); }
+            70%      { transform: translate(2px, -1px); }
+        }
+        .goblin.in .gob-pupil,
+        .goblin.out .gob-pupil { animation: gobLeer 2.7s ease-in-out infinite; }
+
+        /* ── Faces ──
+           One expression at a time, swapped by data-face on the root. */
+        .gob-face { display: none; }
+        .goblin[data-face="grin"]     .f-grin,
+        .goblin[data-face="strain"]   .f-strain,
+        .goblin[data-face="innocent"] .f-innocent,
+        .goblin[data-face="cackle"]   .f-cackle { display: block; }
+
+        /* Hands off the rim for the fake stop — he is not touching it, the wheel
+           is stopping entirely of its own accord, and he is looking at the sky.
+           Sliding down-right along the tangent is letting go; any other
+           direction reads as a grab. */
+        .gob-hands { transition: transform 0.22s cubic-bezier(0.34, 1.4, 0.64, 1); }
+        .goblin.hands-off .gob-hands { transform: translate(11px, 11px) rotate(-5deg); }
+
+        /* The innocent act gets its own idle: a slow guilty look around, instead
+           of the strain of holding onto something. */
+        @keyframes gobInnocent {
+            0%   { transform: translate(0, 0)        rotate(-3deg); }
+            35%  { transform: translate(1.5%, -2%)   rotate(4deg); }
+            70%  { transform: translate(-1%, -1%)    rotate(-1deg); }
+            100% { transform: translate(0, 0)        rotate(-3deg); }
+        }
+        .goblin[data-face="innocent"] .gob-sway { animation: gobInnocent 2.6s ease-in-out infinite !important; }
+
+        /* ── Gremlin banner ── */
+        .windback-popup.gremlin .wb-label {
+            background: linear-gradient(to bottom, #d9ff8a, #74c22c, #2f5b10, #74c22c);
+            -webkit-background-clip: text; background-clip: text;
+            filter: drop-shadow(0 0 22px rgba(122,200,50,0.5));
+        }
 
         /* ── Wind-back banner ──
            Announces the yank at the moment it happens, and gets out of the
@@ -1219,6 +1325,13 @@
                 height: 100% !important;
             }
 
+            /* The gremlin re-solved smaller: at 40% his head runs off the side of
+               a phone, and between ~413px and ~520px wide he pushed the page into
+               a horizontal scrollbar. right% = 0.16413 - 0.625f and
+               bottom% = 0.16413 - 0.605f keep his hands on the rim for any f, and
+               f = 0.30 leaves ~5px of clearance at every stacked width. */
+            .goblin { width: 30%; height: 30%; right: -2.3%; bottom: -1.7%; }
+
             .btn-row, .btn-row-secondary {
                 flex-wrap: wrap;
                 justify-content: center;
@@ -1372,6 +1485,160 @@
             <div class="wheel-socket"></div>
             <canvas id="wheel" width="480" height="480" title="Drag the wheel and let go to spin it yourself"></canvas>
             <div class="pointer-ghost"></div>
+            <!-- The gremlin: hands clamped on the lower-right rim, hanging off
+                 the outside of the wheel so he never covers the landing zone.
+                 Three nested layers so his entrance, his idle twitch and his
+                 per-shove lunge can all run without fighting each other. -->
+            <div class="goblin" id="goblin" aria-hidden="true"><div class="gob-sway"><div class="gob-jerk">
+                <svg viewBox="0 0 200 200" width="100%" height="100%">
+                    <defs>
+                        <radialGradient id="gobSkin" cx="36%" cy="28%" r="78%">
+                            <stop offset="0%"   stop-color="#a6d95a"/>
+                            <stop offset="52%"  stop-color="#5f9226"/>
+                            <stop offset="100%" stop-color="#26440e"/>
+                        </radialGradient>
+                        <radialGradient id="gobEye" cx="50%" cy="40%" r="60%">
+                            <stop offset="0%"   stop-color="#fffbe0"/>
+                            <stop offset="45%"  stop-color="#ffd83a"/>
+                            <stop offset="100%" stop-color="#e08a00"/>
+                        </radialGradient>
+                        <linearGradient id="gobHorn" x1="0" y1="1" x2="0" y2="0">
+                            <stop offset="0%"   stop-color="#4a3a22"/>
+                            <stop offset="100%" stop-color="#16100a"/>
+                        </linearGradient>
+                    </defs>
+
+                    <!-- Arms first, so the head sits over their roots. Both hands land
+                         on the rim's 45-degree tangent and are rotated onto it, claws
+                         curling inward over the gold edge onto the wheel face. -->
+                    <g fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
+                        <path d="M 128 184 C 100 174, 60 140, 34 120 L 54 96 C 80 122, 110 154, 146 168 Z"/>
+                        <path d="M 176 158 C 158 130, 130 72, 118 44 L 94 54 C 106 90, 128 138, 152 172 Z"/>
+                    </g>
+
+                    <!-- ears -->
+                    <g stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
+                        <path d="M 100 120 L 58 92 L 96 152 Z" fill="url(#gobSkin)"/>
+                        <path d="M 176 120 L 194 97 L 180 152 Z" fill="url(#gobSkin)"/>
+                        <path d="M 103 125 L 74 105 L 100 141 Z" fill="#3d6a17" stroke="none"/>
+                        <path d="M 173 125 L 186 111 L 175 141 Z" fill="#3d6a17" stroke="none"/>
+                    </g>
+
+                    <!-- horns -->
+                    <g fill="url(#gobHorn)" stroke="#0d0906" stroke-width="1.5" stroke-linejoin="round">
+                        <path d="M 114 97 C 108 80, 102 68, 94 56 C 108 63, 119 77, 125 93 Z"/>
+                        <path d="M 164 97 C 170 80, 176 68, 184 56 C 170 63, 159 77, 153 93 Z"/>
+                    </g>
+
+                    <!-- head -->
+                    <path d="M 138 88 C 168 88, 183 107, 181 130 C 179 155, 162 179, 138 183
+                             C 114 179, 97 155, 95 130 C 93 107, 108 88, 138 88 Z"
+                          fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5"/>
+
+                    <!-- Four faces, one visible at a time (see .gob-face). Each carries
+                         its own eyes, brows and mouth rather than mixing parts, because
+                         at this size a face reads as one shape or not at all. -->
+
+                    <!-- GRIN: the default. Asymmetric on purpose — a symmetrical face
+                         reads blank, and this one has to read as enjoying itself. -->
+                    <g class="gob-face f-grin">
+                        <ellipse cx="120" cy="130" rx="16"   ry="13"   fill="url(#gobEye)"/>
+                        <ellipse cx="159" cy="132" rx="14"   ry="10.5" fill="url(#gobEye)"/>
+                        <ellipse class="gob-pupil" cx="117" cy="129" rx="3.6" ry="9.5" fill="#160a04"/>
+                        <ellipse class="gob-pupil" cx="156" cy="131" rx="3.2" ry="7.5" fill="#160a04"/>
+                        <g stroke="#1d350b" stroke-linecap="round" fill="none">
+                            <path d="M 102 116 Q 116 100 133 109"   stroke-width="7"/>
+                            <path d="M 176 110 Q 163 114 146 126"   stroke-width="8"/>
+                        </g>
+                        <path d="M 103 153 Q 138 191 173 149 Q 138 166 103 153 Z"
+                              fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
+                        <path d="M 107 154 L 115 169 L 123 156 L 132 172 L 141 158 L 150 171 L 158 156 L 166 165 L 170 151 Z"
+                              fill="#f3edd4"/>
+                    </g>
+
+                    <!-- STRAIN: mid-shove. Eyes screwed down to slits, both brows
+                         hauled in, teeth clenched. -->
+                    <g class="gob-face f-strain">
+                        <ellipse cx="120" cy="131" rx="15" ry="6"   fill="url(#gobEye)"/>
+                        <ellipse cx="159" cy="133" rx="13" ry="5"   fill="url(#gobEye)"/>
+                        <ellipse cx="118" cy="131" rx="3.4" ry="4.6" fill="#160a04"/>
+                        <ellipse cx="157" cy="133" rx="3.1" ry="4"   fill="#160a04"/>
+                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="8">
+                            <path d="M 101 113 L 135 125"/>
+                            <path d="M 178 115 L 144 127"/>
+                        </g>
+                        <path d="M 107 151 Q 138 164 170 148 L 168 138 Q 138 152 109 139 Z"
+                              fill="#f3edd4" stroke="#1d350b" stroke-width="2" stroke-linejoin="round"/>
+                        <g stroke="#6b4a2a" stroke-width="1.8">
+                            <path d="M 120 143 L 121 156"/><path d="M 133 147 L 134 160"/>
+                            <path d="M 146 147 L 146 159"/><path d="M 158 143 L 158 155"/>
+                        </g>
+                    </g>
+
+                    <!-- INNOCENT: hands off the rim, eyes wide and pointed anywhere but
+                         at the wheel, mouth a small blameless whistle. This is the face
+                         that sells the fake stop. -->
+                    <g class="gob-face f-innocent">
+                        <ellipse cx="120" cy="129" rx="17"   ry="16"   fill="url(#gobEye)"/>
+                        <ellipse cx="159" cy="131" rx="15"   ry="14"   fill="url(#gobEye)"/>
+                        <ellipse cx="126" cy="123" rx="5"    ry="5.4"  fill="#160a04"/>
+                        <ellipse cx="165" cy="125" rx="4.6"  ry="5"    fill="#160a04"/>
+                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="6">
+                            <path d="M 100 104 Q 119 92 137 101"/>
+                            <path d="M 179 102 Q 162 93 145 102"/>
+                        </g>
+                        <ellipse cx="140" cy="160" rx="9" ry="8" fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
+                        <ellipse cx="140" cy="163" rx="5" ry="4" fill="#8e2a3e"/>
+                    </g>
+
+                    <!-- CACKLE: eyes squeezed shut, jaw open, tongue out. Used for the
+                         wrong-way drag, the snatch-back, and the moment he lets go. -->
+                    <g class="gob-face f-cackle">
+                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="5.5">
+                            <path d="M 106 133 Q 120 121 134 132"/>
+                            <path d="M 146 135 Q 159 124 172 134"/>
+                            <path d="M 100 112 Q 118 103 134 110" stroke-width="6"/>
+                            <path d="M 180 110 Q 164 103 148 111" stroke-width="6"/>
+                        </g>
+                        <path d="M 104 146 Q 138 137 173 143 Q 168 188 138 192 Q 109 188 104 146 Z"
+                              fill="#2b0c12" stroke="#1d350b" stroke-width="2.2"/>
+                        <path d="M 108 148 L 116 162 L 124 150 L 133 164 L 142 150 L 151 163 L 160 149 L 168 158 L 170 145 Z"
+                              fill="#f3edd4"/>
+                        <path d="M 120 186 L 127 176 L 136 185 L 145 175 L 153 184 L 160 173 L 164 182 Q 138 193 120 186 Z"
+                              fill="#f3edd4"/>
+                        <path d="M 124 170 Q 138 161 153 170 Q 149 185 138 186 Q 128 185 124 170 Z" fill="#a8324a"/>
+                    </g>
+
+                    <!-- Hands last: nothing is allowed to cover the grip. Fingers point
+                         along local +y, which rotate(135) turns into "up and left" —
+                         i.e. inward, curling over the gold rim onto the wheel face.
+                         The whole group slides outward when he takes his hands off. -->
+                    <g class="gob-hands" stroke="#142607" stroke-width="2.6" stroke-linejoin="round">
+                        <g transform="translate(43,111) rotate(135)">
+                            <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
+                            <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
+                            <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
+                            <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
+                            <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
+                                <path d="M -22 19 Q -16 34 -10 20 Z"/>
+                                <path d="M -7  24 Q -1  39  5 25 Z"/>
+                                <path d="M  8  17 Q 14  32 20 18 Z"/>
+                            </g>
+                        </g>
+                        <g transform="translate(107,47) rotate(135)">
+                            <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
+                            <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
+                            <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
+                            <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
+                            <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
+                                <path d="M -22 19 Q -16 34 -10 20 Z"/>
+                                <path d="M -7  24 Q -1  39  5 25 Z"/>
+                                <path d="M  8  17 Q 14  32 20 18 Z"/>
+                            </g>
+                        </g>
+                    </g>
+                </svg>
+            </div></div></div>
             <div class="illegal-stamp" id="illegalStamp">ILLEGAL</div>
         </div>
         <div class="btn-row">
@@ -1417,6 +1684,16 @@
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="windBackToggle" checked>
+                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
+                    </label>
+                </div>
+                <div class="option-row">
+                    <div class="option-info">
+                        <div class="option-name">Gremlin</div>
+                        <div class="option-desc">Something climbs onto the rim as the wheel dies and creeps it round by hand, dragging it backwards and faking the stop over and over, each round slower and greedier than the last. Likelier the emptier the wheel gets — 5% at a full table, 30% with three names left.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="goblinToggle" checked>
                         <div class="toggle-track"><div class="toggle-thumb"></div></div>
                     </label>
                 </div>
@@ -1873,6 +2150,7 @@
     let winnerSlots     = 1;
     let lastTickSection     = -1;
     let windBackEnabled     = true;
+    let goblinEnabled       = true;   // rare: something climbs on and creeps the wheel round by hand
     let noisEnabled         = true;
     let riggedEnabled       = false;
     let riggedValue         = '';     // name/prefix the rigged mode forces to win
@@ -2199,6 +2477,173 @@
         n.start(now); n.stop(now + 0.65);
     }
 
+    /* -- The gremlin --
+       Three noises: him landing on the rim, one per shove, and the laugh he
+       leaves on. The shoves stay deliberately quiet — the peg ticks are the
+       star of a creep this slow, and a grunt on top of each one is enough to
+       tell you the wheel isn't moving on its own. */
+    function playGoblinArrive() {
+        if (!audioCtx) return;
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+
+        // something heavy landing on the rim
+        const th = audioCtx.createOscillator(), tg = audioCtx.createGain();
+        th.type = 'sine';
+        th.frequency.setValueAtTime(155, now);
+        th.frequency.exponentialRampToValueAtTime(38, now + 0.26);
+        tg.gain.setValueAtTime(0.6, now);
+        tg.gain.exponentialRampToValueAtTime(0.001, now + 0.34);
+        th.connect(tg); tg.connect(fx.dry);
+        th.start(now); th.stop(now + 0.36);
+        noiseBurst(0.09, 2600, 0.3, 0.9);
+
+        // and the noise it makes: a squeal sliding UP, which is the wrong
+        // direction for anything friendly
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        const bp = audioCtx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(180, now + 0.03);
+        o.frequency.exponentialRampToValueAtTime(940, now + 0.20);
+        o.frequency.exponentialRampToValueAtTime(700, now + 0.34);
+        bp.type = 'bandpass'; bp.Q.value = 3.5;
+        bp.frequency.setValueAtTime(700, now + 0.03);
+        bp.frequency.exponentialRampToValueAtTime(2400, now + 0.28);
+        g.gain.setValueAtTime(0.0001, now + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.30, now + 0.09);
+        g.gain.exponentialRampToValueAtTime(0.0008, now + 0.42);
+        o.connect(bp); bp.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+        o.start(now + 0.03); o.stop(now + 0.45);
+
+        // a flutter on it, so it reads as a creature and not a synth sweep
+        const lfo = audioCtx.createOscillator(), lg = audioCtx.createGain();
+        lfo.type = 'sine'; lfo.frequency.setValueAtTime(18, now);
+        lg.gain.setValueAtTime(55, now);
+        lfo.connect(lg); lg.connect(o.frequency);
+        lfo.start(now); lfo.stop(now + 0.45);
+    }
+
+    function playGoblinShove(kind) {
+        if (!audioCtx) return;
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+        const heave = kind === 'release', snatch = kind === 'gotcha', back = kind === 'tease';
+        const hard  = heave || snatch;      // both are him yanking, not nudging
+
+        // the grunt — a short vowel through a formant-ish bandpass. A normal
+        // shove falls away; the last heave pushes up, because he means it.
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        const f = audioCtx.createBiquadFilter();
+        o.type = 'sawtooth';
+        const f0 = (back ? 150 : 195) * (0.9 + Math.random() * 0.2);
+        o.frequency.setValueAtTime(f0, now);
+        o.frequency.exponentialRampToValueAtTime(hard ? f0 * 1.5 : f0 * 0.62, now + (hard ? 0.26 : 0.16));
+        f.type = 'bandpass'; f.Q.value = 2.2;
+        f.frequency.setValueAtTime(back ? 520 : 780, now);
+        f.frequency.exponentialRampToValueAtTime(back ? 300 : 460, now + 0.2);
+        const lvl = heave ? 0.30 : snatch ? 0.26 : back ? 0.20 : 0.16;
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(lvl, now + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0006, now + (hard ? 0.34 : 0.20));
+        o.connect(f); f.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+        o.start(now); o.stop(now + 0.38);
+
+        // claws dragging along the rim
+        const n = audioCtx.createBufferSource();
+        n.buffer = getNoiseBuffer(); n.loop = true;
+        n.playbackRate.value = 0.5 + Math.random() * 0.4;
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass'; nf.Q.value = 1.1;
+        nf.frequency.setValueAtTime(hard ? 1200 : 2000, now);
+        nf.frequency.exponentialRampToValueAtTime(hard ? 3400 : 1100, now + 0.22);
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(hard ? 0.20 : 0.10, now + 0.03);
+        ng.gain.exponentialRampToValueAtTime(0.0005, now + (hard ? 0.40 : 0.24));
+        n.connect(nf); nf.connect(ng); ng.connect(fx.dry); ng.connect(fx.verb);
+        n.start(now); n.stop(now + 0.45);
+    }
+
+    /* Him taking his hands off: claws unhooking from the rim, and the little
+       ring of a wheel left to its own devices. Deliberately small — the point of
+       the fake stop is that nothing is happening. */
+    function playGoblinLetGo() {
+        if (!audioCtx) return;
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+
+        const n = audioCtx.createBufferSource();
+        n.buffer = getNoiseBuffer(); n.loop = true;
+        n.playbackRate.value = 1.4;
+        const nf = audioCtx.createBiquadFilter();
+        nf.type = 'bandpass'; nf.Q.value = 2.2;
+        nf.frequency.setValueAtTime(2600, now);
+        nf.frequency.exponentialRampToValueAtTime(5200, now + 0.12);
+        const ng = audioCtx.createGain();
+        ng.gain.setValueAtTime(0.0001, now);
+        ng.gain.exponentialRampToValueAtTime(0.09, now + 0.015);
+        ng.gain.exponentialRampToValueAtTime(0.0005, now + 0.18);
+        n.connect(nf); nf.connect(ng); ng.connect(fx.dry); ng.connect(fx.verb);
+        n.start(now); n.stop(now + 0.2);
+
+        const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(1180, now);
+        o.frequency.exponentialRampToValueAtTime(940, now + 0.5);
+        g.gain.setValueAtTime(0.0001, now);
+        g.gain.exponentialRampToValueAtTime(0.06, now + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0004, now + 0.55);
+        o.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+        o.start(now); o.stop(now + 0.6);
+    }
+
+    // A laugh is a rhythm, not a tone: short syllables tumbling down in pitch,
+    // each one breathed rather than beeped. Four syllables is a snigger, eight
+    // is the one he leaves on.
+    function playGoblinCackle(count) {
+        if (!audioCtx) return;
+        const fx  = getFxBus();
+        const now = audioCtx.currentTime;
+        const syllables = count || (7 + Math.floor(Math.random() * 3));
+        let t = now;
+
+        for (let i = 0; i < syllables; i++) {
+            const u   = i / (syllables - 1);
+            const f0  = 640 * Math.pow(0.865, i) * (0.95 + Math.random() * 0.12);
+            const dur = 0.072 + Math.random() * 0.032;
+            const lvl = 0.26 * (1 - u * 0.45);
+
+            const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+            const bp = audioCtx.createBiquadFilter();
+            o.type = 'sawtooth';
+            o.frequency.setValueAtTime(f0 * 1.12, t);
+            o.frequency.exponentialRampToValueAtTime(f0 * 0.84, t + dur);
+            bp.type = 'bandpass'; bp.Q.value = 2.6;
+            bp.frequency.setValueAtTime(f0 * 2.4, t);
+            bp.frequency.exponentialRampToValueAtTime(f0 * 1.5, t + dur);
+            g.gain.setValueAtTime(0.0001, t);
+            g.gain.exponentialRampToValueAtTime(lvl, t + 0.012);
+            g.gain.exponentialRampToValueAtTime(0.0006, t + dur);
+            o.connect(bp); bp.connect(g); g.connect(fx.dry); g.connect(fx.verb);
+            o.start(t); o.stop(t + dur + 0.02);
+
+            // the breath behind the syllable
+            const n = audioCtx.createBufferSource();
+            n.buffer = getNoiseBuffer(); n.loop = true;
+            const nf = audioCtx.createBiquadFilter();
+            nf.type = 'bandpass'; nf.Q.value = 1.6;
+            nf.frequency.setValueAtTime(f0 * 3.2, t);
+            const ng = audioCtx.createGain();
+            ng.gain.setValueAtTime(0.0001, t);
+            ng.gain.exponentialRampToValueAtTime(lvl * 0.42, t + 0.01);
+            ng.gain.exponentialRampToValueAtTime(0.0005, t + dur * 0.9);
+            n.connect(nf); nf.connect(ng); ng.connect(fx.dry); ng.connect(fx.verb);
+            n.start(t, Math.random() * 0.3); n.stop(t + dur + 0.02);
+
+            t += dur + 0.026 + Math.random() * 0.024;
+        }
+    }
+
     /* ------------------------------------------------------------------
        Winner fanfare
        ------------------------------------------------------------------
@@ -2389,7 +2834,7 @@
     function saveState() {
         try { localStorage.setItem('spinpage', JSON.stringify({
             names, draftOrder, undoStack, winnerSlots, nameColors,
-            noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, popOffEnabled, displayDuration, autoDisplay, riggedValue
+            noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, goblinEnabled, popOffEnabled, displayDuration, autoDisplay, riggedValue
         })); } catch(e) {}
     }
 
@@ -2407,6 +2852,7 @@
                 // plotTwistsEnabled was this setting's name before the makeover
                 if (typeof s.plotTwistsEnabled === 'boolean') windBackEnabled = s.plotTwistsEnabled;
                 if (typeof s.windBackEnabled === 'boolean') windBackEnabled = s.windBackEnabled;
+                if (typeof s.goblinEnabled === 'boolean') goblinEnabled = s.goblinEnabled;
                 if (typeof s.popOffEnabled === 'boolean') popOffEnabled = s.popOffEnabled;
                 if (typeof s.displayDuration === 'number' && s.displayDuration >= 500 && s.displayDuration <= 6000) displayDuration = s.displayDuration;
                 if (typeof s.autoDisplay === 'boolean') autoDisplay = s.autoDisplay;
@@ -3050,6 +3496,263 @@
     }
 
     /* ══════════════════════════════════════
+       The Gremlin
+       ─────────────────────────────────────
+       A spin runs out normally. As it crawls through its last degree — with
+       everyone already reading the slice — something climbs onto the rim and
+       takes hold of it.
+
+       Then it works the room. The creep is never smooth: a smoothly creeping
+       wheel is just a slow wheel, and the eye adapts to it inside a second. It
+       is discrete shoves with dead-still holds between them, slow enough that
+       you can always see exactly where the wheel is, and every hold parks the
+       pointer on somebody's name and leaves it sitting there.
+
+       The real trick is the FAKE STOP. After a few shoves he gives the wheel
+       one last little nudge and lets go — hands off the rim, looking innocently
+       away — while it crawls to a halt. It is over. It has landed. Then he
+       grabs it again. That whole round can repeat up to five times, so a
+       gremlin runs anywhere from about fifteen seconds to a solid minute of
+       nobody being allowed to know anything.
+
+       The peg-tick engine pays for the sound design for free: it scales its
+       click off wheel speed, so a creep this slow comes out as single lonely
+       clicks, and the dying crawl of a fake stop ticks slower and slower.
+
+       Like the wind-back, the route is the only thing that changes. The winner
+       was drawn before the wheel ever moved and the whole creep is sized
+       backwards from that landing — the gremlin is a passenger with a sense of
+       timing, not a thumb on the scale.
+    ══════════════════════════════════════ */
+    const GOBLIN = {
+        // Likelier as the wheel empties out: the last few picks are the ones
+        // where a stolen minute actually costs somebody something.
+        chanceNear: 0.30,        // with 3 names left
+        chanceFar:  0.05,        // with 3 + fadeOver names, and beyond
+        fadeOver:   9,
+
+        // Rounds, weighted: 1..6. Most gremlins are over inside fifteen seconds;
+        // the six-round one runs well over a minute and is rare enough that people
+        // tell each other about it afterwards.
+        roundOdds:  [40, 22, 15, 11, 7, 5],
+        perRound:   [2, 4],      // shoves before the first fake stop...
+        shovesPer:  0.5,         // ...and this many more with every round after
+        slicesBase: 1.25,        // creep arc in SLICES, so it scales with the wheel...
+        slicesPer:  1.90,        // ...and grows with every extra round
+        maxLaps:    3.6,         // hard ceiling, for wheels with two or three names
+
+        /* Slow burn. Every round takes more of the wheel and sits on it longer
+           than the one before, so the thing ratchets instead of repeating: the
+           first round is a few nudges and a short stall, the sixth is long
+           grinding sweeps across several names with five seconds of silence at
+           the end of them. Because shove speed is capped either way, a bigger
+           round doesn't move faster — it moves for longer. */
+        burn:       0.38,        // extra wheel per round
+        dwellBurn:  0.18,        // extra hold after each shove
+        stallBurn:  0.24,        // extra dead stop at each fake stop
+        teaseOdds:  0.70,        // chance of a wrong-way drag in any one round
+        degPerSec:  110,         // a shove may not outrun the eye: this is the most
+                                 //   wheel, in degrees, one second of push may cover
+
+        pushMs:   [300, 470],    // one shove
+        dwellMs:  [450, 950],    // the dead-still hold after it
+        fadeMs:   [1250, 1900],  // the long crawl where it looks like it is dying
+        stallMs:  [1700, 3000],  // ...and the dead stop at the end of that crawl
+        teaseMs:  [800, 1150],   // the hold after he drags it the wrong way
+        releaseMs:[950, 1300],   // the shove he actually lets go on
+        climbMs:  1150,          // still time between the opening spin and the first shove
+        arriveMs: 300,           // he appears this long BEFORE the wheel would stop
+        legAMs:   [4700, 5400],  // the ordinary-looking opening spin
+    };
+
+    const gobRnd = ([a, b]) => a + Math.random() * (b - a);
+
+    /* Own functions so a test can force the branch, or read the odds back,
+       without pinning Math.random for a whole spin (cf. hurdleOdds). */
+    function goblinChance(namesLeft) {
+        const t = Math.min(Math.max((namesLeft - 3) / GOBLIN.fadeOver, 0), 1);
+        return GOBLIN.chanceNear + (GOBLIN.chanceFar - GOBLIN.chanceNear) * t;
+    }
+    function goblinFires(namesLeft) { return Math.random() < goblinChance(namesLeft); }
+
+    function goblinRounds() {
+        const odds = GOBLIN.roundOdds;
+        let r = Math.random() * odds.reduce((a, b) => a + b, 0);
+        for (let i = 0; i < odds.length; i++) if ((r -= odds[i]) < 0) return i + 1;
+        return odds.length;
+    }
+
+    /* One creep, as relative moves: how big each is against the others, how long
+       the push takes, and how long he sits on it afterwards. */
+    function makeGoblinCreep(rounds, creepArc, share) {
+        const moves = [];
+        const mustTease = Math.floor(Math.random() * rounds);     // at least one, guaranteed
+
+        for (let r = 0; r < rounds; r++) {
+            const burn  = 1 + GOBLIN.burn      * r;              // this round's share of the wheel
+            const held  = 1 + GOBLIN.dwellBurn * r;              // ...and of the patience
+            const n = Math.round(gobRnd(GOBLIN.perRound) + GOBLIN.shovesPer * r);
+
+            // Where in the round he drags it backwards, if he does. Held off until
+            // the second shove of the opening round, so the drag has some travel to
+            // eat into; it can still reach back past the false stop, but only by a
+            // fraction of a slice (0.2% of runs, 0.17 of a slice at worst), which
+            // just reads as him being greedy.
+            const teasing = r === mustTease || Math.random() < GOBLIN.teaseOdds;
+            const first   = r === 0 ? 2 : 1;
+            const teaseAt = teasing && n >= first ? first + Math.floor(Math.random() * (n - first + 1)) : -1;
+
+            for (let i = 0; i < n; i++) {
+                moves.push({
+                    size:  (0.75 + Math.random() * 0.85) * burn,
+                    push:  gobRnd(GOBLIN.pushMs),
+                    dwell: gobRnd(GOBLIN.dwellMs) * held,
+                    // the first shove of any round after the first is him snatching it back
+                    kind:  (i === 0 && r > 0) ? 'gotcha' : 'shove',
+                });
+                if (i + 1 === teaseAt) moves.push({      // sized below
+                    size: 0, push: gobRnd([220, 330]),
+                    dwell: gobRnd(GOBLIN.teaseMs) * held, kind: 'tease',
+                });
+            }
+            if (r < rounds - 1) moves.push({                     // the fake stop
+                size:  (0.45 + Math.random() * 0.30) * burn,
+                push:  gobRnd(GOBLIN.fadeMs),
+                dwell: gobRnd(GOBLIN.stallMs) * (1 + GOBLIN.stallBurn * r),
+                kind:  'fade',
+            });
+        }
+        moves.push({                                // ...and the one that is real; sized below
+            size: 0, push: gobRnd(GOBLIN.releaseMs), dwell: 0, kind: 'release',
+        });
+
+        /* The moves that carry the joke get exact shares of the creep rather than
+           being left to the dice, because a share of "whatever the other moves
+           happened to add up to" is unreadable at one extreme and silly at the
+           other:
+
+             the wrong-way drag  — must be big enough to see it go backwards
+             the final release   — must arrive somewhere NEW, or the whole
+                                   build-up ends on the name it was already on
+
+           Everything else sums to A, so with k drags of share t and a release of
+           share r, span = A - k·t·span + r·span, which solves in one line. Every
+           drag gets the same share, so the fifth one is as readable as the first
+           however long the creep has become. */
+        const A = moves.reduce((a, m) =>
+            a + (m.kind === 'tease' || m.kind === 'release' ? 0 : m.size), 0);
+        const drags = moves.reduce((a, m) => a + (m.kind === 'tease' ? 1 : 0), 0);
+        const span = A / (1 + drags * share.tease - share.release);
+        moves.forEach(m => {
+            if (m.kind === 'tease')   m.size = -share.tease * span;
+            if (m.kind === 'release') m.size =  share.release * span;
+        });
+
+        // Normalised against the final position, so the last keyframe is exactly 1.
+        let acc = 0;
+        const raw   = moves.map(m => (acc += m.size));
+        const total = raw[raw.length - 1];
+
+        // Then stretch any push that would outrun the eye. Without this a big
+        // step on a three-name wheel and a small one on a twenty-name wheel both
+        // take 400ms, and the three-name version flicks past too fast to read.
+        const arcDeg = creepArc * 180 / Math.PI;
+        const keys = [{ r: 0, ms: 0, kind: 'grip' }];
+        moves.forEach((m, i) => {
+            const step = Math.abs(raw[i] - (i ? raw[i - 1] : 0)) / total;
+            const ms   = Math.max(m.push, step * arcDeg / GOBLIN.degPerSec * 1000);
+            keys.push({ r: raw[i] / total, ms, kind: m.kind });
+            if (m.dwell) keys.push({ r: raw[i] / total, ms: m.dwell, kind: 'hold' });
+        });
+        return keys;
+    }
+
+    /* A shove: quick off the mark, then dragging to a stop against the wheel's
+       own weight. Pure ease-out would jump from standstill to full speed in one
+       frame, so a little smoothstep is blended in at the front. */
+    const gobSmooth  = u => u * u * (3 - 2 * u);
+    const gobShove   = u => 0.35 * gobSmooth(u) + 0.65 * (1 - Math.pow(1 - u, 2.4));
+    const gobSnatch  = u => 0.20 * gobSmooth(u) + 0.80 * (1 - Math.pow(1 - u, 1.9));
+    const gobRelease = u => 1 - Math.pow(1 - u, 3.2);
+    // The dying crawl. The long heavy tail is the whole point: the ticks stretch
+    // further and further apart and the wheel looks like it is giving up.
+    const gobFade    = u => 0.45 * gobSmooth(u) + 0.55 * (1 - Math.pow(1 - u, 4.2));
+
+    const GOB_EASE = { shove: gobShove, tease: gobShove, gotcha: gobSnatch,
+                       fade:  gobFade,  release: gobRelease };
+
+    /* Size the creep so it ends exactly on the winner, then hand back an ease
+       over the whole spin plus the beats the frame loop fires on. */
+    function buildGoblinRun(totalRot, creepArc, rounds, sliceArc) {
+        const at       = 1 - creepArc / totalRot;       // rotation fraction at the false stop
+        // Release: 1.05 slices, not 0.95, because a move longer than one slice
+        // crosses a divider wherever in the slice it starts from. Drag: half a
+        // slice is the least you can unmistakably see go the wrong way.
+        const share = { release: Math.min(0.45, 1.05 * sliceArc / creepArc),
+                        tease:   Math.min(0.16, 0.50 * sliceArc / creepArc) };
+        const keys  = makeGoblinCreep(rounds, creepArc, share);
+        const legA     = gobRnd(GOBLIN.legAMs);
+        const creepMs  = keys.reduce((a, k) => a + k.ms, 0);
+        const duration = legA + GOBLIN.climbMs + creepMs;
+
+        const tA = legA / duration;                       // opening spin ends
+        const tB = (legA + GOBLIN.climbMs) / duration;    // his hands are on it
+
+        let ms = 0;
+        const kf = keys.map(k => {
+            ms += k.ms;
+            return { t: tB + ms / duration, r: at + k.r * (1 - at), kind: k.kind };
+        });
+
+        const ease = t => {
+            if (t <= tA) return easeOut(t / tA) * at;     // an ordinary spin, to an ordinary stop
+            if (t <= tB) return at;                       // sat still while he climbs on
+            for (let i = 1; i < kf.length; i++) {
+                if (t <= kf[i].t || i === kf.length - 1) {
+                    const p = kf[i - 1], q = kf[i];
+                    if (q.kind === 'hold') return q.r;     // frozen, everyone looking at a name
+                    const u = Math.min(Math.max((t - p.t) / (q.t - p.t), 0), 1);
+                    return p.r + (q.r - p.r) * GOB_EASE[q.kind](u);
+                }
+            }
+            return 1;
+        };
+
+        // Beats: he arrives just before the wheel dies, then one per move he makes.
+        const beats = [{ t: Math.max(0, (legA - GOBLIN.arriveMs) / duration), kind: 'arrive' }];
+        for (let i = 1; i < kf.length; i++) {
+            if (kf[i].kind !== 'hold') beats.push({ t: kf[i - 1].t, kind: kf[i].kind });
+        }
+        return { duration, ease, beats, rounds };
+    }
+
+    /* Which slice a wheel offset falls in, and how far across it. */
+    function offsetSlice(off, segW, totalW) {
+        const TAU = 2 * Math.PI;
+        let acc = 0;
+        for (let i = 0; i < segW.length; i++) {
+            const a0 = (acc / totalW) * TAU; acc += segW[i];
+            const a1 = (acc / totalW) * TAU;
+            if (off < a1 || i === segW.length - 1) return { i, frac: (off - a0) / (a1 - a0), arc: a1 - a0 };
+        }
+    }
+
+    /* How much arc to leave for the gremlin. Sized in SLICES, not radians, so a
+       three-name wheel doesn't get hauled round six times and a twenty-name one
+       still changes hands every round. Then it is nudged so the false stop
+       doesn't land straddling a divider — a wheel that "stops" on a line reads
+       as a bug, not a result. */
+    function goblinCreepArc(segW, totalW, winnerOffset, rounds) {
+        const TAU    = 2 * Math.PI;
+        const slices = GOBLIN.slicesBase + GOBLIN.slicesPer * rounds;
+        let arc = Math.min(slices * TAU / segW.length, TAU * GOBLIN.maxLaps);
+        const at = offsetSlice(((winnerOffset + arc) % TAU + TAU) % TAU, segW, totalW);
+        if      (at.frac < 0.20) arc += (0.34 - at.frac) * at.arc;
+        else if (at.frac > 0.80) arc -= (at.frac - 0.66) * at.arc;
+        return arc;
+    }
+
+    /* ══════════════════════════════════════
        Spin
     ══════════════════════════════════════ */
     spinBtn.addEventListener('click', spin);
@@ -3226,19 +3929,36 @@
         const manual    = launch || null;
         // The reverse-twist choreography assumes a forward, machine-paced spin,
         // so it sits out backwards flicks, hard flicks and pop-offs.
-        const windBackOk = !isIllegal && windBackEnabled &&
-                           !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
-        const windBack   = windBackOk && Math.random() < 0.20;
+        const stuntOk = !isIllegal &&
+                        !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
+        const windBack = stuntOk && windBackEnabled && Math.random() < 0.20;
+        // The gremlin wants that same kind of spin, and enough names either side
+        // of the landing that the creep genuinely changes hands a few times.
+        const goblin   = stuntOk && !windBack && goblinEnabled &&
+                         !prefersReducedMotion() && seg.labels.length >= 3 &&
+                         goblinFires(names.length);
 
-        const dir = (manual && !windBack) ? manual.dir : 1;
+        const dir = (manual && !windBack && !goblin) ? manual.dir : 1;
 
         // Shortest trip to the landing angle, taken the way the wheel is turning.
         let delta = targetNorm - currentNorm;
         if (dir > 0) { if (delta < 0) delta += TAU; }
         else         { if (delta > 0) delta -= TAU; }
 
-        let extraSpins, duration, ease;
-        if (windBack) {
+        let extraSpins, duration, ease, goblinRun = null;
+        if (goblin) {
+            // The creep is sized first, then the laps are chosen to sit on top of
+            // it, so the opening leg is always ~4-5 laps however long the gremlin
+            // then hangs around. Scale the laps with the creep instead and a long
+            // gremlin would give itself away by how lazily the spin started.
+            const rounds = goblinRounds();
+            const arc    = goblinCreepArc(segW, totalW, winnerOffset, rounds);
+            extraSpins   = 4 + Math.ceil(arc / TAU);
+            goblinRun    = buildGoblinRun(extraSpins * TAU + delta, arc, rounds,
+                                          TAU / seg.labels.length);
+            duration     = goblinRun.duration;
+            ease         = goblinRun.ease;
+        } else if (windBack) {
             // Sized so the first leg alone reads as a normal spin: ~3.4 laps
             // over ~4.6s, which is squarely in the range of an ordinary one.
             extraSpins = 6 + Math.floor(Math.random()*2);
@@ -3278,7 +3998,7 @@
         lastTickSection = Math.floor(rotation/tickArc);
         let tickPrevTime = startTime, tickPrevRot = rotation;
 
-        let wbFired = false, releaseFired = false;
+        let wbFired = false, releaseFired = false, gobBeat = 0;
 
         // Whole wheel torn off its hub — bounces around the viewport, drops back
         // on and finishes the very same spin, landing exactly where it would have.
@@ -3311,10 +4031,16 @@
                 triggerRelease();
             }
 
+            // GREMLIN — he turns up, then jerks once per shove he gives it
+            while (goblinRun && gobBeat < goblinRun.beats.length && t >= goblinRun.beats[gobBeat].t) {
+                triggerGoblinBeat(goblinRun.beats[gobBeat++].kind);
+            }
+
             if (t<1) {
                 requestAnimationFrame(frame);
             } else {
                 if (popOff.active) endPopOff();       // safety: never finish mid-flight
+                if (goblinRun) hideGoblin();          // ...and never leave him on the rim
                 rotation = endRot; redraw();
                 if (isIllegal) { showIllegalStamp(); }
                 else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
@@ -4448,8 +5174,12 @@
         setTimeout(() => splashOverlay.classList.add('show'), 500);
     }
 
-    function showWindBackBanner() {
+    // One banner, two stunts — each names itself on the way in.
+    function runBanner(kicker, label, holdMs, gremlin) {
         const el = document.getElementById('windBackPopup');
+        el.querySelector('.wb-kicker').textContent = kicker;
+        el.querySelector('.wb-label').textContent  = label;
+        el.classList.toggle('gremlin', !!gremlin);
         el.classList.remove('in', 'hold', 'out');
         void el.offsetWidth;
         el.classList.add('in');
@@ -4460,8 +5190,97 @@
                 el.classList.remove('hold');
                 el.classList.add('out');
                 setTimeout(() => el.classList.remove('out'), 460);
-            }, 1500);
+            }, holdMs);
         }, 520);
+    }
+
+    function showWindBackBanner() { runBanner('Not so fast', 'Wind-back', 1500, false); }
+
+    /* ── The gremlin's beats ──
+       He turns up once, shoves a handful of times, and the last shove is him
+       letting go: he is off the rim before the wheel has finished settling, so
+       whatever it lands on, it landed on by itself. */
+    const goblinEl = document.getElementById('goblin');
+
+    let goblinFaceTimer = null, goblinLetGoTimer = null;
+
+    function goblinFace(face, revertAfter) {
+        clearTimeout(goblinFaceTimer);
+        goblinEl.dataset.face = face;
+        if (revertAfter) goblinFaceTimer = setTimeout(() => { goblinEl.dataset.face = 'grin'; }, revertAfter);
+    }
+
+    function triggerGoblinBeat(kind) {
+        if (kind === 'arrive') { showGoblin(); return; }
+
+        // FAKE STOP. One last little nudge, then his hands come off the rim and
+        // he looks anywhere but at the wheel while it crawls to a halt on its
+        // own. Everything after this point depends on you believing it.
+        if (kind === 'fade') {
+            goblinFace('grin');
+            jerkGoblin('shove');
+            playGoblinShove('shove');
+            goblinLetGoTimer = setTimeout(() => {
+                goblinFace('innocent');
+                goblinEl.classList.add('hands-off');
+                playGoblinLetGo();
+            }, 240);
+            return;
+        }
+
+        clearTimeout(goblinLetGoTimer);               // whatever he does next, he is holding it again
+        goblinEl.classList.remove('hands-off');
+
+        if (kind === 'gotcha') {                      // ...and it was never going to stop
+            goblinFace('cackle', 1000);
+            jerkGoblin('shove');
+            playGoblinShove('gotcha');
+            playGoblinCackle(4);
+            return;
+        }
+        if (kind === 'tease') {                       // dragging it the wrong way, delighted
+            goblinFace('cackle', 900);
+            jerkGoblin('tease');
+            playGoblinShove('tease');
+            return;
+        }
+        if (kind === 'release') {                     // the real one — he is gone before it lands
+            goblinFace('cackle');
+            jerkGoblin('release');
+            playGoblinShove('release');
+            playGoblinCackle(8);
+            setTimeout(hideGoblin, 300);
+            return;
+        }
+        goblinFace('strain', 420);
+        jerkGoblin('shove');
+        playGoblinShove('shove');
+    }
+
+    function showGoblin() {
+        goblinEl.classList.remove('in', 'out', 'hands-off');
+        goblinFace('grin');
+        void goblinEl.offsetWidth;
+        goblinEl.classList.add('in');
+        playGoblinArrive();
+        shakeWheel();
+        runBanner('Uninvited', 'Gremlin', 1250, true);
+    }
+
+    function jerkGoblin(kind) {
+        const el = goblinEl.querySelector('.gob-jerk');
+        el.className = 'gob-jerk';
+        void el.offsetWidth;
+        el.classList.add(kind);
+    }
+
+    function hideGoblin() {
+        clearTimeout(goblinFaceTimer); clearTimeout(goblinLetGoTimer);
+        goblinEl.classList.remove('hands-off');
+        if (!goblinEl.classList.contains('in')) return;   // never arrived, or already leaving
+        goblinEl.classList.remove('in');
+        goblinEl.classList.add('out');
+        setTimeout(() => goblinEl.classList.remove('out'), 560);
     }
 
     // Beat one: the wheel had stopped, and something has just grabbed it.
@@ -4643,6 +5462,13 @@
         saveState();
     });
 
+    const goblinToggle = document.getElementById('goblinToggle');
+
+    goblinToggle.addEventListener('change', () => {
+        goblinEnabled = goblinToggle.checked;
+        saveState();
+    });
+
     powerUpToggle.addEventListener('change', () => {
         powerUpsEnabled = powerUpToggle.checked;
         if (!powerUpsEnabled) setPowerUpRail(null);
@@ -4711,6 +5537,7 @@
     panicToggle.checked      = panicEnabled;
     popOffToggle.checked     = popOffEnabled;
     windBackToggle.checked   = windBackEnabled;
+    goblinToggle.checked     = goblinEnabled;
     riggedInput.value        = riggedValue;
     displaySlider.value      = displayDuration / 1000;
     displayDuration          = parseFloat(displaySlider.value) * 1000;   // honor step snapping
