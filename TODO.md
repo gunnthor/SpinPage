@@ -47,6 +47,7 @@ single-screen, auto-simulated experience.
 - [ ] `og-image.png` + favicon — social preview image and tab icon are referenced/expected but missing.
 - [ ] `<title>` casing: says "Spinpage" but the H1/brand is "SpinPage".
 - [ ] Name remove `×` button contrast is very low until hover (discoverability/a11y).
+- [ ] Gremlin: he always grips the lower-right rim. Picking a side per appearance (and mirroring him) would stop it feeling staged after a few sightings.
 
 ## Other game-mode ideas (not yet built)
 - Survivor / Elimination mode (wheel picks who's OUT; last one standing wins).
