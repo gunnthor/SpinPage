@@ -1690,7 +1690,7 @@
                 <div class="option-row">
                     <div class="option-info">
                         <div class="option-name">Gremlin</div>
-                        <div class="option-desc">Something climbs onto the rim as the wheel dies and creeps it round by hand, faking the stop over and over before it lets go. Likelier the emptier the wheel gets — 5% at a full table, 30% with three names left.</div>
+                        <div class="option-desc">Something climbs onto the rim as the wheel dies and creeps it round by hand, dragging it backwards and faking the stop over and over, each round slower and greedier than the last. Likelier the emptier the wheel gets — 5% at a full table, 30% with three names left.</div>
                     </div>
                     <label class="toggle-switch">
                         <input type="checkbox" id="goblinToggle" checked>
@@ -3531,14 +3531,26 @@
         chanceFar:  0.05,        // with 3 + fadeOver names, and beyond
         fadeOver:   9,
 
-        // Rounds, weighted: 1..6. Most gremlins are over in twelve seconds; the
-        // six-round one runs the better part of a minute and is rare enough that
-        // people tell each other about it afterwards.
-        roundOdds:  [46, 22, 15, 9, 5, 3],
-        perRound:   [2, 4],      // shoves before each fake stop
+        // Rounds, weighted: 1..6. Most gremlins are over inside fifteen seconds;
+        // the six-round one runs well over a minute and is rare enough that people
+        // tell each other about it afterwards.
+        roundOdds:  [40, 22, 15, 11, 7, 5],
+        perRound:   [2, 4],      // shoves before the first fake stop...
+        shovesPer:  0.5,         // ...and this many more with every round after
         slicesBase: 1.25,        // creep arc in SLICES, so it scales with the wheel...
-        slicesPer:  1.15,        // ...and grows with every extra round
-        maxLaps:    2.4,         // hard ceiling, for wheels with two or three names
+        slicesPer:  1.90,        // ...and grows with every extra round
+        maxLaps:    3.6,         // hard ceiling, for wheels with two or three names
+
+        /* Slow burn. Every round takes more of the wheel and sits on it longer
+           than the one before, so the thing ratchets instead of repeating: the
+           first round is a few nudges and a short stall, the sixth is long
+           grinding sweeps across several names with five seconds of silence at
+           the end of them. Because shove speed is capped either way, a bigger
+           round doesn't move faster — it moves for longer. */
+        burn:       0.38,        // extra wheel per round
+        dwellBurn:  0.18,        // extra hold after each shove
+        stallBurn:  0.24,        // extra dead stop at each fake stop
+        teaseOdds:  0.70,        // chance of a wrong-way drag in any one round
         degPerSec:  110,         // a shove may not outrun the eye: this is the most
                                  //   wheel, in degrees, one second of push may cover
 
@@ -3574,43 +3586,63 @@
        the push takes, and how long he sits on it afterwards. */
     function makeGoblinCreep(rounds, creepArc, share) {
         const moves = [];
-        const teaseRound = Math.floor(Math.random() * rounds);   // one wrong-way drag, somewhere
+        const mustTease = Math.floor(Math.random() * rounds);     // at least one, guaranteed
 
         for (let r = 0; r < rounds; r++) {
-            const n = Math.round(gobRnd(GOBLIN.perRound));
-            for (let i = 0; i < n; i++) moves.push({
-                size:  0.75 + Math.random() * 0.85,
-                push:  gobRnd(GOBLIN.pushMs),
-                dwell: gobRnd(GOBLIN.dwellMs),
-                // the first shove of any round after the first is him snatching it back
-                kind:  (i === 0 && r > 0) ? 'gotcha' : 'shove',
-            });
-            if (r === teaseRound) moves.push({          // sized below
-                size: 0, push: gobRnd([220, 330]), dwell: gobRnd(GOBLIN.teaseMs), kind: 'tease',
-            });
+            const burn  = 1 + GOBLIN.burn      * r;              // this round's share of the wheel
+            const held  = 1 + GOBLIN.dwellBurn * r;              // ...and of the patience
+            const n = Math.round(gobRnd(GOBLIN.perRound) + GOBLIN.shovesPer * r);
+
+            // Where in the round he drags it backwards, if he does. Held off until
+            // the second shove of the opening round, so the drag has some travel to
+            // eat into; it can still reach back past the false stop, but only by a
+            // fraction of a slice (0.2% of runs, 0.17 of a slice at worst), which
+            // just reads as him being greedy.
+            const teasing = r === mustTease || Math.random() < GOBLIN.teaseOdds;
+            const first   = r === 0 ? 2 : 1;
+            const teaseAt = teasing && n >= first ? first + Math.floor(Math.random() * (n - first + 1)) : -1;
+
+            for (let i = 0; i < n; i++) {
+                moves.push({
+                    size:  (0.75 + Math.random() * 0.85) * burn,
+                    push:  gobRnd(GOBLIN.pushMs),
+                    dwell: gobRnd(GOBLIN.dwellMs) * held,
+                    // the first shove of any round after the first is him snatching it back
+                    kind:  (i === 0 && r > 0) ? 'gotcha' : 'shove',
+                });
+                if (i + 1 === teaseAt) moves.push({      // sized below
+                    size: 0, push: gobRnd([220, 330]),
+                    dwell: gobRnd(GOBLIN.teaseMs) * held, kind: 'tease',
+                });
+            }
             if (r < rounds - 1) moves.push({                     // the fake stop
-                size: 0.45 + Math.random() * 0.30,
-                push: gobRnd(GOBLIN.fadeMs), dwell: gobRnd(GOBLIN.stallMs), kind: 'fade',
+                size:  (0.45 + Math.random() * 0.30) * burn,
+                push:  gobRnd(GOBLIN.fadeMs),
+                dwell: gobRnd(GOBLIN.stallMs) * (1 + GOBLIN.stallBurn * r),
+                kind:  'fade',
             });
         }
         moves.push({                                // ...and the one that is real; sized below
             size: 0, push: gobRnd(GOBLIN.releaseMs), dwell: 0, kind: 'release',
         });
 
-        /* The two moves that carry the joke are given exact shares of the creep
-           rather than being left to the dice, because a share of "whatever the
-           other moves happened to add up to" is unreadable at one extreme and
-           silly at the other:
+        /* The moves that carry the joke get exact shares of the creep rather than
+           being left to the dice, because a share of "whatever the other moves
+           happened to add up to" is unreadable at one extreme and silly at the
+           other:
 
              the wrong-way drag  — must be big enough to see it go backwards
              the final release   — must arrive somewhere NEW, or the whole
                                    build-up ends on the name it was already on
 
-           Everything else sums to A, so with the two shares t and r fixed,
-           span = A - t·span + r·span, which solves in one line. */
+           Everything else sums to A, so with k drags of share t and a release of
+           share r, span = A - k·t·span + r·span, which solves in one line. Every
+           drag gets the same share, so the fifth one is as readable as the first
+           however long the creep has become. */
         const A = moves.reduce((a, m) =>
             a + (m.kind === 'tease' || m.kind === 'release' ? 0 : m.size), 0);
-        const span = A / (1 + share.tease - share.release);
+        const drags = moves.reduce((a, m) => a + (m.kind === 'tease' ? 1 : 0), 0);
+        const span = A / (1 + drags * share.tease - share.release);
         moves.forEach(m => {
             if (m.kind === 'tease')   m.size = -share.tease * span;
             if (m.kind === 'release') m.size =  share.release * span;
