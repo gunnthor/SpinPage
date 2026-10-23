@@ -306,6 +306,7 @@ button.stat:hover { background: var(--raised); }
     height: 34px; margin-top: 6px; padding: 0 12px;
     background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-md);
     font-size: var(--fs-small); color: var(--ink-2);
+    contain: layout paint;       /* the readout changes many times a second; keep that local */
 }
 .ticker-icon {
     width: 8px; height: 8px; border-radius: 50%; flex: none;
@@ -371,6 +372,7 @@ button.stat:hover { background: var(--raised); }
 }
 .wheel-frame::before {                         /* the brass ring */
     content: ''; position: absolute; inset: 0; border-radius: 50%;
+    will-change: transform;
     background: conic-gradient(from 200deg, #6b4e12, #f6dc8a 12%, #b88f2c 22%, #5a410e 34%, #e2b94a 48%,
                                #fff0b8 56%, #a37e24 66%, #5a410e 78%, #d9b04a 90%, #6b4e12);
     -webkit-mask: radial-gradient(circle closest-side, transparent calc(var(--rim) - 0.6%), #000 var(--rim), #000 99%, transparent 100%);
@@ -393,6 +395,7 @@ button.stat:hover { background: var(--raised); }
     content: ''; position: absolute; inset: -40%; border-radius: 50%;
     background: radial-gradient(circle, var(--bulb, #fff6d6) 0 22%, color-mix(in srgb, var(--bulb, #ffd36b) 70%, transparent) 34%, transparent 68%);
     opacity: 0; transition: opacity 90ms linear;
+    will-change: opacity;        /* its own layer: a chase step never repaints the ring */
 }
 /* idle: alternate bulbs lit, static */
 .wheel-frame[data-mode="idle"] .bulb:nth-child(odd)::after { opacity: 0.85; }
@@ -426,6 +429,7 @@ canvas#wheel.locked                { cursor: default; touch-action: manipulation
     width: 8.6%; height: auto; margin-left: -4.3%;
     transform-origin: 50% 23.5%;
     filter: drop-shadow(0 3px 4px rgba(0,0,0,0.7));
+    will-change: transform;      /* it moves every frame: keep it on the compositor */
     pointer-events: none;
 }
 
@@ -433,6 +437,9 @@ canvas#wheel.locked                { cursor: default; touch-action: manipulation
    On a monster flick the wheel leaves its frame, bounces around the
    viewport and drops back onto the hub to finish the spin. */
 .wheel-wrap.flying { z-index: 1400; }
+/* The zone is a containment boundary, so its stacking context has to rise
+   too, or the flying wheel would pass under the console and the tab bar. */
+.app.popping .wheel-zone { z-index: 1400; }
 .wheel-wrap.flying canvas#wheel {
     z-index: 5;
     filter: drop-shadow(0 0 30px rgba(226,185,74,0.55)) drop-shadow(0 18px 34px rgba(0,0,0,0.75));
