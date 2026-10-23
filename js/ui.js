@@ -41,7 +41,7 @@ function render() {
 
 /* ── Scoreboard ── */
 function renderScore(st) {
-    if (st.complete) { statNext.textContent = 'Done'; statNextSub.textContent = st.picked + ' picks'; }
+    if (st.complete) { statNext.textContent = 'Done'; statNextSub.textContent = ''; }
     else if (st.total === 0) { statNext.textContent = '—'; statNextSub.textContent = ''; }
     else { statNext.textContent = '#' + st.next; statNextSub.textContent = 'of ' + st.total; }
 
@@ -379,8 +379,9 @@ function renderDock(st) {
 function renderWheelState(st) {
     const where = layout();
     if (names.length < 2) {
-        $('wheelEmptyTitle').textContent = names.length === 1 ? 'One more name' : (st.total ? 'Wheel empty' : "Who's playing?");
+        $('wheelEmptyTitle').textContent = st.complete ? 'Draft complete' : names.length === 1 ? 'One more name' : (st.total ? 'Wheel empty' : "Who's playing?");
         $('wheelEmptySub').textContent =
+            st.complete ? 'Copy the board, or Restore all to go again' :
             st.total && names.length === 0 ? 'Add a name, or undo the last pick' :
             where === 'phone'     ? 'Type names below — or paste a list' :
             where === 'landscape' ? 'Type names on the right' :
@@ -509,6 +510,19 @@ addForm.addEventListener('submit', e => { e.preventDefault(); addNames(nameInput
 quickAdd.addEventListener('submit', e => { e.preventDefault(); addNames(quickInput); });
 // Keep the keyboard up on a phone: the + button shouldn't steal focus.
 document.querySelectorAll('.add-btn').forEach(b => b.addEventListener('pointerdown', e => e.preventDefault()));
+// A text box drops line breaks, so a list pasted from a spreadsheet or a
+// notes app would arrive as one long name. Catch the paste and turn the
+// breaks into commas; Enter then adds every name in it.
+[nameInput, quickInput].forEach(inp => inp.addEventListener('paste', e => {
+    const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+    if (!/[\r\n\t]/.test(text)) return;
+    e.preventDefault();
+    const list = splitNames(text).join(', ');
+    const a = inp.selectionStart ?? inp.value.length, b = inp.selectionEnd ?? inp.value.length;
+    inp.value = inp.value.slice(0, a) + list + inp.value.slice(b);
+    inp.setSelectionRange(a + list.length, a + list.length);
+    showHint(`${splitNames(inp.value).length} names ready — press Enter to add them all.`, false);
+}));
 [nameInput, quickInput].forEach(inp => inp.addEventListener('input', () => {
     if (inp.getAttribute('aria-invalid')) { inp.removeAttribute('aria-invalid'); hintError = ''; commit({ save: false }); }
 }));
