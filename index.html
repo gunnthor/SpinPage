@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
     <title>SpinPage — Free Spinning Wheel &amp; Random Name Picker</title>
     <meta name="description" content="Free online spinning wheel that picks a random name or winner — and keeps spinning to build a full draft order. Drag the wheel to spin it yourself. No sign-up, no ads, works on phone and desktop.">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
@@ -52,561 +52,650 @@
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
+    <link rel="preload" href="fonts/oswald-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="fonts/cinzel-latin-wght.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="stylesheet" href="css/spinpage.css">
+    <noscript><style>body{overflow:auto}.app{display:none}#aboutDialog{display:flex;position:static;max-height:none;margin:72px auto 24px;width:min(760px,94vw)}#aboutDialog .dialog-close{display:none}</style></noscript>
 </head>
 <body>
 
-<canvas id="fireCanvas"></canvas>
+<!-- Icon sprite: drawn once, referenced with <use> everywhere -->
+<svg class="sprite" aria-hidden="true" focusable="false">
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/></symbol>
+    <symbol id="i-mute" viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="m16 9 5 6m0-6-5 6"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 6h9m4 0h3M4 12h3m4 0h9M4 18h11m4 0h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/></symbol>
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-auto" viewBox="0 0 24 24"><path d="m17 2 4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="m7 22-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/></symbol>
+    <symbol id="i-stop" viewBox="0 0 24 24"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></symbol>
+    <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8M18 14.2a6.5 6.5 0 0 1 3.5 5.8"/></symbol>
+    <symbol id="i-board" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3.2 4M16 6h3a3 3 0 0 1-3.2 4"/><path d="M12 13v4m-4 4h8m-7-4h6"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></symbol>
+    <symbol id="i-restore" viewBox="0 0 24 24"><path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16m-10 4v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></symbol>
+</svg>
 
-<header>
-    <h1>♦ SpinPage ♦<span class="sr-only"> — free spinning wheel and random name picker</span></h1>
-    <p class="subtitle">Free Spinning Wheel &amp; Random Name Picker</p>
-</header>
+<canvas id="fireCanvas" aria-hidden="true"></canvas>
 
 <noscript>
-    <p style="max-width:70ch;margin:0 auto 1.5rem;padding:0.9rem 1.1rem;text-align:center;
-              border:1px solid rgba(212,175,55,0.35);border-radius:10px;color:#e8dfc8;">
+    <p class="noscript-note">
         The wheel needs JavaScript to spin. Turn it on and reload — nothing is installed and
         nothing leaves your browser. What SpinPage does is described below.
     </p>
 </noscript>
 
-<div class="container">
+<div class="app" id="app" data-phase="setup">
 
-    <div class="side-col">
+    <!-- ── Brand ── -->
+    <header class="brand-bar">
+        <h1 class="brand"><span class="brand-gem" aria-hidden="true"></span><span class="brand-word">SpinPage</span><span class="sr-only"> — free spinning wheel and random name picker</span></h1>
+    </header>
 
-    <div class="powerup-rail" id="powerUpRail">
-        <div class="rail-title" id="railTitle">Power-ups</div>
-        <div class="rail-slot">
-            <div class="rail-face rail-idle">Armed. One spin in three warps a slice — and the odds with it.</div>
-            <div class="rail-face rail-card">
-                <div class="rail-top">
-                    <span class="rail-emoji" id="railEmoji">🔥</span>
-                    <div>
-                        <div class="rail-label" id="railLabel">Hot Seat</div>
-                        <div class="rail-name" id="railName">Ada</div>
-                    </div>
-                </div>
-                <div class="rail-odds" id="railOdds"></div>
-            </div>
+    <!-- ── Scoreboard: the numbers that must never leave the screen ── -->
+    <section class="scoreboard" id="scoreboard" aria-label="Draft status">
+        <div class="stat stat-next">
+            <span class="stat-label"><span class="lbl-long">Next pick</span><span class="lbl-short" aria-hidden="true">Next</span></span>
+            <span class="stat-value"><b id="statNext">—</b><small id="statNextSub"></small></span>
         </div>
-    </div>
-
-    <div class="name-panel">
-        <div class="panel-title">Players <span class="panel-count" id="playerCount">0</span></div>
-        <div class="add-row">
-            <input type="text" id="nameInput" placeholder="Enter a name..." maxlength="30" autocomplete="off">
-            <button class="add-btn" id="addBtn" title="Add">+</button>
+        <button type="button" class="stat stat-left" id="statLeft" aria-controls="playersPanel">
+            <span class="stat-label"><span class="lbl-long">On the wheel</span><span class="lbl-short" aria-hidden="true">Left</span></span>
+            <span class="stat-value"><b id="statLeftNum">0</b><small id="statLeftSub"></small></span>
+        </button>
+        <button type="button" class="stat stat-latest" id="statLatest" aria-controls="boardPanel">
+            <span class="stat-label">Latest</span>
+            <span class="stat-value"><i class="dot" id="statLatestDot"></i><b id="statLatestName">—</b><small id="statLatestSub"></small></span>
+        </button>
+        <div class="stat stat-spins">
+            <span class="stat-label">Spins</span>
+            <span class="stat-value"><b id="statSpins">0</b><small id="statSpinsSub"></small></span>
         </div>
-        <div class="starter-hint" id="starterHint">Add at least 2 names to spin.</div>
-        <ol class="setup-steps" id="setupSteps">
-            <li><div class="setup-step" id="step1"><span class="step-num"><span>1</span></span><span class="step-text"><b>Add names</b><br>Type a name and hit Enter. Two or more and the wheel unlocks.</span></div></li>
-            <li><button type="button" class="setup-step" id="step2"><span class="step-num"><span>2</span></span><span class="step-text"><b>Pick winner slots</b><br>How many of the picks count as winners — set it on the draft board. Tap to jump there.</span></button></li>
-            <li><div class="setup-step" id="step3"><span class="step-num"><span>3</span></span><span class="step-text"><b>Spin the wheel</b><br>Press SPIN, or grab the wheel and fling it.</span></div></li>
-            <li><button type="button" class="setup-step optional" id="step4"><span class="step-num"><span>+</span></span><span class="step-text"><b>Tweak the options</b><br>Optional — gremlins, power-ups, panic slices and the rest.</span></button></li>
-        </ol>
-        <ul class="name-list" id="nameList"></ul>
-    </div>
-
-    </div>
-
-    <div class="wheel-panel">
-        <div class="wheel-wrap" id="wheelWrap">
-            <div class="wheel-socket"></div>
-            <canvas id="wheel" width="480" height="480" title="Drag the wheel and let go to spin it yourself"></canvas>
-            <div class="pointer-ghost"></div>
-            <!-- The gremlin: hands clamped on the lower-right rim, hanging off
-                 the outside of the wheel so he never covers the landing zone.
-                 Three nested layers so his entrance, his idle twitch and his
-                 per-shove lunge can all run without fighting each other. -->
-            <div class="goblin" id="goblin" aria-hidden="true"><div class="gob-sway"><div class="gob-jerk">
-                <svg viewBox="0 0 200 200" width="100%" height="100%">
-                    <defs>
-                        <radialGradient id="gobSkin" cx="36%" cy="28%" r="78%">
-                            <stop offset="0%"   stop-color="#a6d95a"/>
-                            <stop offset="52%"  stop-color="#5f9226"/>
-                            <stop offset="100%" stop-color="#26440e"/>
-                        </radialGradient>
-                        <radialGradient id="gobEye" cx="50%" cy="40%" r="60%">
-                            <stop offset="0%"   stop-color="#fffbe0"/>
-                            <stop offset="45%"  stop-color="#ffd83a"/>
-                            <stop offset="100%" stop-color="#e08a00"/>
-                        </radialGradient>
-                        <linearGradient id="gobHorn" x1="0" y1="1" x2="0" y2="0">
-                            <stop offset="0%"   stop-color="#4a3a22"/>
-                            <stop offset="100%" stop-color="#16100a"/>
-                        </linearGradient>
-                    </defs>
-
-                    <!-- Arms first, so the head sits over their roots. Both hands land
-                         on the rim's 45-degree tangent and are rotated onto it, claws
-                         curling inward over the gold edge onto the wheel face. -->
-                    <g fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
-                        <path d="M 128 184 C 100 174, 60 140, 34 120 L 54 96 C 80 122, 110 154, 146 168 Z"/>
-                        <path d="M 176 158 C 158 130, 130 72, 118 44 L 94 54 C 106 90, 128 138, 152 172 Z"/>
-                    </g>
-
-                    <!-- ears -->
-                    <g stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
-                        <path d="M 100 120 L 58 92 L 96 152 Z" fill="url(#gobSkin)"/>
-                        <path d="M 176 120 L 194 97 L 180 152 Z" fill="url(#gobSkin)"/>
-                        <path d="M 103 125 L 74 105 L 100 141 Z" fill="#3d6a17" stroke="none"/>
-                        <path d="M 173 125 L 186 111 L 175 141 Z" fill="#3d6a17" stroke="none"/>
-                    </g>
-
-                    <!-- horns -->
-                    <g fill="url(#gobHorn)" stroke="#0d0906" stroke-width="1.5" stroke-linejoin="round">
-                        <path d="M 114 97 C 108 80, 102 68, 94 56 C 108 63, 119 77, 125 93 Z"/>
-                        <path d="M 164 97 C 170 80, 176 68, 184 56 C 170 63, 159 77, 153 93 Z"/>
-                    </g>
-
-                    <!-- head -->
-                    <path d="M 138 88 C 168 88, 183 107, 181 130 C 179 155, 162 179, 138 183
-                             C 114 179, 97 155, 95 130 C 93 107, 108 88, 138 88 Z"
-                          fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5"/>
-
-                    <!-- Four faces, one visible at a time (see .gob-face). Each carries
-                         its own eyes, brows and mouth rather than mixing parts, because
-                         at this size a face reads as one shape or not at all. -->
-
-                    <!-- GRIN: the default. Asymmetric on purpose — a symmetrical face
-                         reads blank, and this one has to read as enjoying itself. -->
-                    <g class="gob-face f-grin">
-                        <ellipse cx="120" cy="130" rx="16"   ry="13"   fill="url(#gobEye)"/>
-                        <ellipse cx="159" cy="132" rx="14"   ry="10.5" fill="url(#gobEye)"/>
-                        <ellipse class="gob-pupil" cx="117" cy="129" rx="3.6" ry="9.5" fill="#160a04"/>
-                        <ellipse class="gob-pupil" cx="156" cy="131" rx="3.2" ry="7.5" fill="#160a04"/>
-                        <g stroke="#1d350b" stroke-linecap="round" fill="none">
-                            <path d="M 102 116 Q 116 100 133 109"   stroke-width="7"/>
-                            <path d="M 176 110 Q 163 114 146 126"   stroke-width="8"/>
-                        </g>
-                        <path d="M 103 153 Q 138 191 173 149 Q 138 166 103 153 Z"
-                              fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
-                        <path d="M 107 154 L 115 169 L 123 156 L 132 172 L 141 158 L 150 171 L 158 156 L 166 165 L 170 151 Z"
-                              fill="#f3edd4"/>
-                    </g>
-
-                    <!-- STRAIN: mid-shove. Eyes screwed down to slits, both brows
-                         hauled in, teeth clenched. -->
-                    <g class="gob-face f-strain">
-                        <ellipse cx="120" cy="131" rx="15" ry="6"   fill="url(#gobEye)"/>
-                        <ellipse cx="159" cy="133" rx="13" ry="5"   fill="url(#gobEye)"/>
-                        <ellipse cx="118" cy="131" rx="3.4" ry="4.6" fill="#160a04"/>
-                        <ellipse cx="157" cy="133" rx="3.1" ry="4"   fill="#160a04"/>
-                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="8">
-                            <path d="M 101 113 L 135 125"/>
-                            <path d="M 178 115 L 144 127"/>
-                        </g>
-                        <path d="M 107 151 Q 138 164 170 148 L 168 138 Q 138 152 109 139 Z"
-                              fill="#f3edd4" stroke="#1d350b" stroke-width="2" stroke-linejoin="round"/>
-                        <g stroke="#6b4a2a" stroke-width="1.8">
-                            <path d="M 120 143 L 121 156"/><path d="M 133 147 L 134 160"/>
-                            <path d="M 146 147 L 146 159"/><path d="M 158 143 L 158 155"/>
-                        </g>
-                    </g>
-
-                    <!-- INNOCENT: hands off the rim, eyes wide and pointed anywhere but
-                         at the wheel, mouth a small blameless whistle. This is the face
-                         that sells the fake stop. -->
-                    <g class="gob-face f-innocent">
-                        <ellipse cx="120" cy="129" rx="17"   ry="16"   fill="url(#gobEye)"/>
-                        <ellipse cx="159" cy="131" rx="15"   ry="14"   fill="url(#gobEye)"/>
-                        <ellipse cx="126" cy="123" rx="5"    ry="5.4"  fill="#160a04"/>
-                        <ellipse cx="165" cy="125" rx="4.6"  ry="5"    fill="#160a04"/>
-                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="6">
-                            <path d="M 100 104 Q 119 92 137 101"/>
-                            <path d="M 179 102 Q 162 93 145 102"/>
-                        </g>
-                        <ellipse cx="140" cy="160" rx="9" ry="8" fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
-                        <ellipse cx="140" cy="163" rx="5" ry="4" fill="#8e2a3e"/>
-                    </g>
-
-                    <!-- CACKLE: eyes squeezed shut, jaw open, tongue out. Used for the
-                         wrong-way drag, the snatch-back, and the moment he lets go. -->
-                    <g class="gob-face f-cackle">
-                        <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="5.5">
-                            <path d="M 106 133 Q 120 121 134 132"/>
-                            <path d="M 146 135 Q 159 124 172 134"/>
-                            <path d="M 100 112 Q 118 103 134 110" stroke-width="6"/>
-                            <path d="M 180 110 Q 164 103 148 111" stroke-width="6"/>
-                        </g>
-                        <path d="M 104 146 Q 138 137 173 143 Q 168 188 138 192 Q 109 188 104 146 Z"
-                              fill="#2b0c12" stroke="#1d350b" stroke-width="2.2"/>
-                        <path d="M 108 148 L 116 162 L 124 150 L 133 164 L 142 150 L 151 163 L 160 149 L 168 158 L 170 145 Z"
-                              fill="#f3edd4"/>
-                        <path d="M 120 186 L 127 176 L 136 185 L 145 175 L 153 184 L 160 173 L 164 182 Q 138 193 120 186 Z"
-                              fill="#f3edd4"/>
-                        <path d="M 124 170 Q 138 161 153 170 Q 149 185 138 186 Q 128 185 124 170 Z" fill="#a8324a"/>
-                    </g>
-
-                    <!-- Hands last: nothing is allowed to cover the grip. Fingers point
-                         along local +y, which rotate(135) turns into "up and left" —
-                         i.e. inward, curling over the gold rim onto the wheel face.
-                         The whole group slides outward when he takes his hands off. -->
-                    <g class="gob-hands" stroke="#142607" stroke-width="2.6" stroke-linejoin="round">
-                        <g transform="translate(43,111) rotate(135)">
-                            <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
-                            <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
-                            <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
-                            <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
-                            <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
-                                <path d="M -22 19 Q -16 34 -10 20 Z"/>
-                                <path d="M -7  24 Q -1  39  5 25 Z"/>
-                                <path d="M  8  17 Q 14  32 20 18 Z"/>
-                            </g>
-                        </g>
-                        <g transform="translate(107,47) rotate(135)">
-                            <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
-                            <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
-                            <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
-                            <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
-                            <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
-                                <path d="M -22 19 Q -16 34 -10 20 Z"/>
-                                <path d="M -7  24 Q -1  39  5 25 Z"/>
-                                <path d="M  8  17 Q 14  32 20 18 Z"/>
-                            </g>
-                        </g>
-                    </g>
-                </svg>
-            </div></div></div>
-            <div class="illegal-stamp" id="illegalStamp">ILLEGAL</div>
-        </div>
-        <div class="btn-row">
-            <button class="spin-btn" id="spinBtn" disabled>SPIN</button>
-            <button class="auto-btn" id="autoBtn" disabled title="Automatically spin every few seconds" aria-label="Autospin: automatically spin every few seconds">AUTOSPIN</button>
-        </div>
-        <div class="spin-hint" id="spinHint">Add at least 2 names to spin</div>
-        <div class="btn-row-secondary">
-            <button class="undo-btn" id="undoBtn" disabled>↩ UNDO</button>
-            <button class="reset-btn" id="resetBtn">↺ RESET</button>
-            <button class="options-btn" id="optionsBtn">⚙ OPTIONS</button>
-            <button class="about-btn" id="aboutBtn">ⓘ ABOUT</button>
-        </div>
-
-        <div class="options-panel" id="optionsPanel">
-            <div class="options-inner">
-                <div class="options-title">Options <span style="float:right;color:#2e2840;font-weight:400;letter-spacing:0.05em">v2.2</span></div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Winner display</div>
-                        <div class="option-desc">Auto · ~2s under 5 players, shorter as the table grows</div>
-                    </div>
-                    <label class="toggle-switch" title="Auto-scale winner display by player count">
-                        <input type="checkbox" id="autoDisplayToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                    <div class="display-row" id="displayManual" style="flex-shrink:0;display:none">
-                        <input type="range" id="displaySlider" min="0.5" max="6" step="0.5" value="2.8">
-                        <span class="display-val" id="displayVal">2.8s</span>
-                    </div>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Winner slots</div>
-                        <div class="option-desc">First X draft positions count as winners. Everyone after that is a loser. Also set straight on the draft board.</div>
-                    </div>
-                    <input class="winner-slots-input" type="number" id="winnerSlotsInput" min="1" max="99" step="1" value="1" aria-label="Number of winning positions">
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Wind-back</div>
-                        <div class="option-desc">20% chance the wheel settles on a slice, then gets shoved into a full spin the other way</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="windBackToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Gremlin</div>
-                        <div class="option-desc">Something climbs onto the rim as the wheel dies and creeps it round by hand, dragging it backwards and faking the stop over and over, each round slower and greedier than the last. Likelier the emptier the wheel gets — 5% at a full table, 30% with three names left.</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="goblinToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Power-ups</div>
-                        <div class="option-desc">35% chance a slice swells or shrinks before a spin — and it really shifts the odds</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="powerUpToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Pop-off</div>
-                        <div class="option-desc">A violent hand-flick can rip the wheel off its hub — it either ricochets around the screen or hits the floor and rolls away, then drops back on and finishes the spin</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="popOffToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">No One Is Safe</div>
-                        <div class="option-desc">15% chance a new pick steals a drafted player's seat</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="noisToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Panic Slice</div>
-                        <div class="option-desc">Adds a ⚠ PANIC wedge once 2+ are drafted — landing it starts a horse race where only half survive</div>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="panicToggle" checked>
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-                <div class="option-row">
-                    <div class="option-info">
-                        <div class="option-name">Rigged</div>
-                        <div class="option-desc">When on, anyone whose name starts with this text is always picked first</div>
-                        <input class="rigged-input" type="text" id="riggedInput" list="riggedNames" placeholder="Type or pick a name…" maxlength="30" autocomplete="off" aria-label="Rigged name or prefix">
-                        <datalist id="riggedNames"></datalist>
-                    </div>
-                    <label class="toggle-switch">
-                        <input type="checkbox" id="riggedToggle">
-                        <div class="toggle-track"><div class="toggle-thumb"></div></div>
-                    </label>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <section class="draft-section" id="draftSection">
-        <div class="draft-header">
-            <div class="draft-heading">
-                <span class="draft-title">♠ Draft Order ♠</span>
-                <span class="draft-subtitle" id="draftSubtitle">First position counts as winner. Everyone after that is a loser.</span>
-            </div>
-            <div class="draft-rule"></div>
-            <div class="slots-control" id="slotsControl">
-                <span class="slots-label">Winner slots</span>
-                <div class="slots-stepper">
-                    <button type="button" class="slots-btn" id="slotsMinus" aria-label="One fewer winning position">−</button>
-                    <input class="slots-input" type="number" id="draftSlotsInput" min="1" max="99" step="1" value="1" aria-label="Number of winning positions">
-                    <button type="button" class="slots-btn" id="slotsPlus" aria-label="One more winning position">+</button>
-                </div>
-            </div>
-            <div class="draft-actions">
-                <button class="draft-copy" id="copyBtn">COPY</button>
-                <button class="draft-restore" id="restoreBtn">↩ RESTORE</button>
-                <button class="draft-clear" id="draftClear">CLEAR</button>
-            </div>
-        </div>
-        <div class="draft-grid" id="draftGrid"></div>
+        <div class="score-track" aria-hidden="true"><span class="score-fill" id="scoreFill"></span><span class="score-cut" id="scoreCut"></span></div>
     </section>
 
-</div>
+    <!-- ── App actions ── -->
+    <nav class="app-actions" aria-label="Settings and information">
+        <button type="button" class="icon-btn" id="soundBtn" aria-pressed="true" aria-label="Sound" title="Sound on — click to mute">
+            <svg class="i i-on" aria-hidden="true"><use href="#i-sound"/></svg><svg class="i i-off" aria-hidden="true"><use href="#i-mute"/></svg>
+        </button>
+        <button type="button" class="icon-btn" id="optionsBtn" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
+            <svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg><span class="icon-label">Settings</span><i class="rig-dot" id="rigDot" hidden></i>
+        </button>
+        <button type="button" class="icon-btn" id="aboutBtn" aria-haspopup="dialog" aria-controls="aboutDialog" title="About SpinPage">
+            <svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span class="icon-label">About</span>
+        </button>
+    </nav>
 
-<footer class="site-foot">
-    <div class="foot-rule"></div>
-
-    <h2>A spinning wheel that picks a name — and then a whole order</h2>
-    <p>
-        SpinPage is a free online wheel spinner and random name picker. Type in the names,
-        press SPIN, and the wheel lands on one of them. Where most wheel spinners stop there,
-        SpinPage keeps going: the winner steps off the wheel and takes the next slot in the
-        draft order, so spinning until the wheel is empty leaves you with a complete ranked
-        list you can copy straight out. Nothing to install, no account, and no ads.
-    </p>
-
-    <div class="foot-cols">
-        <div>
-            <h2>How to use it</h2>
-            <h3>1. Add the names</h3>
-            <p>Type a name and press Enter. Two is the minimum; there is no upper limit, and the wheel keeps subdividing as the list grows.</p>
-            <h3>2. Spin</h3>
-            <p>Press SPIN, or grab the wheel with the mouse or a finger, drag it round and let go. Your flick decides how fast it goes and how many laps it turns — never where it stops. Flick it hard enough and the wheel can come off its hub entirely, bouncing or rolling across the screen before it drops back on to finish the spin.</p>
-            <h3>3. Take the result</h3>
-            <p>The winner is announced, then leaves the wheel for the next pick in the draft order. Turn on autospin and the remaining rounds run themselves.</p>
+    <!-- ── Players ── -->
+    <aside class="panel players" id="playersPanel" aria-labelledby="playersTitle">
+        <div class="panel-head">
+            <h2 class="panel-title" id="playersTitle">Players</h2>
+            <span class="pill" id="playerCount" aria-live="off">0</span>
+            <button type="button" class="sheet-close" data-close-sheet aria-label="Close players"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
         </div>
-
-        <div>
-            <h2>What people use it for</h2>
-            <ul>
-                <li><strong>Draft orders</strong> — fantasy leagues, five-a-side sides, tournament seeding, who picks first.</li>
-                <li><strong>Random name picker for class</strong> — who answers, who presents, who goes next.</li>
-                <li><strong>Giveaway and raffle draws</strong> — a visible, watchable draw instead of a number out of a script.</li>
-                <li><strong>Deciding as a group</strong> — where to eat, who does the washing up, who takes the last shift.</li>
-                <li><strong>Game night order</strong> — turn order, team splits, dramatic tie-breakers.</li>
-            </ul>
-
-            <h2>Extras, if you want them</h2>
-            <ul>
-                <li><strong>Power-up slices</strong> — Hot Seat, Cursed and Wildcard swell or shrink somebody's real odds, with the live percentage shown beside the wheel.</li>
-                <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles. Only half of them survive.</li>
-                <li><strong>Wind-back</strong> — the wheel lands, settles, then gets shoved into a whole second spin the other way for a different answer.</li>
-                <li>Every extra is a switch in the options panel. Turn them all off and you have a plain, fast wheel spinner.</li>
-            </ul>
+        <form class="add-row" id="addForm" autocomplete="off">
+            <label class="sr-only" for="nameInput">Add a player</label>
+            <input type="text" id="nameInput" placeholder="Add a name — or paste a list" autocomplete="off" enterkeyhint="done" spellcheck="false" aria-describedby="starterHint">
+            <button type="submit" class="add-btn" id="addBtn" aria-label="Add"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        </form>
+        <p class="field-hint" id="starterHint" aria-live="polite">Add at least 2 names to spin.</p>
+        <ol class="setup-steps" id="setupSteps" aria-label="Getting started">
+            <li><div class="setup-step" id="step1"><span class="step-num">1</span><span class="step-text"><b>Add names</b> — type one and press Enter, or paste a whole list.</span></div></li>
+            <li><button type="button" class="setup-step" id="step2"><span class="step-num">2</span><span class="step-text"><b>Winner slots</b> — how many picks count as winners. Set it on the board.</span></button></li>
+            <li><div class="setup-step" id="step3"><span class="step-num">3</span><span class="step-text"><b>Spin</b> — press SPIN, or grab the wheel and fling it.</span></div></li>
+            <li><button type="button" class="setup-step optional" id="step4"><span class="step-num">+</span><span class="step-text"><b>Twists</b> — gremlins, power-ups, panic and more, in Settings.</span></button></li>
+        </ol>
+        <ul class="name-list" id="nameList" aria-label="Names on the wheel"></ul>
+        <div class="panel-foot">
+            <span class="foot-note" id="playersFoot"></span>
+            <button type="button" class="text-btn danger" id="resetBtn" title="Clear every name and pick">
+                <svg class="i" aria-hidden="true"><use href="#i-trash"/></svg><span>Reset table</span>
+            </button>
         </div>
+    </aside>
+
+    <!-- ── Status line: what the wheel is doing right now ── -->
+    <div class="ticker" id="ticker" data-kind="setup">
+        <span class="ticker-icon" id="tickerIcon" aria-hidden="true"></span>
+        <span class="ticker-text" id="tickerText">Add names to begin</span>
+        <span class="ticker-odds" id="tickerOdds"></span>
     </div>
 
-    <h2>Questions</h2>
+    <!-- ── The wheel ── -->
+    <div class="wheel-zone" id="wheelZone">
+        <div class="wheel-stage" id="wheelStage">
+            <div class="wheel-frame" id="wheelFrame" aria-hidden="true"></div>
+            <div class="wheel-wrap" id="wheelWrap">
+                <div class="wheel-socket"></div>
+                <canvas id="wheel" width="480" height="480" role="img" aria-label="The wheel. Add at least two names to spin."></canvas>
+                <svg class="wheel-pointer" id="wheelPointer" viewBox="0 0 40 64" aria-hidden="true">
+                    <defs>
+                        <linearGradient id="ptrGold" x1="0" x2="1" y1="0" y2="0">
+                            <stop offset="0" stop-color="#6b4f12"/><stop offset="0.45" stop-color="#fff2b8"/><stop offset="0.6" stop-color="#e2bb52"/><stop offset="1" stop-color="#6b4f12"/>
+                        </linearGradient>
+                        <radialGradient id="ptrGem" cx="0.35" cy="0.32" r="0.75">
+                            <stop offset="0" stop-color="#ffe1e5"/><stop offset="0.45" stop-color="#e3354b"/><stop offset="1" stop-color="#560c19"/>
+                        </radialGradient>
+                    </defs>
+                    <path d="M20 62 L7.5 19 A13.5 13.5 0 1 1 32.5 19 Z" fill="url(#ptrGold)" stroke="#2e2106" stroke-width="1.4" stroke-linejoin="round"/>
+                    <circle cx="20" cy="15" r="6.6" fill="url(#ptrGem)" stroke="#2e2106" stroke-width="1"/>
+                    <circle cx="17.8" cy="12.8" r="1.6" fill="#fff" opacity="0.85"/>
+                </svg>
+                <button type="button" class="wheel-empty" id="wheelEmpty" tabindex="-1">
+                    <span class="we-title" id="wheelEmptyTitle">Who's playing?</span>
+                    <span class="we-sub" id="wheelEmptySub">Add at least two names</span>
+                </button>
+                <div class="goblin" id="goblin" aria-hidden="true"><div class="gob-sway"><div class="gob-jerk">
+                    <svg viewBox="0 0 200 200" width="100%" height="100%">
+                        <defs>
+                            <radialGradient id="gobSkin" cx="36%" cy="28%" r="78%">
+                                <stop offset="0%"   stop-color="#a6d95a"/>
+                                <stop offset="52%"  stop-color="#5f9226"/>
+                                <stop offset="100%" stop-color="#26440e"/>
+                            </radialGradient>
+                            <radialGradient id="gobEye" cx="50%" cy="40%" r="60%">
+                                <stop offset="0%"   stop-color="#fffbe0"/>
+                                <stop offset="45%"  stop-color="#ffd83a"/>
+                                <stop offset="100%" stop-color="#e08a00"/>
+                            </radialGradient>
+                            <linearGradient id="gobHorn" x1="0" y1="1" x2="0" y2="0">
+                                <stop offset="0%"   stop-color="#4a3a22"/>
+                                <stop offset="100%" stop-color="#16100a"/>
+                            </linearGradient>
+                        </defs>
 
-    <div class="foot-cols">
-        <div>
-            <h3>Is SpinPage free?</h3>
-            <p>Yes — free, no account, no ads. Open the page, add names, spin.</p>
+                        <!-- Arms first, so the head sits over their roots. Both hands land
+                             on the rim's 45-degree tangent and are rotated onto it, claws
+                             curling inward over the gold edge onto the wheel face. -->
+                        <g fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
+                            <path d="M 128 184 C 100 174, 60 140, 34 120 L 54 96 C 80 122, 110 154, 146 168 Z"/>
+                            <path d="M 176 158 C 158 130, 130 72, 118 44 L 94 54 C 106 90, 128 138, 152 172 Z"/>
+                        </g>
 
-            <h3>Is the wheel actually random?</h3>
-            <p>Yes. The winner is drawn the moment you release the wheel, from the browser's random number generator. Spinning by hand changes the speed and the number of laps, but not where it lands, so the person spinning cannot steer it. The one exception is the Rigged option, which you have to switch on yourself.</p>
+                        <!-- ears -->
+                        <g stroke="#1d350b" stroke-width="2.5" stroke-linejoin="round">
+                            <path d="M 100 120 L 58 92 L 96 152 Z" fill="url(#gobSkin)"/>
+                            <path d="M 176 120 L 194 97 L 180 152 Z" fill="url(#gobSkin)"/>
+                            <path d="M 103 125 L 74 105 L 100 141 Z" fill="#3d6a17" stroke="none"/>
+                            <path d="M 173 125 L 186 111 L 175 141 Z" fill="#3d6a17" stroke="none"/>
+                        </g>
 
-            <h3>How many names can I add?</h3>
-            <p>Two at minimum, no fixed maximum. Names of up to 30 characters fit on a slice.</p>
+                        <!-- horns -->
+                        <g fill="url(#gobHorn)" stroke="#0d0906" stroke-width="1.5" stroke-linejoin="round">
+                            <path d="M 114 97 C 108 80, 102 68, 94 56 C 108 63, 119 77, 125 93 Z"/>
+                            <path d="M 164 97 C 170 80, 176 68, 184 56 C 170 63, 159 77, 153 93 Z"/>
+                        </g>
 
-            <h3>Does it work on a phone?</h3>
-            <p>Yes. The layout adapts to phones and tablets, and the wheel takes touch — flick it with a finger.</p>
-        </div>
+                        <!-- head -->
+                        <path d="M 138 88 C 168 88, 183 107, 181 130 C 179 155, 162 179, 138 183
+                                 C 114 179, 97 155, 95 130 C 93 107, 108 88, 138 88 Z"
+                              fill="url(#gobSkin)" stroke="#1d350b" stroke-width="2.5"/>
 
-        <div>
-            <h3>Does it save my names?</h3>
-            <p>Your names, draft order and settings live in your own browser's local storage, so they survive a refresh. Nothing is uploaded and no server holds your list.</p>
+                        <!-- Four faces, one visible at a time (see .gob-face). Each carries
+                             its own eyes, brows and mouth rather than mixing parts, because
+                             at this size a face reads as one shape or not at all. -->
 
-            <h3>Can I get a full draft order rather than one winner?</h3>
-            <p>That is the default. Each winner leaves the wheel and takes the next pick, and COPY puts the finished order on your clipboard.</p>
+                        <!-- GRIN: the default. Asymmetric on purpose — a symmetrical face
+                             reads blank, and this one has to read as enjoying itself. -->
+                        <g class="gob-face f-grin">
+                            <ellipse cx="120" cy="130" rx="16"   ry="13"   fill="url(#gobEye)"/>
+                            <ellipse cx="159" cy="132" rx="14"   ry="10.5" fill="url(#gobEye)"/>
+                            <ellipse class="gob-pupil" cx="117" cy="129" rx="3.6" ry="9.5" fill="#160a04"/>
+                            <ellipse class="gob-pupil" cx="156" cy="131" rx="3.2" ry="7.5" fill="#160a04"/>
+                            <g stroke="#1d350b" stroke-linecap="round" fill="none">
+                                <path d="M 102 116 Q 116 100 133 109"   stroke-width="7"/>
+                                <path d="M 176 110 Q 163 114 146 126"   stroke-width="8"/>
+                            </g>
+                            <path d="M 103 153 Q 138 191 173 149 Q 138 166 103 153 Z"
+                                  fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
+                            <path d="M 107 154 L 115 169 L 123 156 L 132 172 L 141 158 L 150 171 L 158 156 L 166 165 L 170 151 Z"
+                                  fill="#f3edd4"/>
+                        </g>
 
-            <h3>Do I need to install anything?</h3>
-            <p>No. SpinPage is a single web page — it runs in the browser, offline once loaded, with no sign-up and no download.</p>
+                        <!-- STRAIN: mid-shove. Eyes screwed down to slits, both brows
+                             hauled in, teeth clenched. -->
+                        <g class="gob-face f-strain">
+                            <ellipse cx="120" cy="131" rx="15" ry="6"   fill="url(#gobEye)"/>
+                            <ellipse cx="159" cy="133" rx="13" ry="5"   fill="url(#gobEye)"/>
+                            <ellipse cx="118" cy="131" rx="3.4" ry="4.6" fill="#160a04"/>
+                            <ellipse cx="157" cy="133" rx="3.1" ry="4"   fill="#160a04"/>
+                            <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="8">
+                                <path d="M 101 113 L 135 125"/>
+                                <path d="M 178 115 L 144 127"/>
+                            </g>
+                            <path d="M 107 151 Q 138 164 170 148 L 168 138 Q 138 152 109 139 Z"
+                                  fill="#f3edd4" stroke="#1d350b" stroke-width="2" stroke-linejoin="round"/>
+                            <g stroke="#6b4a2a" stroke-width="1.8">
+                                <path d="M 120 143 L 121 156"/><path d="M 133 147 L 134 160"/>
+                                <path d="M 146 147 L 146 159"/><path d="M 158 143 L 158 155"/>
+                            </g>
+                        </g>
 
-            <h3>Can I undo a spin?</h3>
-            <p>Yes. RESTORE puts the last winner back on the wheel; CLEAR empties the draft order and starts again.</p>
-        </div>
-    </div>
+                        <!-- INNOCENT: hands off the rim, eyes wide and pointed anywhere but
+                             at the wheel, mouth a small blameless whistle. This is the face
+                             that sells the fake stop. -->
+                        <g class="gob-face f-innocent">
+                            <ellipse cx="120" cy="129" rx="17"   ry="16"   fill="url(#gobEye)"/>
+                            <ellipse cx="159" cy="131" rx="15"   ry="14"   fill="url(#gobEye)"/>
+                            <ellipse cx="126" cy="123" rx="5"    ry="5.4"  fill="#160a04"/>
+                            <ellipse cx="165" cy="125" rx="4.6"  ry="5"    fill="#160a04"/>
+                            <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="6">
+                                <path d="M 100 104 Q 119 92 137 101"/>
+                                <path d="M 179 102 Q 162 93 145 102"/>
+                            </g>
+                            <ellipse cx="140" cy="160" rx="9" ry="8" fill="#2b0c12" stroke="#1d350b" stroke-width="2"/>
+                            <ellipse cx="140" cy="163" rx="5" ry="4" fill="#8e2a3e"/>
+                        </g>
 
-    <p class="foot-note">SpinPage — a free spinning wheel, random name picker and draft order generator. Runs entirely in your browser.</p>
-</footer>
+                        <!-- CACKLE: eyes squeezed shut, jaw open, tongue out. Used for the
+                             wrong-way drag, the snatch-back, and the moment he lets go. -->
+                        <g class="gob-face f-cackle">
+                            <g stroke="#1d350b" stroke-linecap="round" fill="none" stroke-width="5.5">
+                                <path d="M 106 133 Q 120 121 134 132"/>
+                                <path d="M 146 135 Q 159 124 172 134"/>
+                                <path d="M 100 112 Q 118 103 134 110" stroke-width="6"/>
+                                <path d="M 180 110 Q 164 103 148 111" stroke-width="6"/>
+                            </g>
+                            <path d="M 104 146 Q 138 137 173 143 Q 168 188 138 192 Q 109 188 104 146 Z"
+                                  fill="#2b0c12" stroke="#1d350b" stroke-width="2.2"/>
+                            <path d="M 108 148 L 116 162 L 124 150 L 133 164 L 142 150 L 151 163 L 160 149 L 168 158 L 170 145 Z"
+                                  fill="#f3edd4"/>
+                            <path d="M 120 186 L 127 176 L 136 185 L 145 175 L 153 184 L 160 173 L 164 182 Q 138 193 120 186 Z"
+                                  fill="#f3edd4"/>
+                            <path d="M 124 170 Q 138 161 153 170 Q 149 185 138 186 Q 128 185 124 170 Z" fill="#a8324a"/>
+                        </g>
 
-<div class="draft-dock" id="draftDock" role="button" tabindex="0" aria-label="Show the full draft order">
-    <div class="dock-head">
-        <span class="dock-title">♠ Draft Order</span>
-        <span class="dock-count" id="dockCount"></span>
-    </div>
-    <div class="dock-list" id="dockList"></div>
-</div>
-
-<div class="splash-overlay" id="splashOverlay">
-    <div class="splash-card">
-        <div class="splash-eyebrow">♦ Draft Complete ♦</div>
-        <div class="splash-heading">Top Picks</div>
-        <div class="splash-list" id="splashList"></div>
-        <button class="splash-close" id="splashClose">CLOSE</button>
-    </div>
-</div>
-
-<div class="about-overlay" id="aboutOverlay">
-    <div class="about-card" role="dialog" aria-modal="true" aria-labelledby="aboutTitle">
-        <div class="about-top">
-            <div>
-                <div class="about-eyebrow">♦ About SpinPage ♦</div>
-                <div class="about-heading" id="aboutTitle">SpinPage</div>
+                        <!-- Hands last: nothing is allowed to cover the grip. Fingers point
+                             along local +y, which rotate(135) turns into "up and left" —
+                             i.e. inward, curling over the gold rim onto the wheel face.
+                             The whole group slides outward when he takes his hands off. -->
+                        <g class="gob-hands" stroke="#142607" stroke-width="2.6" stroke-linejoin="round">
+                            <g transform="translate(43,111) rotate(135)">
+                                <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
+                                <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
+                                <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
+                                <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
+                                <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
+                                    <path d="M -22 19 Q -16 34 -10 20 Z"/>
+                                    <path d="M -7  24 Q -1  39  5 25 Z"/>
+                                    <path d="M  8  17 Q 14  32 20 18 Z"/>
+                                </g>
+                            </g>
+                            <g transform="translate(107,47) rotate(135)">
+                                <path d="M -27 -15 C -11 -30, 19 -30, 27 -12 C 32 2, 21 15, -1 16 C -21 16, -32 4, -27 -15 Z" fill="url(#gobSkin)"/>
+                                <rect x="-22" y="2"  width="12" height="21" rx="6" fill="url(#gobSkin)"/>
+                                <rect x="-7"  y="5"  width="12" height="23" rx="6" fill="url(#gobSkin)"/>
+                                <rect x="8"   y="1"  width="12" height="20" rx="6" fill="url(#gobSkin)"/>
+                                <g fill="#1c1409" stroke="#0d0906" stroke-width="1.4">
+                                    <path d="M -22 19 Q -16 34 -10 20 Z"/>
+                                    <path d="M -7  24 Q -1  39  5 25 Z"/>
+                                    <path d="M  8  17 Q 14  32 20 18 Z"/>
+                                </g>
+                            </g>
+                        </g>
+                    </svg>
+                </div></div></div>
+                <div class="illegal-stamp" id="illegalStamp" aria-hidden="true">ILLEGAL</div>
+                <div class="win-callout" id="winCallout" aria-hidden="true">
+                    <span class="win-kicker" id="winKicker">Pick #1</span>
+                    <span class="win-name" id="winName"></span>
+                    <span class="win-sub" id="winSub"></span>
+                </div>
             </div>
-            <button class="about-close" id="aboutClose" aria-label="Close about panel">×</button>
+            <div class="stage-banner windback-popup" id="windBackPopup" aria-hidden="true">
+                <div class="wb-kicker">Not so fast</div>
+                <div class="wb-label">Wind-back</div>
+            </div>
+            <div class="stage-banner powerup-popup" id="powerUpPopup" aria-hidden="true">
+                <span class="pu-emoji">🔥</span>
+                <div class="pu-label">Hot Seat</div>
+                <div class="pu-name">Name</div>
+            </div>
         </div>
+    </div>
 
+    <!-- ── Primary controls ── -->
+    <div class="controls" id="controls">
+        <button type="button" class="ctrl-btn" id="undoBtn" aria-disabled="true" aria-label="Undo the last pick" title="Undo the last pick">
+            <svg class="i" aria-hidden="true"><use href="#i-undo"/></svg><span class="ctrl-label">Undo</span>
+        </button>
+        <button type="button" class="spin-btn" id="spinBtn" aria-disabled="true" aria-keyshortcuts="Space"><span class="spin-face" id="spinLabel">Spin</span></button>
+        <button type="button" class="ctrl-btn auto-btn" id="autoBtn" aria-disabled="true" aria-pressed="false" title="Spin automatically until the draft is done">
+            <svg class="i i-on" aria-hidden="true"><use href="#i-stop"/></svg><svg class="i i-off" aria-hidden="true"><use href="#i-auto"/></svg><span class="ctrl-label" id="autoLabel">Auto</span>
+        </button>
+        <p class="spin-hint" id="spinHint">Press <kbd>Space</kbd> or drag the wheel and let go.</p>
+    </div>
+
+    <!-- ── Phone dock: quick add while setting up, the latest picks after ── -->
+    <div class="dock" id="dock">
+        <form class="quick-add" id="quickAdd" autocomplete="off">
+            <label class="sr-only" for="quickInput">Add a player</label>
+            <input type="text" id="quickInput" placeholder="Add a name — or paste a list" autocomplete="off" enterkeyhint="done" spellcheck="false">
+            <button type="submit" class="add-btn" aria-label="Add"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
+        </form>
+        <button type="button" class="dock-picks" id="dockPicks" aria-controls="boardPanel">
+            <span class="dock-label">Board</span>
+            <span class="dock-strip" id="dockStrip"></span>
+        </button>
+    </div>
+
+    <!-- ── Draft board ── -->
+    <aside class="panel board" id="boardPanel" aria-labelledby="boardTitle">
+        <div class="panel-head">
+            <h2 class="panel-title" id="boardTitle">Draft board</h2>
+            <span class="pill" id="boardCount">0 / 0</span>
+            <button type="button" class="sheet-close" data-close-sheet aria-label="Close draft board"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+        </div>
+        <div class="slots-control" id="slotsControl">
+            <label class="slots-label" for="draftSlotsInput">Winner slots</label>
+            <div class="slots-stepper">
+                <button type="button" class="slots-btn" id="slotsMinus" aria-label="One fewer winning position">−</button>
+                <input class="slots-input" type="number" id="draftSlotsInput" min="1" max="99" step="1" value="1" inputmode="numeric">
+                <button type="button" class="slots-btn" id="slotsPlus" aria-label="One more winning position">+</button>
+            </div>
+            <span class="slots-note" id="draftSubtitle">First pick wins.</span>
+        </div>
+        <ol class="board-list" id="draftGrid" aria-label="Draft order"></ol>
+        <p class="board-log" id="boardLog"></p>
+        <div class="board-actions">
+            <button type="button" class="text-btn" id="copyBtn"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy</span></button>
+            <button type="button" class="text-btn" id="restoreBtn" title="Put every pick back on the wheel"><svg class="i" aria-hidden="true"><use href="#i-restore"/></svg><span>Restore all</span></button>
+            <button type="button" class="text-btn danger" id="draftClear" title="Take the drafted players off the table"><svg class="i" aria-hidden="true"><use href="#i-trash"/></svg><span>Delete picks</span></button>
+        </div>
+    </aside>
+
+    <!-- ── Phone tab bar ── -->
+    <nav class="tabbar" id="tabbar" aria-label="Panels">
+        <button type="button" class="tab" id="tabPlayers" aria-controls="playersPanel" aria-expanded="false">
+            <svg class="i" aria-hidden="true"><use href="#i-users"/></svg><span>Players</span><b class="tab-badge" id="tabPlayersBadge">0</b>
+        </button>
+        <button type="button" class="tab" id="tabBoard" aria-controls="boardPanel" aria-expanded="false">
+            <svg class="i" aria-hidden="true"><use href="#i-board"/></svg><span>Board</span><b class="tab-badge" id="tabBoardBadge">0</b>
+        </button>
+        <button type="button" class="tab" id="tabSettings" aria-controls="settingsDialog" aria-haspopup="dialog">
+            <svg class="i" aria-hidden="true"><use href="#i-sliders"/></svg><span>Settings</span>
+        </button>
+    </nav>
+</div>
+
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- Restore, Delete picks and Reset act at once; this is the way back -->
+<div class="toast" id="toast" role="status">
+    <span class="toast-text" id="toastText"></span>
+    <button type="button" class="text-btn" id="toastUndo">Undo</button>
+</div>
+
+<!-- Screen-reader announcements: the result of every spin, said once -->
+<div class="sr-only" id="announcer" aria-live="polite" aria-atomic="true"></div>
+<div class="sr-only" id="alerter" aria-live="assertive" aria-atomic="true"></div>
+
+<!-- ── Settings ── -->
+<dialog class="dialog settings" id="settingsDialog" aria-labelledby="settingsTitle">
+    <div class="dialog-head">
+        <h2 class="dialog-title" id="settingsTitle">Settings</h2>
+        <button type="button" class="dialog-close" data-close-dialog aria-label="Close settings"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="dialog-body">
+        <section class="set-group">
+            <h3 class="set-title">Spin &amp; results</h3>
+            <div class="setting">
+                <label class="set-main" for="autoDisplayToggle">
+                    <span class="set-name">Winner display: automatic</span>
+                    <span class="set-desc">About two seconds at a small table, quicker as the table grows.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="autoDisplayToggle" checked>
+            </div>
+            <div class="setting sub" id="displayManual" hidden>
+                <label class="set-main" for="displaySlider"><span class="set-name">Show each winner for</span></label>
+                <div class="range-row">
+                    <input type="range" id="displaySlider" min="0.5" max="6" step="0.5" value="2.8">
+                    <output class="range-val" id="displayVal" for="displaySlider">2.8s</output>
+                </div>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="winnerSlotsInput">
+                    <span class="set-name">Winner slots</span>
+                    <span class="set-desc">The first picks that count as winners. Everyone after is a loser.</span>
+                </label>
+                <input class="num-input" type="number" id="winnerSlotsInput" min="1" max="99" step="1" value="1" inputmode="numeric">
+            </div>
+        </section>
+
+        <section class="set-group">
+            <h3 class="set-title">Plot twists <span class="set-tag">change the show, never the winner</span></h3>
+            <div class="setting">
+                <label class="set-main" for="windBackToggle">
+                    <span class="set-name">Wind-back</span>
+                    <span class="set-desc">About one spin in five settles on a slice — then gets shoved into a whole spin the other way.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="windBackToggle" checked>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="goblinToggle">
+                    <span class="set-name">Gremlin</span>
+                    <span class="set-desc">Something climbs onto the rim as the wheel dies and fakes the stop, over and over. Rare at a full table; up to about one spin in four with three names left.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="goblinToggle" checked>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="popOffToggle">
+                    <span class="set-name">Pop-off</span>
+                    <span class="set-desc">A violent hand-flick can rip the wheel off its hub. It ricochets or rolls away, then drops back on.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="popOffToggle" checked>
+            </div>
+        </section>
+
+        <section class="set-group">
+            <h3 class="set-title">Events <span class="set-tag">change the draft</span></h3>
+            <div class="setting">
+                <label class="set-main" for="powerUpToggle">
+                    <span class="set-name">Power-ups</span>
+                    <span class="set-desc">35% of spins, a slice swells or shrinks first — and the real odds move with it. The new odds are shown above the wheel.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="powerUpToggle" checked>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="panicToggle">
+                    <span class="set-name">Panic slice</span>
+                    <span class="set-desc">Once two are drafted, a ⚠ PANIC wedge joins the wheel. Land on it and the drafted run a horse race — only the majority keep their seats.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="panicToggle" checked>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="noisToggle">
+                    <span class="set-name">No One Is Safe</span>
+                    <span class="set-desc">15% of picks steal a drafted player's seat. They go back on the wheel.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="noisToggle" checked>
+            </div>
+        </section>
+
+        <section class="set-group">
+            <h3 class="set-title">Sound &amp; motion</h3>
+            <div class="setting">
+                <label class="set-main" for="soundToggle">
+                    <span class="set-name">Sound effects</span>
+                    <span class="set-desc">Peg clicks, the fanfare and the stunt sounds. Also on the speaker button at the top.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="soundToggle" checked>
+            </div>
+            <div class="setting">
+                <label class="set-main" for="calmToggle">
+                    <span class="set-name">Calm effects</span>
+                    <span class="set-desc">No confetti, fire, shaking or flashing, no gremlin or pop-off, and shorter takeovers. Starts out matching your system's reduce-motion setting.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="calmToggle">
+            </div>
+        </section>
+
+        <section class="set-group house">
+            <h3 class="set-title">House rules <span class="set-tag warn">overrides the random draw</span></h3>
+            <div class="setting">
+                <label class="set-main" for="riggedToggle">
+                    <span class="set-name">Rigged</span>
+                    <span class="set-desc">While on, the first name starting with this text is always picked. It switches itself off when you reload.</span>
+                </label>
+                <input type="checkbox" class="switch" role="switch" id="riggedToggle">
+            </div>
+            <div class="setting sub">
+                <label class="sr-only" for="riggedInput">Rigged name or prefix</label>
+                <input class="text-input" type="text" id="riggedInput" list="riggedNames" placeholder="Type or pick a name…" maxlength="30" autocomplete="off">
+                <datalist id="riggedNames"></datalist>
+            </div>
+        </section>
+        <p class="dialog-foot">SpinPage v3 · everything is saved in this browser only.</p>
+    </div>
+</dialog>
+
+<!-- ── About ── -->
+<dialog class="dialog about" id="aboutDialog" aria-labelledby="aboutTitle">
+    <div class="dialog-head">
+        <div>
+            <div class="eyebrow">About</div>
+            <h2 class="dialog-title display" id="aboutTitle">SpinPage</h2>
+        </div>
+        <button type="button" class="dialog-close" data-close-dialog aria-label="Close about"><svg class="i" aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="dialog-body">
         <p class="about-lede">
             A dramatic spinning wheel and random name picker for draft orders, giveaways, party games,
-            and any moment that deserves a little spectacle. SpinPage turns a simple random picker into
-            a polished casino-style experience with confetti, fanfare, plot twists, and just enough chaos
-            to keep the table honest.
+            and any moment that deserves a little spectacle — with confetti, fanfare, plot twists,
+            and just enough chaos to keep the table honest.
+        </p>
+        <div class="about-grid">
+            <div class="about-chip" style="--chip:#e0b84e"><b>Draft orders</b><span>Winners leave the wheel and line up on the board, pick by pick.</span></div>
+            <div class="about-chip" style="--chip:#a35bd6"><b>Spin it yourself</b><span>Grab the wheel, drag and let go. Flick hard enough and it may pop clean off its hub.</span></div>
+            <div class="about-chip" style="--chip:#e04a4a"><b>Wind-back &amp; the Gremlin</b><span>Stunts that change the route, never the result — the winner is drawn before the wheel moves.</span></div>
+            <div class="about-chip" style="--chip:#2fb36b"><b>Zero setup</b><span>No account, no ads, no download. Your table is saved in this browser only.</span></div>
+        </div>
+        <h3 class="about-h">Keyboard</h3>
+        <ul class="about-list">
+            <li><kbd>Space</kbd> spins the wheel when you're not typing.</li>
+            <li><kbd>Enter</kbd> in the name box adds a name; paste a list to add many at once.</li>
+            <li><kbd>Esc</kbd> closes any panel or dialog.</li>
+        </ul>
+        <h3 class="about-h">Is it fair?</h3>
+        <p class="about-p">The winner is drawn by your browser's random number generator the moment a spin starts, weighted by slice size. Power-ups change slice sizes and the real odds, and the new odds are shown. Hand flicks, wind-backs, the gremlin and pop-offs only change how the wheel gets there. The one exception is Rigged, which you have to switch on yourself.</p>
+        <p class="about-quote">Built for the sacred moment when everyone says, “Just spin it already.”</p>
+        <section class="guide" aria-label="How to use SpinPage, and questions">
+        <div class="foot-rule"></div>
+
+        <h2>A spinning wheel that picks a name — and then a whole order</h2>
+        <p>
+            SpinPage is a free online wheel spinner and random name picker. Type in the names,
+            press SPIN, and the wheel lands on one of them. Where most wheel spinners stop there,
+            SpinPage keeps going: the winner steps off the wheel and takes the next slot in the
+            draft order, so spinning until the wheel is empty leaves you with a complete ranked
+            list you can copy straight out. Nothing to install, no account, and no ads.
         </p>
 
-        <div class="about-grid">
-            <div class="about-chip" style="--chip-color:#d4af37">
-                <div class="about-chip-title">Draft Orders</div>
-                <div class="about-chip-text">Winners leave the wheel and line up in a clean pick list.</div>
+        <div class="foot-cols">
+            <div>
+                <h2>How to use it</h2>
+                <h3>1. Add the names</h3>
+                <p>Type a name and press Enter. Two is the minimum; there is no upper limit, and the wheel keeps subdividing as the list grows.</p>
+                <h3>2. Spin</h3>
+                <p>Press SPIN, or grab the wheel with the mouse or a finger, drag it round and let go. Your flick decides how fast it goes and how many laps it turns — never where it stops. Flick it hard enough and the wheel can come off its hub entirely, bouncing or rolling across the screen before it drops back on to finish the spin.</p>
+                <h3>3. Take the result</h3>
+                <p>The winner is announced, then leaves the wheel for the next pick in the draft order. Turn on autospin and the remaining rounds run themselves.</p>
             </div>
-            <div class="about-chip" style="--chip-color:#6c3483">
-                <div class="about-chip-title">Spin It Yourself</div>
-                <div class="about-chip-text">Grab the wheel, drag it and let go — flick hard enough and it may pop clean off its hub, ricocheting or rolling away before it drops back on.</div>
-            </div>
-            <div class="about-chip" style="--chip-color:#c0392b">
-                <div class="about-chip-title">Wind-back</div>
-                <div class="about-chip-text">The wheel lands, sits there — then gets shoved into a whole second spin, the other way.</div>
-            </div>
-            <div class="about-chip" style="--chip-color:#1e8449">
-                <div class="about-chip-title">Zero Setup</div>
-                <div class="about-chip-text">No accounts, no build step, no dependencies. Just add names and spin.</div>
-            </div>
-            <div class="about-chip" style="--chip-color:#1a5276">
-                <div class="about-chip-title">Saved Locally</div>
-                <div class="about-chip-text">Your current table survives refreshes using browser localStorage.</div>
+
+            <div>
+                <h2>What people use it for</h2>
+                <ul>
+                    <li><strong>Draft orders</strong> — fantasy leagues, five-a-side sides, tournament seeding, who picks first.</li>
+                    <li><strong>Random name picker for class</strong> — who answers, who presents, who goes next.</li>
+                    <li><strong>Giveaway and raffle draws</strong> — a visible, watchable draw instead of a number out of a script.</li>
+                    <li><strong>Deciding as a group</strong> — where to eat, who does the washing up, who takes the last shift.</li>
+                    <li><strong>Game night order</strong> — turn order, team splits, dramatic tie-breakers.</li>
+                </ul>
+
+                <h2>Extras, if you want them</h2>
+                <ul>
+                    <li><strong>Power-up slices</strong> — Hot Seat, Cursed and Wildcard swell or shrink somebody's real odds, with the live percentage shown beside the wheel.</li>
+                    <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles. Only half of them survive.</li>
+                    <li><strong>Wind-back</strong> — the wheel lands, settles, then gets shoved into a whole second spin the other way for a different answer.</li>
+                    <li>Every extra is a switch in the options panel. Turn them all off and you have a plain, fast wheel spinner.</li>
+                </ul>
             </div>
         </div>
 
-        <div class="about-section-title">What It Does</div>
-        <ul class="about-list">
-            <li>Spins a smooth animated canvas wheel to pick a random winner.</li>
-            <li>Lets you spin by hand: drag the wheel and release — your flick sets the speed, the laps and the drama, never the winner.</li>
-            <li>Builds a full draft order with undo, restore, clear, copy, and autospin controls.</li>
-            <li>Drops random power-up slices — Hot Seat, Cursed, and Wildcard — that swell or shrink the real odds, with the live odds shown beside the wheel.</li>
-            <li>Hides a ⚠ PANIC wedge that launches a horse race over 2–4 hurdles, each horse carrying its own posted odds of clearing them — and only half the drafted survive.</li>
-            <li>Adds confetti, fire, ticks, fanfare, and a second-chance wheel where no one is safe.</li>
-        </ul>
+        <h2>Questions</h2>
 
-        <div class="about-section-title">Best Used For</div>
-        <ul class="about-list">
-            <li>Fantasy drafts, giveaways, classroom picks, game nights, party orders, and dramatic tie-breakers.</li>
-            <li>Any decision that could technically be a spreadsheet, but deserves a spotlight instead.</li>
-        </ul>
+        <div class="foot-cols">
+            <div>
+                <h3>Is SpinPage free?</h3>
+                <p>Yes — free, no account, no ads. Open the page, add names, spin.</p>
 
-        <div class="about-quote">
-            Built for the sacred moment when everyone says, "Just spin it already."
+                <h3>Is the wheel actually random?</h3>
+                <p>Yes. The winner is drawn the moment you release the wheel, from the browser's random number generator. Spinning by hand changes the speed and the number of laps, but not where it lands, so the person spinning cannot steer it. The one exception is the Rigged option, which you have to switch on yourself.</p>
+
+                <h3>How many names can I add?</h3>
+                <p>Two at minimum, no fixed maximum. Names of up to 30 characters fit on a slice.</p>
+
+                <h3>Does it work on a phone?</h3>
+                <p>Yes. The layout adapts to phones and tablets, and the wheel takes touch — flick it with a finger.</p>
+            </div>
+
+            <div>
+                <h3>Does it save my names?</h3>
+                <p>Your names, draft order and settings live in your own browser's local storage, so they survive a refresh. Nothing is uploaded and no server holds your list.</p>
+
+                <h3>Can I get a full draft order rather than one winner?</h3>
+                <p>That is the default. Each winner leaves the wheel and takes the next pick, and COPY puts the finished order on your clipboard.</p>
+
+                <h3>Do I need to install anything?</h3>
+                <p>No. SpinPage is a single web page — it runs in the browser, offline once loaded, with no sign-up and no download.</p>
+
+                <h3>Can I undo a spin?</h3>
+                <p>Yes. UNDO reverses the last thing that happened — a pick, a stolen seat or a whole PANIC race. RESTORE ALL puts every pick back on the wheel, and DELETE PICKS takes the drafted players off the table; both can be taken back from the message that pops up.</p>
+            </div>
+        </div>
+
+        <p class="foot-note">SpinPage — a free spinning wheel, random name picker and draft order generator. Runs entirely in your browser.</p>
+        </section>
+    </div>
+</dialog>
+
+<!-- ── Draft complete ── -->
+<dialog class="dialog splash" id="splashOverlay" aria-labelledby="splashTitle">
+    <div class="splash-card">
+        <div class="eyebrow">Draft complete</div>
+        <h2 class="dialog-title display" id="splashTitle">The results</h2>
+        <ol class="splash-list" id="splashList"></ol>
+        <div class="splash-actions">
+            <button type="button" class="text-btn" id="splashCopy"><svg class="i" aria-hidden="true"><use href="#i-copy"/></svg><span>Copy results</span></button>
+            <button type="button" class="primary-btn" id="splashClose">Done</button>
         </div>
     </div>
+</dialog>
+
+<div class="takeover nois-overlay" id="noisOverlay" role="dialog" aria-modal="true" aria-labelledby="noisTitle">
+    <div class="takeover-title" id="noisTitle">No one is safe</div>
+    <div class="nois-wrap" aria-hidden="true"><canvas id="noisWheel" width="380" height="380"></canvas></div>
+    <div class="takeover-result" id="noisResult"></div>
+    <button type="button" class="skip-btn" id="noisSkip">Skip to the result</button>
 </div>
 
-<div class="nois-overlay" id="noisOverlay">
-    <div class="nois-title">No one is safe</div>
-    <div class="nois-wrap">
-        <canvas id="noisWheel" width="380" height="380"></canvas>
-    </div>
-    <div class="nois-result" id="noisResult"></div>
-</div>
-
-<div class="marble-overlay" id="marbleOverlay">
-    <div class="marble-title">⚠ Panic ⚠</div>
-    <div class="marble-subtitle" id="marbleSubtitle">Only half survive the horse race</div>
+<div class="takeover marble-overlay" id="marbleOverlay" role="dialog" aria-modal="true" aria-labelledby="marbleTitle">
+    <div class="takeover-title" id="marbleTitle">Panic</div>
+    <div class="takeover-sub" id="marbleSubtitle">Only half survive the horse race</div>
     <div class="marble-stage">
-        <canvas id="marbleCanvas" width="388" height="560"></canvas>
+        <canvas id="marbleCanvas" width="388" height="560" aria-hidden="true"></canvas>
         <div class="marble-board">
             <div class="marble-board-title">Finish order</div>
             <ol class="marble-rank-list" id="marbleRankList"></ol>
         </div>
     </div>
-    <div class="marble-result" id="marbleResult"></div>
+    <div class="takeover-result" id="marbleResult"></div>
+    <button type="button" class="skip-btn" id="marbleSkip">Skip to the result</button>
 </div>
 
-<div class="windback-popup" id="windBackPopup">
-    <div class="wb-kicker">Not so fast</div>
-    <div class="wb-label">Wind-back</div>
-</div>
-
-<div class="powerup-popup" id="powerUpPopup">
-    <span class="pu-emoji">🔥</span>
-    <div class="pu-label">Hot Seat</div>
-    <div class="pu-name">Name</div>
-</div>
-
-<div class="winner-overlay" id="winnerOverlay">
-    <div class="winner-card" id="winnerCard">
-        <div class="winner-label">Winner</div>
-        <div class="winner-suits">♠ ♥ ♦ ♣</div>
-        <div class="winner-name" id="winnerName"></div>
-        <div class="winner-sub" id="winnerSub"></div>
-    </div>
-</div>
-
+<script src="js/core.js"></script>
 <script src="js/dom.js"></script>
 <script src="js/state.js"></script>
 <script src="js/audio.js"></script>

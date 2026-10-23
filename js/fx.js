@@ -10,14 +10,26 @@ let confettiParticles = [];
 let boostElements     = [];
 let overlayRunning    = false;
 
-function resizeOverlay() { overlayCanvas.width = window.innerWidth; overlayCanvas.height = window.innerHeight; }
+// Reallocating a canvas clears it, so only do it when the size really
+// changed — a phone's URL bar sliding shouldn't wipe a confetti burst.
+function resizeOverlay() {
+    if (overlayCanvas.width !== window.innerWidth)   overlayCanvas.width  = window.innerWidth;
+    if (overlayCanvas.height !== window.innerHeight) overlayCanvas.height = window.innerHeight;
+}
 
-const CONFETTI_COLORS = ['#d4af37','#f5e070','#c0392b','#e74c3c','#fff','#e8dfc8','#2471a3','#1e8449'];
+// Bursts come out of the wheel, not the middle of the screen: the pointer
+// for a win, the hub for a wind-back.
+function burstOrigin(atPointer) {
+    const r = wheelWrap.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height * (atPointer ? 0.14 : 0.5) };
+}
+
+const CONFETTI_COLORS = ['#e2b94a','#f6dc8a','#c8352a','#ff6b5f','#fff8ec','#f3ead6','#74b9f0','#4fd09c'];
 const SUITS = ['♠','♥','♦','♣'];
 
 function launchConfetti(accentColor) {
-    const W = overlayCanvas.width, H = overlayCanvas.height;
-    const ox = W / 2, oy = H * 0.42;
+    if (calmEffects()) return;
+    const { x: ox, y: oy } = burstOrigin(true);
     const colors = [...CONFETTI_COLORS, accentColor];
     for (let i = 0; i < 160; i++) {
         const angle = Math.random() * Math.PI * 2, speed = Math.random() * 14 + 4;
@@ -35,8 +47,8 @@ function launchConfetti(accentColor) {
 }
 
 function launchBoostElements() {
-    const W = overlayCanvas.width, H = overlayCanvas.height;
-    const ox = W / 2, oy = H * 0.42;
+    if (calmEffects()) return;
+    const { x: ox, y: oy } = burstOrigin(false);
 
     // Flying card suits — large and dramatic
     for (let i = 0; i < 28; i++) {
@@ -48,7 +60,7 @@ function launchBoostElements() {
             vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 7,
             rot: Math.random()*360, rotV: (Math.random()-0.5)*18,
             size: Math.random()*42+22,
-            color: ['#d4af37','#f5e070','#c0392b','#ff6b6b','#fff'][Math.floor(Math.random()*5)],
+            color: ['#e2b94a','#f6dc8a','#c8352a','#ff6b5f','#fff8ec'][Math.floor(Math.random()*5)],
             life: 0, maxLife: Math.floor(Math.random()*70+50),
         });
     }
@@ -61,7 +73,7 @@ function launchBoostElements() {
             x: ox + (Math.random()-0.5)*120, y: oy + (Math.random()-0.5)*100,
             vx: Math.cos(angle)*speed, vy: Math.sin(angle)*speed - 4,
             size: Math.random()*5+2,
-            color: Math.random() < 0.65 ? '#d4af37' : '#ff6b6b',
+            color: Math.random() < 0.65 ? '#e2b94a' : '#ff6b5f',
             life: 0, maxLife: Math.floor(Math.random()*45+20),
         });
     }
@@ -140,11 +152,17 @@ const fctx       = fireCanvas.getContext('2d');
 let   fireParticles = [];
 let   fireRunning   = false;
 
+// The fire layer carries a full-screen blur, so it only exists in the page
+// while it is burning.
 function startFire() {
-    if (!fireRunning) { fireRunning = true; requestAnimationFrame(fireLoop); }
+    if (calmEffects()) { fireParticles = []; return; }
+    if (!fireRunning) { fireRunning = true; fireCanvas.classList.add('burning'); requestAnimationFrame(fireLoop); }
 }
 
-function resizeFire() { fireCanvas.width = window.innerWidth; fireCanvas.height = window.innerHeight; }
+function resizeFire() {
+    if (fireCanvas.width !== window.innerWidth)   fireCanvas.width  = window.innerWidth;
+    if (fireCanvas.height !== window.innerHeight) fireCanvas.height = window.innerHeight;
+}
 
 function spawnFlame(x, vy, size) {
     fireParticles.push({
@@ -184,7 +202,7 @@ function fireLoop() {
     fctx.globalAlpha = 1;
 
     // Stop the loop once the surge burns out — no idle full-screen RAF
-    if (fireParticles.length === 0) { fireRunning = false; fctx.clearRect(0,0,W,H); return; }
+    if (fireParticles.length === 0) { fireRunning = false; fctx.clearRect(0,0,W,H); fireCanvas.classList.remove('burning'); return; }
     requestAnimationFrame(fireLoop);
 }
 
@@ -192,13 +210,14 @@ function fireLoop() {
 function flashScreen() {
     if (prefersReducedMotion()) return;   // skip the photosensitive luminance flash
     const el = document.createElement('div');
-    el.style.cssText = 'position:fixed;inset:0;background:rgba(212,175,55,0.22);z-index:1500;pointer-events:none;opacity:1;transition:opacity 0.45s ease;';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(226,185,74,0.22);z-index:1500;pointer-events:none;opacity:1;transition:opacity 0.45s ease;';
     document.body.appendChild(el);
     requestAnimationFrame(()=>{ el.style.opacity='0'; });
     setTimeout(()=>el.remove(), 550);
 }
 
 function shakeWheel() {
+    if (calmEffects()) return;
     wheelWrap.classList.remove('shaking');
     void wheelWrap.offsetWidth; // force reflow
     wheelWrap.classList.add('shaking');

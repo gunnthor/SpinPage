@@ -1,399 +1,297 @@
 /* ══════════════════════════════════════
    Draw wheel
-══════════════════════════════════════ */
-function drawWheel() {
-    ctx.clearRect(0,0,SIZE,SIZE);
-    if (names.length===0) {
-        const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
-        bg.addColorStop(0,'#161022'); bg.addColorStop(1,'#08080e');
-        ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fillStyle=bg; ctx.fill();
-        ctx.strokeStyle='rgba(212,175,55,0.42)'; ctx.lineWidth=3; ctx.stroke();
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillStyle='#d4af37';
-        ctx.font='700 18px Palatino Linotype, Palatino, Georgia, serif';
-        ctx.fillText(stackedLayout() ? 'Add names below' : 'Add names on the left',cx,cy-10);
-        ctx.fillStyle='#9b8d68';
-        ctx.font='italic 13px Palatino Linotype, Palatino, Georgia, serif';
-        ctx.fillText('to get started.',cx,cy+16);
-        return;
-    }
-    if (names.length===1) {
-        const bg=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
-        bg.addColorStop(0,'#161022'); bg.addColorStop(1,'#08080e');
-        ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.fillStyle=bg; ctx.fill();
-        ctx.strokeStyle='rgba(212,175,55,0.42)'; ctx.lineWidth=3; ctx.stroke();
-        ctx.textAlign='center'; ctx.textBaseline='middle';
-        ctx.fillStyle='#d4af37';
-        ctx.font='700 18px Palatino Linotype, Palatino, Georgia, serif';
-        ctx.fillText('Add 1 more name',cx,cy-10);
-        ctx.fillStyle='#9b8d68';
-        ctx.font='italic 13px Palatino Linotype, Palatino, Georgia, serif';
-        ctx.fillText('A duel needs two names to spin',cx,cy+16);
-        return;
-    }
-    const seg     = buildSegments(getWeights());
-    const weights = seg.weights;
-    const count   = seg.labels.length;
-    const totalW  = weights.reduce((a,b)=>a+b,0) || 1;
-    const TAU     = 2*Math.PI;
-    const base    = rotation - Math.PI/2;
-    let   acc     = 0;
-    const starts  = [];                       // local start offset per slice, for divider lines
-    for (let i=0;i<count;i++) {
-        const isPanic = i === seg.panicIndex;
-        const a0 = (acc/totalW)*TAU;
-        acc += weights[i];
-        const a1 = (acc/totalW)*TAU;
-        starts.push(a0);
-        const sliceAng = a1 - a0;
-        const start=base+a0, end=base+a1, mid=(start+end)/2;
-        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
-        ctx.fillStyle=seg.colors[i]; ctx.fill();
-        if (!isSpinning) {
-            const shine=ctx.createRadialGradient(cx,cy,0,cx,cy,R);
-            shine.addColorStop(0,'rgba(255,255,255,0.10)'); shine.addColorStop(0.55,'rgba(255,255,255,0.03)'); shine.addColorStop(1,'rgba(0,0,0,0.25)');
-            ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,R,start,end); ctx.closePath();
-            ctx.fillStyle=shine; ctx.fill();
-        }
-        if (sliceAng > 0.13) {                 // skip labels on ultra-thin (cursed) slices
-            ctx.save(); ctx.translate(cx,cy); ctx.rotate(mid);
-            const fs=isPanic?15:count>14?10:count>9?12:count>5?14:16;
-            ctx.font=`${isPanic?900:700} ${fs}px Segoe UI,system-ui,sans-serif`;
-            ctx.textAlign='center'; ctx.textBaseline='middle';
-            ctx.fillStyle = isPanic ? PANIC.textColor : 'rgba(255,255,255,0.95)';
-            ctx.shadowColor= isPanic ? 'rgba(255,92,138,0.7)' : 'rgba(0,0,0,0.5)';
-            ctx.shadowBlur = isPanic ? 8 : 2;
-            ctx.shadowOffsetY=1;
-            let label=seg.labels[i];
-            const maxW=R*0.52;
-            while(ctx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
-            if(label!==seg.labels[i]) label+='…';
-            ctx.fillText(isPanic ? '⚠ '+label : label,R*0.62,0); ctx.restore();
-        }
-    }
-    for (let i=0;i<count;i++) {
-        const angle=base+starts[i];
-        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(cx+Math.cos(angle)*R,cy+Math.sin(angle)*R);
-        ctx.strokeStyle='rgba(212,175,55,0.4)'; ctx.lineWidth=1.5; ctx.stroke();
-    }
-    ctx.beginPath(); ctx.arc(cx,cy,R,0,2*Math.PI); ctx.strokeStyle='rgba(212,175,55,0.55)'; ctx.lineWidth=4; ctx.stroke();
-    ctx.beginPath(); ctx.arc(cx,cy,R-9,0,2*Math.PI); ctx.strokeStyle='rgba(212,175,55,0.12)'; ctx.lineWidth=1; ctx.stroke();
-    const hub=ctx.createRadialGradient(cx,cy,0,cx,cy,22);
-    hub.addColorStop(0,'#f5e070'); hub.addColorStop(0.45,'#d4af37'); hub.addColorStop(1,'#6b5010');
-    ctx.beginPath(); ctx.arc(cx,cy,22,0,2*Math.PI); ctx.fillStyle=hub; ctx.fill();
-    ctx.strokeStyle='rgba(255,230,100,0.3)'; ctx.lineWidth=1.5; ctx.stroke();
-}
-
-function drawPointer() {
-    const tipX=cx, tipY=22, halfW=15;
-    ctx.shadowColor='rgba(212,175,55,0.8)'; ctx.shadowBlur=18;
-    const pg=ctx.createLinearGradient(tipX-halfW,0,tipX+halfW,0);
-    pg.addColorStop(0,'#6b5010'); pg.addColorStop(0.5,'#f5e070'); pg.addColorStop(1,'#6b5010');
-    ctx.beginPath(); ctx.moveTo(tipX-halfW,3); ctx.lineTo(tipX+halfW,3); ctx.lineTo(tipX,tipY);
-    ctx.closePath(); ctx.fillStyle=pg; ctx.fill(); ctx.shadowBlur=0;
-    ctx.beginPath(); ctx.arc(tipX,tipY,4.5,0,2*Math.PI);
-    ctx.fillStyle='#fff'; ctx.shadowColor='rgba(255,255,255,0.9)'; ctx.shadowBlur=6; ctx.fill(); ctx.shadowBlur=0;
-}
-
-// While the wheel is popped off, its pointer stays behind on the frame
-// (a CSS ghost pinned to the empty socket) instead of flying with it.
-function redraw() { drawWheel(); if (!popOff.active) drawPointer(); }
-
-/* ══════════════════════════════════════
-   Wind-back easing
    ─────────────────────────────────────
-   The whole trick is that nothing gives it away. Up to the false stop
-   this is an ordinary spin on the ordinary curve — same shape, same
-   slowing, same creep to a halt — so it reads as a spin that has
-   landed. Then it is shoved the other way and does a second, equally
-   ordinary spin backwards, coasting to a halt on the real winner. One
-   reversal, no yank-and-release.
+   Everything is drawn in 480-unit wheel space (SIZE, cx, cy, R) and scaled
+   onto a backing store sized to the wheel's real on-screen pixels, so it is
+   sharp on a phone and on a 4K monitor alike, and the gremlin and pop-off
+   geometry — solved against R = 228 of 480 — never moves.
 
-   The first leg deliberately overshoots the landing by exactly the
-   ground the backwards leg will give back, so the net rotation is
-   untouched: the slice it finishes on is the one that was drawn before
-   the wheel ever moved.
-
-   t 0.00-0.44 : an ordinary spin, decelerating to a stop  (→ 1 + over)
-   t 0.44-0.53 : sat on a slice, rocking a couple of degrees
-   t 0.53-1.00 : shoved the other way, an ordinary spin back to the winner
+   Two cached layers, so a frame is two drawImage calls:
+     face   slices, dividers, labels and pegs. Rotates with the wheel, and
+            is only repainted when the table or the slice weights change.
+     light  the room's lighting, the brass rim and the hub. It does not
+            rotate — light comes from the room, not from the wheel — so the
+            wheel looks the same at rest and at full speed.
 ══════════════════════════════════════ */
-const WB = { stop: 0.44, hold: 0.53 };
+const faceCanvas  = document.createElement('canvas');
+const faceCtx     = faceCanvas.getContext('2d');
+const lightCanvas = document.createElement('canvas');
+const lightCtx    = lightCanvas.getContext('2d');
+let faceKey        = '';
+let lightKey       = '';
+let wheelScale     = 1;          // backing-store px per wheel unit
+let wheelHighlight = null;       // name whose slice is spotlit after a landing
+let spinSeg        = null;       // the slices a spin in flight was solved against
 
-// `over` is how far past the landing the first leg runs, as a fraction of
-// the net rotation; `totalRot` only sizes the rock, which wants to be a
-// couple of degrees whatever the trip works out to.
-function makeWindBackEase(over, totalRot) {
-    const at   = 1 + over;
-    const rock = (2.5 * Math.PI/180) / Math.abs(totalRot);
-    return function (t) {
-        if (t < WB.stop) {                  // an ordinary spin, to an ordinary stop
-            return easeOut(t / WB.stop) * at;
-        }
-        if (t < WB.hold) {                  // a wheel that has just stopped rocks
-            const u = (t - WB.stop) / (WB.hold - WB.stop);
-            return at + Math.sin(u * Math.PI * 3) * Math.exp(-u * 5) * rock;
-        }
-        return at - easeOut((t - WB.hold) / (1 - WB.hold)) * over;  // and away the other way
-    };
+const HUB_R   = 31;              // hub radius, wheel units
+const PEG_R   = R - 8;           // radius of the peg ring
+const LABEL_R = R - 19;          // labels end here, just inside the pegs
+const LABEL_FONT = '"Oswald Variable", "Bahnschrift SemiCondensed", "Avenir Next Condensed", "Roboto Condensed", "Arial Narrow", sans-serif';
+
+// Size the backing store to the canvas's layout box (offsetWidth ignores the
+// pop-off transform, so a flying wheel doesn't re-rasterise every frame).
+function sizeWheelCanvas() {
+    const css = canvas.offsetWidth || SIZE;
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const px  = Math.max(240, Math.min(2048, Math.round(css * dpr)));
+    if (canvas.width === px && faceCanvas.width === px) return false;
+    canvas.width = canvas.height = px;
+    faceCanvas.width = faceCanvas.height = px;
+    lightCanvas.width = lightCanvas.height = px;
+    wheelScale = px / SIZE;
+    faceKey = lightKey = '';
+    return true;
 }
 
-/* ══════════════════════════════════════
-   The Gremlin
-   ─────────────────────────────────────
-   A spin runs out normally. As it crawls through its last degree — with
-   everyone already reading the slice — something climbs onto the rim and
-   takes hold of it.
-
-   Then it works the room. The creep is never smooth: a smoothly creeping
-   wheel is just a slow wheel, and the eye adapts to it inside a second. It
-   is discrete shoves with dead-still holds between them, slow enough that
-   you can always see exactly where the wheel is, and every hold parks the
-   pointer on somebody's name and leaves it sitting there.
-
-   The real trick is the FAKE STOP. After a few shoves he gives the wheel
-   one last little nudge and lets go — hands off the rim, looking innocently
-   away — while it crawls to a halt. It is over. It has landed. Then he
-   grabs it again. That whole round can repeat up to five times, so a
-   gremlin runs anywhere from about fifteen seconds to a solid minute of
-   nobody being allowed to know anything.
-
-   The peg-tick engine pays for the sound design for free: it scales its
-   click off wheel speed, so a creep this slow comes out as single lonely
-   clicks, and the dying crawl of a fake stop ticks slower and slower.
-
-   Like the wind-back, the route is the only thing that changes. The winner
-   was drawn before the wheel ever moved and the whole creep is sized
-   backwards from that landing — the gremlin is a passenger with a sense of
-   timing, not a thumb on the scale.
-══════════════════════════════════════ */
-const GOBLIN = {
-    // Likelier as the wheel empties out: the last few picks are the ones
-    // where a stolen minute actually costs somebody something.
-    chanceNear: 0.30,        // with 3 names left
-    chanceFar:  0.05,        // with 3 + fadeOver names, and beyond
-    fadeOver:   9,
-
-    // Rounds, weighted: 1..6. Most gremlins are over inside fifteen seconds;
-    // the six-round one runs well over a minute and is rare enough that people
-    // tell each other about it afterwards.
-    roundOdds:  [40, 22, 15, 11, 7, 5],
-    perRound:   [2, 4],      // shoves before the first fake stop...
-    shovesPer:  0.5,         // ...and this many more with every round after
-    slicesBase: 1.25,        // creep arc in SLICES, so it scales with the wheel...
-    slicesPer:  1.90,        // ...and grows with every extra round
-    maxLaps:    3.6,         // hard ceiling, for wheels with two or three names
-
-    /* Slow burn. Every round takes more of the wheel and sits on it longer
-       than the one before, so the thing ratchets instead of repeating: the
-       first round is a few nudges and a short stall, the sixth is long
-       grinding sweeps across several names with five seconds of silence at
-       the end of them. Because shove speed is capped either way, a bigger
-       round doesn't move faster — it moves for longer. */
-    burn:       0.38,        // extra wheel per round
-    dwellBurn:  0.18,        // extra hold after each shove
-    stallBurn:  0.24,        // extra dead stop at each fake stop
-    teaseOdds:  0.70,        // chance of a wrong-way drag in any one round
-    degPerSec:  110,         // a shove may not outrun the eye: this is the most
-                             //   wheel, in degrees, one second of push may cover
-
-    pushMs:   [300, 470],    // one shove
-    dwellMs:  [450, 950],    // the dead-still hold after it
-    fadeMs:   [1250, 1900],  // the long crawl where it looks like it is dying
-    stallMs:  [1700, 3000],  // ...and the dead stop at the end of that crawl
-    teaseMs:  [800, 1150],   // the hold after he drags it the wrong way
-    releaseMs:[950, 1300],   // the shove he actually lets go on
-    climbMs:  1150,          // still time between the opening spin and the first shove
-    arriveMs: 300,           // he appears this long BEFORE the wheel would stop
-    legAMs:   [4700, 5400],  // the ordinary-looking opening spin
-};
-
-const gobRnd = ([a, b]) => a + Math.random() * (b - a);
-
-/* Own functions so a test can force the branch, or read the odds back,
-   without pinning Math.random for a whole spin (cf. hurdleOdds). */
-function goblinChance(namesLeft) {
-    const t = Math.min(Math.max((namesLeft - 3) / GOBLIN.fadeOver, 0), 1);
-    return GOBLIN.chanceNear + (GOBLIN.chanceFar - GOBLIN.chanceNear) * t;
-}
-function goblinFires(namesLeft) { return Math.random() < goblinChance(namesLeft); }
-
-function goblinRounds() {
-    const odds = GOBLIN.roundOdds;
-    let r = Math.random() * odds.reduce((a, b) => a + b, 0);
-    for (let i = 0; i < odds.length; i++) if ((r -= odds[i]) < 0) return i + 1;
-    return odds.length;
+function sliceArcs(weights) {
+    const TAU = 2 * Math.PI;
+    const total = weights.reduce((a, b) => a + b, 0) || 1;
+    let acc = 0;
+    return weights.map(w => {
+        const a0 = (acc / total) * TAU; acc += w;
+        return { a0, a1: (acc / total) * TAU };
+    });
 }
 
-/* One creep, as relative moves: how big each is against the others, how long
-   the push takes, and how long he sits on it afterwards. */
-function makeGoblinCreep(rounds, creepArc, share) {
-    const moves = [];
-    const mustTease = Math.floor(Math.random() * rounds);     // at least one, guaranteed
+/* ── Label sizing ──
+   One type size for the whole wheel, solved from geometry rather than the
+   name count: the largest size at which the thinnest ordinary slice still
+   has room for a few letters. The thinnest slice is measured at the table's
+   resting geometry, so a power-up warping the slices doesn't make every
+   label jump. Each label is then cut to its own slice: surname or initial
+   first ("Gwen F." → "Gwen"), an ellipsis only after that. */
+function labelPlan(seg) {
+    const css   = canvas.offsetWidth || SIZE;
+    const unit  = SIZE / css;                                    // wheel units per CSS px
+    const dpr   = window.devicePixelRatio || 1;
+    const minFs = (dpr >= 2 ? 10 : 11) * unit;
+    const maxFs = Math.max(14 * unit, 0.044 * SIZE);
+    const players = seg.labels.length - (seg.panicIndex >= 0 ? 1 : 0);
+    const restW = players + (seg.panicIndex >= 0 ? Math.min(PANIC.weight, players / 3) : 0);
+    const angMin = 2 * Math.PI / Math.max(restW, 1);
+    let fs = maxFs;
+    while (fs > minFs && roomFor(fs, angMin) < fs * 4.5) fs -= 0.5;
+    return { fs, show: roomFor(fs, angMin) >= fs * 2.4 };
+}
+// Radial room for a label of size fs in a slice of angle ang: from the rim
+// inward until the slice is too narrow to hold the letters' height.
+function roomFor(fs, ang) {
+    const inner = Math.max(HUB_R + 10, fs / (0.8 * 2 * Math.sin(Math.min(ang, Math.PI) / 2)));
+    return Math.min(R * 0.66, LABEL_R - inner);
+}
+function fitText(c, text, room) {
+    if (c.measureText(text).width <= room) return text;
+    const first = text.split(' ')[0];
+    if (first !== text && c.measureText(first).width <= room) return first;
+    let cut = text;
+    while (cut.length > 1 && c.measureText(cut + '…').width > room) cut = cut.slice(0, -1);
+    return cut.length > 1 ? cut + '…' : '';
+}
 
-    for (let r = 0; r < rounds; r++) {
-        const burn  = 1 + GOBLIN.burn      * r;              // this round's share of the wheel
-        const held  = 1 + GOBLIN.dwellBurn * r;              // ...and of the patience
-        const n = Math.round(gobRnd(GOBLIN.perRound) + GOBLIN.shovesPer * r);
+let panicStripe = null;
+function panicPattern(c) {
+    if (!panicStripe) {
+        panicStripe = document.createElement('canvas');
+        panicStripe.width = panicStripe.height = 16;
+        const p = panicStripe.getContext('2d');
+        p.fillStyle = PANIC.color; p.fillRect(0, 0, 16, 16);
+        p.strokeStyle = 'rgba(255,61,139,0.32)'; p.lineWidth = 4;
+        p.beginPath();
+        p.moveTo(-4, 20); p.lineTo(20, -4); p.moveTo(-12, 12); p.lineTo(12, -12); p.moveTo(4, 28); p.lineTo(28, 4);
+        p.stroke();
+    }
+    return c.createPattern(panicStripe, 'repeat');
+}
 
-        // Where in the round he drags it backwards, if he does. Held off until
-        // the second shove of the opening round, so the drag has some travel to
-        // eat into; it can still reach back past the false stop, but only by a
-        // fraction of a slice (0.2% of runs, 0.17 of a slice at worst), which
-        // just reads as him being greedy.
-        const teasing = r === mustTease || Math.random() < GOBLIN.teaseOdds;
-        const first   = r === 0 ? 2 : 1;
-        const teaseAt = teasing && n >= first ? first + Math.floor(Math.random() * (n - first + 1)) : -1;
+function paintPegs(c, count) {
+    const ring = pegRing(count);
+    const n = Math.max(count, 1) * ring.per;
+    for (let k = 0; k < n; k++) {
+        const a = -Math.PI / 2 + k * ring.arc;
+        const x = cx + Math.cos(a) * PEG_R, y = cy + Math.sin(a) * PEG_R;
+        const r = isAccentPeg(k, ring.per) ? 3.2 : 2.3;
+        const g = c.createRadialGradient(x - r * 0.35, y - r * 0.4, 0, x, y, r);
+        g.addColorStop(0, '#fff6cf'); g.addColorStop(0.45, '#e2bd55'); g.addColorStop(1, '#6e5214');
+        c.beginPath(); c.arc(x, y, r, 0, 2 * Math.PI); c.fillStyle = g; c.fill();
+        c.lineWidth = 0.6; c.strokeStyle = 'rgba(0,0,0,0.45)'; c.stroke();
+    }
+}
 
-        for (let i = 0; i < n; i++) {
-            moves.push({
-                size:  (0.75 + Math.random() * 0.85) * burn,
-                push:  gobRnd(GOBLIN.pushMs),
-                dwell: gobRnd(GOBLIN.dwellMs) * held,
-                // the first shove of any round after the first is him snatching it back
-                kind:  (i === 0 && r > 0) ? 'gotcha' : 'shove',
-            });
-            if (i + 1 === teaseAt) moves.push({      // sized below
-                size: 0, push: gobRnd([220, 330]),
-                dwell: gobRnd(GOBLIN.teaseMs) * held, kind: 'tease',
-            });
-        }
-        if (r < rounds - 1) moves.push({                     // the fake stop
-            size:  (0.45 + Math.random() * 0.30) * burn,
-            push:  gobRnd(GOBLIN.fadeMs),
-            dwell: gobRnd(GOBLIN.stallMs) * (1 + GOBLIN.stallBurn * r),
-            kind:  'fade',
+function prepare(c, canvasEl) {
+    c.setTransform(1, 0, 0, 1, 0, 0);
+    c.clearRect(0, 0, canvasEl.width, canvasEl.height);
+    c.setTransform(wheelScale, 0, 0, wheelScale, 0, 0);
+}
+
+function paintFace(seg) {
+    const c = faceCtx, base = -Math.PI / 2;
+    prepare(c, faceCanvas);
+    const arcs = sliceArcs(seg.weights);
+
+    arcs.forEach(({ a0, a1 }, i) => {
+        c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R, base + a0, base + a1); c.closePath();
+        c.fillStyle = i === seg.panicIndex ? panicPattern(c) : seg.colors[i];
+        c.fill();
+    });
+
+    // Dividers: a dark groove with a brass hairline in it.
+    arcs.forEach(({ a0 }) => {
+        const x = cx + Math.cos(base + a0) * R, y = cy + Math.sin(base + a0) * R;
+        c.beginPath(); c.moveTo(cx, cy); c.lineTo(x, y);
+        c.lineWidth = 2.4; c.strokeStyle = 'rgba(0,0,0,0.42)'; c.stroke();
+        c.lineWidth = 0.9; c.strokeStyle = 'rgba(240,206,110,0.6)'; c.stroke();
+    });
+
+    const plan = labelPlan(seg);
+    if (plan.show) {
+        arcs.forEach(({ a0, a1 }, i) => {
+            const panic = i === seg.panicIndex;
+            const room  = roomFor(plan.fs, a1 - a0);
+            if (room < plan.fs * 1.8) return;                 // a sliver: colour only
+            c.save();
+            c.translate(cx, cy); c.rotate(base + (a0 + a1) / 2);
+            c.font = `${panic ? 700 : 600} ${plan.fs.toFixed(2)}px ${LABEL_FONT}`;
+            c.textAlign = 'right'; c.textBaseline = 'middle';
+            const text = fitText(c, panic ? PANIC.label : seg.labels[i], room);
+            if (text) {
+                if (panic) { c.shadowColor = 'rgba(255,61,139,0.75)'; c.shadowBlur = 6; }
+                c.fillStyle = panic ? PANIC.textColor : inkOn(seg.colors[i]);
+                c.fillText(text, LABEL_R, plan.fs * 0.04);
+            }
+            c.restore();
         });
     }
-    moves.push({                                // ...and the one that is real; sized below
-        size: 0, push: gobRnd(GOBLIN.releaseMs), dwell: 0, kind: 'release',
-    });
-
-    /* The moves that carry the joke get exact shares of the creep rather than
-       being left to the dice, because a share of "whatever the other moves
-       happened to add up to" is unreadable at one extreme and silly at the
-       other:
-
-         the wrong-way drag  — must be big enough to see it go backwards
-         the final release   — must arrive somewhere NEW, or the whole
-                               build-up ends on the name it was already on
-
-       Everything else sums to A, so with k drags of share t and a release of
-       share r, span = A - k·t·span + r·span, which solves in one line. Every
-       drag gets the same share, so the fifth one is as readable as the first
-       however long the creep has become. */
-    const A = moves.reduce((a, m) =>
-        a + (m.kind === 'tease' || m.kind === 'release' ? 0 : m.size), 0);
-    const drags = moves.reduce((a, m) => a + (m.kind === 'tease' ? 1 : 0), 0);
-    const span = A / (1 + drags * share.tease - share.release);
-    moves.forEach(m => {
-        if (m.kind === 'tease')   m.size = -share.tease * span;
-        if (m.kind === 'release') m.size =  share.release * span;
-    });
-
-    // Normalised against the final position, so the last keyframe is exactly 1.
-    let acc = 0;
-    const raw   = moves.map(m => (acc += m.size));
-    const total = raw[raw.length - 1];
-
-    // Then stretch any push that would outrun the eye. Without this a big
-    // step on a three-name wheel and a small one on a twenty-name wheel both
-    // take 400ms, and the three-name version flicks past too fast to read.
-    const arcDeg = creepArc * 180 / Math.PI;
-    const keys = [{ r: 0, ms: 0, kind: 'grip' }];
-    moves.forEach((m, i) => {
-        const step = Math.abs(raw[i] - (i ? raw[i - 1] : 0)) / total;
-        const ms   = Math.max(m.push, step * arcDeg / GOBLIN.degPerSec * 1000);
-        keys.push({ r: raw[i] / total, ms, kind: m.kind });
-        if (m.dwell) keys.push({ r: raw[i] / total, ms: m.dwell, kind: 'hold' });
-    });
-    return keys;
+    paintPegs(c, seg.labels.length);
 }
 
-/* A shove: quick off the mark, then dragging to a stop against the wheel's
-   own weight. Pure ease-out would jump from standstill to full speed in one
-   frame, so a little smoothstep is blended in at the front. */
-const gobSmooth  = u => u * u * (3 - 2 * u);
-const gobShove   = u => 0.35 * gobSmooth(u) + 0.65 * (1 - Math.pow(1 - u, 2.4));
-const gobSnatch  = u => 0.20 * gobSmooth(u) + 0.80 * (1 - Math.pow(1 - u, 1.9));
-const gobRelease = u => 1 - Math.pow(1 - u, 3.2);
-// The dying crawl. The long heavy tail is the whole point: the ticks stretch
-// further and further apart and the wheel looks like it is giving up.
-const gobFade    = u => 0.45 * gobSmooth(u) + 0.55 * (1 - Math.pow(1 - u, 4.2));
-
-const GOB_EASE = { shove: gobShove, tease: gobShove, gotcha: gobSnatch,
-                   fade:  gobFade,  release: gobRelease };
-
-/* Size the creep so it ends exactly on the winner, then hand back an ease
-   over the whole spin plus the beats the frame loop fires on. */
-function buildGoblinRun(totalRot, creepArc, rounds, sliceArc) {
-    const at       = 1 - creepArc / totalRot;       // rotation fraction at the false stop
-    // Release: 1.05 slices, not 0.95, because a move longer than one slice
-    // crosses a divider wherever in the slice it starts from. Drag: half a
-    // slice is the least you can unmistakably see go the wrong way.
-    const share = { release: Math.min(0.45, 1.05 * sliceArc / creepArc),
-                    tease:   Math.min(0.16, 0.50 * sliceArc / creepArc) };
-    const keys  = makeGoblinCreep(rounds, creepArc, share);
-    const legA     = gobRnd(GOBLIN.legAMs);
-    const creepMs  = keys.reduce((a, k) => a + k.ms, 0);
-    const duration = legA + GOBLIN.climbMs + creepMs;
-
-    const tA = legA / duration;                       // opening spin ends
-    const tB = (legA + GOBLIN.climbMs) / duration;    // his hands are on it
-
-    let ms = 0;
-    const kf = keys.map(k => {
-        ms += k.ms;
-        return { t: tB + ms / duration, r: at + k.r * (1 - at), kind: k.kind };
-    });
-
-    const ease = t => {
-        if (t <= tA) return easeOut(t / tA) * at;     // an ordinary spin, to an ordinary stop
-        if (t <= tB) return at;                       // sat still while he climbs on
-        for (let i = 1; i < kf.length; i++) {
-            if (t <= kf[i].t || i === kf.length - 1) {
-                const p = kf[i - 1], q = kf[i];
-                if (q.kind === 'hold') return q.r;     // frozen, everyone looking at a name
-                const u = Math.min(Math.max((t - p.t) / (q.t - p.t), 0), 1);
-                return p.r + (q.r - p.r) * GOB_EASE[q.kind](u);
-            }
-        }
-        return 1;
-    };
-
-    // Beats: he arrives just before the wheel dies, then one per move he makes.
-    const beats = [{ t: Math.max(0, (legA - GOBLIN.arriveMs) / duration), kind: 'arrive' }];
-    for (let i = 1; i < kf.length; i++) {
-        if (kf[i].kind !== 'hold') beats.push({ t: kf[i - 1].t, kind: kf[i].kind });
+// The wheel with nothing on it yet: a dim, gilded blank — clearly a wheel,
+// clearly waiting. The words sit in the DOM over it (see .wheel-empty).
+function paintBlankFace() {
+    const c = faceCtx, TAU = 2 * Math.PI, base = -Math.PI / 2, n = 12;
+    prepare(c, faceCanvas);
+    for (let i = 0; i < n; i++) {
+        c.beginPath(); c.moveTo(cx, cy); c.arc(cx, cy, R, base + i * TAU / n, base + (i + 1) * TAU / n); c.closePath();
+        c.fillStyle = i % 2 ? '#15121d' : '#1c1826'; c.fill();
     }
-    return { duration, ease, beats, rounds };
-}
-
-/* Which slice a wheel offset falls in, and how far across it. */
-function offsetSlice(off, segW, totalW) {
-    const TAU = 2 * Math.PI;
-    let acc = 0;
-    for (let i = 0; i < segW.length; i++) {
-        const a0 = (acc / totalW) * TAU; acc += segW[i];
-        const a1 = (acc / totalW) * TAU;
-        if (off < a1 || i === segW.length - 1) return { i, frac: (off - a0) / (a1 - a0), arc: a1 - a0 };
+    for (let i = 0; i < n; i++) {
+        const a = base + i * TAU / n;
+        c.beginPath(); c.moveTo(cx, cy); c.lineTo(cx + Math.cos(a) * R, cy + Math.sin(a) * R);
+        c.lineWidth = 1; c.strokeStyle = 'rgba(240,206,110,0.16)'; c.stroke();
     }
+    paintPegs(c, n);
 }
 
-/* How much arc to leave for the gremlin. Sized in SLICES, not radians, so a
-   three-name wheel doesn't get hauled round six times and a twenty-name one
-   still changes hands every round. Then it is nudged so the false stop
-   doesn't land straddling a divider — a wheel that "stops" on a line reads
-   as a bug, not a result. */
-function goblinCreepArc(segW, totalW, winnerOffset, rounds) {
-    const TAU    = 2 * Math.PI;
-    const slices = GOBLIN.slicesBase + GOBLIN.slicesPer * rounds;
-    let arc = Math.min(slices * TAU / segW.length, TAU * GOBLIN.maxLaps);
-    const at = offsetSlice(((winnerOffset + arc) % TAU + TAU) % TAU, segW, totalW);
-    if      (at.frac < 0.20) arc += (0.34 - at.frac) * at.arc;
-    else if (at.frac > 0.80) arc -= (at.frac - 0.66) * at.arc;
-    return arc;
+function paintLight(blank) {
+    const c = lightCtx;
+    prepare(c, lightCanvas);
+    // Fall-off: brighter toward the hub, darker into the rim...
+    const fall = c.createRadialGradient(cx, cy, HUB_R, cx, cy, R);
+    fall.addColorStop(0, 'rgba(255,255,255,0.10)');
+    fall.addColorStop(0.55, 'rgba(255,255,255,0.02)');
+    fall.addColorStop(0.86, 'rgba(0,0,0,0.10)');
+    fall.addColorStop(1, 'rgba(0,0,0,0.34)');
+    c.beginPath(); c.arc(cx, cy, R, 0, 2 * Math.PI); c.fillStyle = fall; c.fill();
+    // ...and a soft key light from the upper left.
+    const kx = cx - R * 0.42, ky = cy - R * 0.55;
+    const key = c.createRadialGradient(kx, ky, 0, kx, ky, R * 1.15);
+    key.addColorStop(0, 'rgba(255,246,220,0.17)');
+    key.addColorStop(0.45, 'rgba(255,246,220,0.05)');
+    key.addColorStop(1, 'rgba(0,0,0,0.06)');
+    c.fill(); c.fillStyle = key; c.fill();
+
+    // The brass rim: dark seat, bright lip lit from above, shadow groove.
+    c.beginPath(); c.arc(cx, cy, R, 0, 2 * Math.PI);
+    c.lineWidth = 7; c.strokeStyle = '#3d2d09'; c.stroke();
+    const lip = c.createLinearGradient(0, cy - R, 0, cy + R);
+    lip.addColorStop(0, '#fff1b8'); lip.addColorStop(0.3, '#e2b94a'); lip.addColorStop(0.68, '#7c5c16'); lip.addColorStop(1, '#d9b04a');
+    c.beginPath(); c.arc(cx, cy, R - 1.2, 0, 2 * Math.PI);
+    c.lineWidth = 3.6; c.strokeStyle = lip; c.stroke();
+    c.beginPath(); c.arc(cx, cy, R - 4.8, 0, 2 * Math.PI);
+    c.lineWidth = 1.2; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.stroke();
+
+    // The hub: domed brass, an engraved well and the house mark. An empty
+    // wheel has words where the hub would be, so it goes without.
+    if (blank) return;
+    const ring = c.createLinearGradient(cx - HUB_R, cy - HUB_R, cx + HUB_R, cy + HUB_R);
+    ring.addColorStop(0, '#fff3c2'); ring.addColorStop(0.32, '#e0b84e'); ring.addColorStop(0.64, '#7c5c16'); ring.addColorStop(1, '#f2d77c');
+    c.save();
+    c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 10; c.shadowOffsetY = 3;
+    c.beginPath(); c.arc(cx, cy, HUB_R, 0, 2 * Math.PI); c.fillStyle = ring; c.fill();
+    c.restore();
+    const well = c.createRadialGradient(cx, cy - 6, 2, cx, cy, HUB_R - 7);
+    well.addColorStop(0, '#2a2236'); well.addColorStop(1, '#09080e');
+    c.beginPath(); c.arc(cx, cy, HUB_R - 7, 0, 2 * Math.PI); c.fillStyle = well; c.fill();
+    c.lineWidth = 1; c.strokeStyle = 'rgba(255,236,170,0.35)'; c.stroke();
+    const gem = c.createRadialGradient(cx - 3, cy - 4, 1, cx, cy, 12);
+    gem.addColorStop(0, '#ffd9de'); gem.addColorStop(0.45, '#d8344a'); gem.addColorStop(1, '#5a0d1b');
+    c.beginPath(); c.moveTo(cx, cy - 12); c.lineTo(cx + 9, cy); c.lineTo(cx, cy + 12); c.lineTo(cx - 9, cy); c.closePath();
+    c.fillStyle = gem; c.fill();
+    c.lineWidth = 1.2; c.strokeStyle = '#c9a23c'; c.stroke();
 }
+
+// Dim everything but the winner and ring the winning slice in light.
+function paintHighlight(seg) {
+    const i = seg.labels.indexOf(wheelHighlight);
+    if (i < 0) return;
+    const { a0, a1 } = sliceArcs(seg.weights)[i];
+    const base = rotation - Math.PI / 2, TAU = 2 * Math.PI;
+    ctx.save();
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R - 3, base + a1, base + a0 + TAU); ctx.closePath();
+    ctx.fillStyle = 'rgba(4,3,9,0.6)'; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R - 3, base + a0, base + a1); ctx.closePath();
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(255,214,102,0.9)'; ctx.shadowBlur = 22;
+    ctx.lineWidth = 4; ctx.strokeStyle = '#ffe07a'; ctx.stroke();
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = '#fffbe8'; ctx.stroke();
+    ctx.restore();
+}
+
+function drawWheel() {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    const blank = names.length < 2;
+    const seg = blank ? null : (spinSeg || buildSegments(getWeights()));
+    const key = blank ? 'blank|' + canvas.width
+        : [canvas.width, canvas.offsetWidth, seg.panicIndex, seg.labels.join('\u0001'), seg.colors.join(','),
+           seg.weights.map(w => w.toFixed(4)).join(',')].join('|');
+    if (key !== faceKey) { blank ? paintBlankFace() : paintFace(seg); faceKey = key; }
+    const lk = canvas.width + (blank ? '|blank' : '');
+    if (lightKey !== lk) { paintLight(blank); lightKey = lk; }
+
+    const W = canvas.width;
+    ctx.translate(W / 2, W / 2);
+    ctx.rotate(blank ? 0 : rotation);
+    ctx.drawImage(faceCanvas, -W / 2, -W / 2);
+    ctx.setTransform(wheelScale, 0, 0, wheelScale, 0, 0);
+    if (!blank && wheelHighlight) paintHighlight(seg);
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.drawImage(lightCanvas, 0, 0);
+}
+
+/* ── The flapper ──
+   The pointer is a leather flapper on the frame, so it rides the pegs: each
+   one pushes it aside as it comes up and lets it snap back as it passes.
+   Driven from the same peg ring the click sound uses, so you see each tick
+   you hear. At speed the swing shrinks to a shiver; calm effects keep it still. */
+const wheelPointer = document.getElementById('wheelPointer');
+let flapRot = 0, flapT = 0;
+function flapPointer() {
+    if (!wheelPointer) return;
+    if (calmEffects()) { wheelPointer.style.transform = ''; return; }
+    const now = performance.now();
+    const ring = pegRing(names.length < 2 ? 12 : segCount());
+    const moved = rotation - flapRot;
+    const speed = Math.abs(moved) / Math.max(now - flapT, 1);
+    flapRot = rotation; flapT = now;
+    const phase = ((rotation / ring.arc) % 1 + 1) % 1;            // 0 at a peg, 1 at the next
+    const push  = moved >= 0 ? Math.max(0, (phase - 0.55) / 0.45)  // the next peg is coming up
+                             : Math.max(0, (0.45 - phase) / 0.45);
+    const amp   = 18 * Math.min(1, Math.max(0.12, 1 - speed / 0.016));
+    const deg   = (moved >= 0 ? -1 : 1) * amp * push * push;
+    wheelPointer.style.transform = `rotate(${deg.toFixed(2)}deg)`;
+}
+
+function redraw() { drawWheel(); flapPointer(); }
 
 /* ══════════════════════════════════════
    Spin
@@ -412,13 +310,23 @@ function beginSpin(launch) {
     ensureAudio();
 
     isSpinning = true;
-    updateButtons();
+    phase = 'spinning';
+    stunt = null;
+    wheelHighlight = null;
+    hideWinCallout();
+    closeSheets();
+    // Put the phone keyboard away: the landing is the thing to watch.
+    if (document.activeElement && document.activeElement.matches('input')) document.activeElement.blur();
 
     // Maybe drop a power-up: a slice swells/shrinks before the spin, which
     // both looks dramatic AND shifts the real odds (winner is weighted).
     const pu = rollPowerUp();
-    setPowerUpRail(pu);
+    activePowerUp = pu ? describePowerUp(pu) : null;
+    if (activePowerUp) announce(activePowerUp.say, 'spin');
+    else if (!autoSpin) announce('Spinning.', 'spin');
+    commit({ save: false });
     if (pu) {
+        phase = 'warping';
         playPowerUpSound();
         showPowerUpPopup(pu);
         if (launch) {
@@ -468,14 +376,10 @@ function animateWeights(targetW, duration, done) {
     })(performance.now());
 }
 
-/* ------------------------------------------------------------------
-   Power-up rail
-   ------------------------------------------------------------------
+/* ── What a power-up did to the odds ──
    The drop popup is gone in a second and the slice it warped is a blur
-   once the wheel is moving, so the rail keeps the active power-up — and
-   what it did to the real odds — on screen beside the wheel until the
-   next spin. Desktop only; a phone has no side to put it on.
------------------------------------------------------------------- */
+   once the wheel is moving, so the status line keeps the power-up and its
+   effect on the real odds on screen for the whole spin, on every screen. */
 
 // Actual chance for one player, straight off the same segment weights the
 // draw uses — so it accounts for the PANIC wedge eating into the wheel.
@@ -486,34 +390,15 @@ function chanceOf(weights, idx) {
 }
 const pct = v => Math.round(v * 100) + '%';
 
-function setPowerUpRail(pu) {
-    railTitle.textContent = pu ? 'Active this spin' : 'Power-ups';
-    if (!pu) { powerUpRail.classList.remove('live'); syncPowerUpRail(); return; }
-
-    powerUpRail.style.setProperty('--pu-color', pu.color);
-    railEmoji.textContent = pu.emoji;
-    railLabel.textContent = pu.label;
-    railName.textContent  = pu.name;
-
-    if (pu.type === 'wildcard') {
-        const flat = names.map(() => 1);
-        const best = pu.weights.indexOf(Math.max(...pu.weights));
-        railOdds.innerHTML = 'Every slice re-rolled. Best odds: <b>' +
-            names[best] + ' ' + pct(chanceOf(pu.weights, best)) + '</b> (was ' +
-            pct(chanceOf(flat, best)) + ')';
-    } else {
-        const flat = names.map(() => 1);
-        railOdds.innerHTML = 'Odds <b>' + pct(chanceOf(flat, pu.idx)) + ' → ' +
-            pct(chanceOf(pu.weights, pu.idx)) + '</b> to win this spin';
-    }
-    powerUpRail.classList.add('live');
-    syncPowerUpRail();
-}
-
-function syncPowerUpRail() {
-    // Hidden outright when the feature is off — one steady state, so
-    // nothing below it ever jumps around mid-draft.
-    powerUpRail.classList.toggle('on', powerUpsEnabled);
+function describePowerUp(pu) {
+    const flat = names.map(() => 1);
+    const idx  = pu.type === 'wildcard' ? pu.weights.indexOf(Math.max(...pu.weights)) : pu.idx;
+    const from = chanceOf(flat, idx), to = chanceOf(pu.weights, idx);
+    const who  = names[idx];
+    const say  = pu.type === 'wildcard'
+        ? `Wildcard: every slice re-rolled. Best odds: ${who}, ${pct(to)}.`
+        : `${pu.type === 'cursed' ? 'Cursed:' : 'Power-up: ' + pu.label + ' on'} ${who}. Odds ${pct(from)} to ${pct(to)} this spin.`;
+    return { ...pu, who, from, to, say };
 }
 
 function showPowerUpPopup(pu) {
@@ -535,6 +420,10 @@ function showPowerUpPopup(pu) {
 function startSpin(spinWeights, launch) {
     const TAU    = 2 * Math.PI;
     const seg    = buildSegments(spinWeights);   // players (+ PANIC wedge when active)
+    // The landing is solved against these slices, so the wheel is drawn from
+    // them until it stops: flipping a setting mid-spin can't move the target.
+    spinSeg  = seg;
+    phase    = 'spinning';
     const segW   = seg.weights;
     const totalW = segW.reduce((a, b) => a + b, 0) || 1;
 
@@ -616,6 +505,10 @@ function startSpin(spinWeights, launch) {
         extraSpins = 4 + Math.floor(Math.random()*5);
         duration   = 6500 + Math.random()*2500;
         ease       = easeOut;
+        // Calm effects: the same draw, the same landing and the same curve,
+        // in one lap and three seconds. The dice above are still rolled, so
+        // nothing downstream sees a different sequence.
+        if (calmEffects()) { extraSpins = 1; duration = 3000; }
     }
     const totalRot = dir*extraSpins*TAU + delta;
     // The overshoot is only knowable once the trip is, so the curve is
@@ -624,7 +517,7 @@ function startSpin(spinWeights, launch) {
 
     const startRot  = rotation;
     const endRot    = rotation + totalRot;
-    const startTime = performance.now();
+    let   startTime = performance.now(), lastNow = startTime;
 
     // Tick cadence uses an even arc — a believable peg click rate that's
     // independent of the (possibly uneven) slice geometry.
@@ -638,11 +531,19 @@ function startSpin(spinWeights, launch) {
     // Whole wheel torn off its hub — bounces around the viewport, drops back
     // on and finishes the very same spin, landing exactly where it would have.
     if (manual && manual.popOff) startPopOff(duration, { stunt: manual.stunt, dir });
+    commit({ save: false });
 
     function frame(now) {
+      try {
+        // A hidden tab stops sending frames. Pick up where it left off rather
+        // than jumping to the end and firing every gremlin beat at once.
+        if (now - lastNow > 250) startTime += now - lastNow - 16;
+        lastNow = now;
         const t = Math.min((now-startTime)/duration, 1);
         rotation = startRot + (endRot-startRot) * ease(t);
         redraw();
+        chaseBulbs();
+        showUnderPointer(seg);
 
         // Peg clicks — brighter and tighter the faster the wheel is going
         const frameMs = Math.max(now - tickPrevTime, 1);
@@ -673,31 +574,54 @@ function startSpin(spinWeights, launch) {
             if (popOff.active) endPopOff();       // safety: never finish mid-flight
             if (goblinRun) hideGoblin();          // ...and never leave him on the rim
             rotation = endRot; redraw();
+            spinSeg = null;
             if (isIllegal) { showIllegalStamp(); }
             else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
             else { onSpinEnd(winnerIdx); }
         }
+      } catch (err) { recoverFromError(err); }
     }
 
     requestAnimationFrame(frame);
 }
 
-/* ══════════════════════════════════════
-   Spin easing
-   ─────────────────────────────────────
-   1 - (a*(1-t)^9 + (1-a)*(1-t)^1.7): a two-term decay whose opening slope
-   is 9a + 1.7(1-a). Blending the two exponents lets a spin start at any
-   speed between a lazy roll (1.7x) and a violent rip (9x) and still glide
-   to the same gentle, tick-by-tick landing.
-══════════════════════════════════════ */
-const STOCK_SLOPE     = 5.715;   // opening slope of the stock button spin (a = 0.55)
-const MIN_FLICK_SPINS = 3;       // even a limp flick owes you a few full laps
+/* If anything throws mid-spin, put the wheel back in a usable state instead
+   of leaving every control locked until a reload. */
+function recoverFromError(err) {
+    console.error(err);
+    spinSeg = null;
+    try { if (popOff.active) endPopOff(); hideGoblin(); } catch (e) {}
+    isSpinning = false; isBusy = false; phase = 'ready'; activePowerUp = null;
+    sliceWeights = null;
+    commit();
+}
 
-function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
+/* ── Marquee bulbs ──
+   They chase in step with the wheel, one bulb per few degrees of travel, so
+   they race at full speed and crawl with the final ticks. */
+let chaseStep = -1;
+function chaseBulbs() {
+    if (calmEffects()) return;
+    const step = ((Math.floor(rotation / (Math.PI / 14)) % 3) + 3) % 3;
+    if (step !== chaseStep) { chaseStep = step; wheelFrame.dataset.chase = step; }
+}
 
-function decayEase(slope0) {
-    const a = Math.min(Math.max((slope0 - 1.7) / 7.3, 0), 1);
-    return t => 1 - (a*Math.pow(1-t,9) + (1-a)*Math.pow(1-t,1.7));
+/* ── Under the pointer ──
+   The slice under the pointer, named in the status line every frame, so
+   any wheel stays readable however thin its slices are. */
+let readoutAt = -1;
+function underPointer(seg) {
+    const TAU = 2 * Math.PI;
+    const off = ((-rotation % TAU) + TAU) % TAU;
+    const arcs = sliceArcs(seg.weights);
+    for (let i = 0; i < arcs.length; i++) if (off < arcs[i].a1) return i;
+    return arcs.length - 1;
+}
+function showUnderPointer(seg) {
+    const i = underPointer(seg);
+    if (i === readoutAt) return;
+    readoutAt = i;
+    setReadout(seg.labels[i], i === seg.panicIndex ? PANIC.textColor : seg.colors[i]);
 }
 
 /* ══════════════════════════════════════
@@ -717,7 +641,7 @@ const FLICK = {
     popPower: 0.88      // power above which the wheel can rip off its hub
 };
 
-const drag = { active: false, id: null, last: 0, moved: 0, samples: [] };
+const drag = { active: false, id: null, last: 0, moved: 0, samples: [], t0: 0 };
 
 function segCount() { return names.length + (panicSliceActive() ? 1 : 0); }
 function canGrab()  { return !isSpinning && !isBusy && !drag.active && names.length >= 2; }
@@ -738,10 +662,27 @@ function dragTicks() {
     }
 }
 
+// Only the drawn disc is grabbable: the canvas corners are empty space.
+function onDisc(e) {
+    const r = canvas.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    return Math.hypot(dx, dy) <= (r.width / 2) * (R / (SIZE / 2));
+}
+
+function dropDrag() {
+    drag.active = false;
+    wheelWrap.classList.remove('grabbing');
+    try { canvas.releasePointerCapture(drag.id); } catch (err) {}
+}
+
 canvas.addEventListener('pointerdown', e => {
-    if (!canGrab()) return;
+    // A second finger means a pinch or a fumble, not a spin: let go of the
+    // wheel where it is.
+    if (drag.active && e.pointerId !== drag.id) { dropDrag(); return; }
+    if (!canGrab() || !onDisc(e)) return;
     ensureAudio();
     e.preventDefault();
+    drag.t0      = performance.now();
     drag.active  = true;
     drag.id      = e.pointerId;
     drag.last    = pointerAngle(e);
@@ -787,8 +728,12 @@ function releaseDrag(e) {
     }
     const speed = Math.abs(vel);
 
-    // Pressed without really turning it? That's a tap - spin it for them.
-    if (drag.moved < FLICK.tapArc && speed < FLICK.minVel) { spin(); return; }
+    // Pressed without really turning it? A quick tap spins it for them; a
+    // finger left resting on the wheel does nothing.
+    if (drag.moved < FLICK.tapArc && speed < FLICK.minVel) {
+        if (now - drag.t0 <= 450) spin();
+        return;
+    }
 
     const power = Math.min(Math.max((speed - FLICK.minVel) / (FLICK.maxVel - FLICK.minVel), 0), 1);
     // Only a genuinely violent flick can tear the wheel loose, and even then
@@ -810,9 +755,12 @@ canvas.addEventListener('pointerup', releaseDrag);
 // where it is — an interrupted touch shouldn't fling it.
 canvas.addEventListener('pointercancel', e => {
     if (!drag.active || e.pointerId !== drag.id) return;
-    drag.active = false;
-    wheelWrap.classList.remove('grabbing');
-    try { canvas.releasePointerCapture(drag.id); } catch (err) {}
+    dropDrag();
+});
+// If the browser takes the pointer away without a pointerup, the drag must
+// not stay stuck on: that would leave SPIN silently doing nothing.
+canvas.addEventListener('lostpointercapture', e => {
+    if (drag.active && e.pointerId === drag.id) dropDrag();
 });
 
 /* ══════════════════════════════════════
@@ -823,6 +771,7 @@ canvas.addEventListener('pointercancel', e => {
    already drawn. Bounces are viewport-bounded, so it can't sail off-screen.
 ══════════════════════════════════════ */
 const popOff = { active: false };
+const DISC   = R / (SIZE / 2);      // the drawn wheel's share of the canvas box
 
 // Two ways off the hub, picked at the moment of release:
 //   bounce - the wheel pinballs around the viewport
@@ -861,6 +810,7 @@ function startPopOff(spinDuration, opts) {
     }
 
     wheelWrap.classList.add('flying');
+    app.classList.add('popping');
     canvas.style.willChange = 'transform';
     playPopSound();
     shakeWheel();
@@ -874,8 +824,8 @@ function popBounds() {
     // The wheel is a circle inside a square canvas, so the transparent
     // corners are not part of it — bound the drawn radius instead, or it
     // stops short of every edge and tilting makes it worse.
-    const halfW = (r.width  / 2 - 12) * popOff.sx;
-    const halfH = (r.height / 2 - 12) * popOff.sy;
+    const halfW = (r.width  / 2) * DISC * popOff.sx;
+    const halfH = (r.height / 2) * DISC * popOff.sy;
     return {
         halfW, halfH,
         left:  m + halfW - (r.left + r.width/2),
@@ -973,8 +923,8 @@ function stepBounce(now, dt) {
         popOff.scale += (popOff.baseScale - popOff.scale) * 0.06;
         popOff.tilt  += popOff.vtilt * dt;
 
-        const halfW = (r.width  / 2 - 12) * popOff.scale;
-        const halfH = (r.height / 2 - 12) * popOff.scale;
+        const halfW = (r.width  / 2) * DISC * popOff.scale;
+        const halfH = (r.height / 2) * DISC * popOff.scale;
         const px    = r.left + r.width/2  + popOff.x;
         const py    = r.top  + r.height/2 + popOff.y;
         const m     = 12;
@@ -1019,6 +969,7 @@ function endPopOff() {
     canvas.style.transform  = '';
     canvas.style.willChange = '';
     wheelWrap.classList.remove('flying');
+    app.classList.remove('popping');
     const ring = document.createElement('div');
     ring.className = 'reseat-ring';
     wheelWrap.appendChild(ring);

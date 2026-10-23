@@ -4,9 +4,17 @@
 let audioCtx = null;
 
 function ensureAudio() {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
+    if (!soundOn) return;                    // muted: don't even wake the context
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch (e) { audioCtx = null; }         // no Web Audio: play silently
 }
+
+// Every sound asks this first. Muting stops new sounds at the source rather
+// than suspending the context, which would queue them up and fire them all
+// at once on unmute.
+function sfx() { return !!audioCtx && soundOn; }
 
 /* ------------------------------------------------------------------
    Peg click
@@ -55,7 +63,7 @@ function getTickBus() {
 // accent = the click that marks a whole slice passing, rather than one of
 // the pins between them: a shade lower, louder and woodier.
 function playTick(accent) {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const t   = audioCtx.currentTime;
     const i   = Math.min(Math.max(tickIntensity, 0), 1);
     const bus = getTickBus();
@@ -96,20 +104,9 @@ function setTickSpeed(radPerMs) {
     tickIntensity = Math.min(Math.abs(radPerMs) / 0.03, 1);
 }
 
-// A real wheel carries far more pins than slices — a three-name wheel
-// clicking three times a lap sounds empty. Clicks come off a ring of
-// ~30 evenly spaced pegs instead, a whole number of them per slice, so
-// every `per`-th click can be accented as a name goes by.
-const PEG_RING = 30;
-function pegRing(segments) {
-    const segs = Math.max(segments, 1);
-    const per  = Math.max(1, Math.ceil(PEG_RING / segs));
-    return { per, arc: (2 * Math.PI) / (segs * per) };
-}
-function isAccentPeg(idx, per) { return ((idx % per) + per) % per === 0; }
 
 function playStampSound() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     // Deep thud
     const osc = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -138,7 +135,7 @@ function playStampSound() {
    The peg clicks carry the clatter on their own, so these two only have
    to supply the mechanism underneath them. */
 function playWindBack() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
 
@@ -182,7 +179,7 @@ function playWindBack() {
    What the wind-back is given to send it the other way: a sub thump and
    a whoosh sweeping up under the groan of the reversal. */
 function playShove() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
 
@@ -230,7 +227,7 @@ function playShove() {
    star of a creep this slow, and a grunt on top of each one is enough to
    tell you the wheel isn't moving on its own. */
 function playGoblinArrive() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
 
@@ -271,7 +268,7 @@ function playGoblinArrive() {
 }
 
 function playGoblinShove(kind) {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
     const heave = kind === 'release', snatch = kind === 'gotcha', back = kind === 'tease';
@@ -315,7 +312,7 @@ function playGoblinShove(kind) {
    ring of a wheel left to its own devices. Deliberately small — the point of
    the fake stop is that nothing is happening. */
 function playGoblinLetGo() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
 
@@ -348,7 +345,7 @@ function playGoblinLetGo() {
 // each one breathed rather than beeped. Four syllables is a snigger, eight
 // is the one he leaves on.
 function playGoblinCackle(count) {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const fx  = getFxBus();
     const now = audioCtx.currentTime;
     const syllables = count || (7 + Math.floor(Math.random() * 3));
@@ -530,7 +527,7 @@ function winImpact(t) {
 // through in 600ms, so the tail is trimmed rather than left ringing over
 // the next spin.
 function playFanfare(windowMs) {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const t0   = audioCtx.currentTime + 0.02;
     const room = Math.max(600, windowMs || 2000);
     const full = room >= 1200;
@@ -591,7 +588,7 @@ function noiseBurst(dur, freq, gain, q) {
 }
 
 function playPopSound() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = 'square';
@@ -607,7 +604,7 @@ function playPopSound() {
 }
 
 function playClank() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     [1180, 1790].forEach((f, i) => {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -624,7 +621,7 @@ function playClank() {
 
 // Heavy, wooden landing when the wheel meets the floor.
 function playThud() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = 'sine';
@@ -639,7 +636,7 @@ function playThud() {
 
 // Low looping rumble while it rolls, tracked to how fast it is going.
 function startRumble() {
-    if (!audioCtx || popOff.rumble) return;
+    if (!sfx() || popOff.rumble) return;
     const src = audioCtx.createBufferSource();
     src.buffer = getNoiseBuffer(); src.loop = true;
     const lp = audioCtx.createBiquadFilter();
@@ -667,7 +664,7 @@ function stopRumble() {
 }
 
 function playReseatSound() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     const o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = 'sine';
@@ -682,7 +679,7 @@ function playReseatSound() {
 
 
 function playPanicSound() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     for (let k = 0; k < 2; k++) {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -700,7 +697,7 @@ function playPanicSound() {
 
 // Timber rattling — a clipped rail, not a clean note.
 function playHurdleHit() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     [196, 262, 147].forEach((f, i) => {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();
@@ -718,7 +715,7 @@ function playHurdleHit() {
 }
 
 function playFinishPing() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime, o = audioCtx.createOscillator(), g = audioCtx.createGain();
     o.type = 'triangle'; o.frequency.setValueAtTime(880, now); o.frequency.exponentialRampToValueAtTime(1320, now + 0.08);
     g.gain.setValueAtTime(0.0001, now); g.gain.linearRampToValueAtTime(0.22, now + 0.015); g.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
@@ -727,7 +724,7 @@ function playFinishPing() {
 
 
 function playPowerUpSound() {
-    if (!audioCtx) return;
+    if (!sfx()) return;
     const now = audioCtx.currentTime;
     [523.25, 659.25, 880].forEach((f, i) => {
         const o = audioCtx.createOscillator(), g = audioCtx.createGain();

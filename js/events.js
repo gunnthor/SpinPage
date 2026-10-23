@@ -3,6 +3,11 @@ function showIllegalStamp() {
     stamp.classList.remove('out');
     stamp.classList.add('show');
     playStampSound();
+    // It counts as a spin — it happened — but it never touches the draft.
+    spinLog.spins++; spinLog.illegal++;
+    phase = 'illegal'; activePowerUp = null; stunt = null;
+    announce(autoSpin ? 'Illegal spin. Re-spinning.' : 'Illegal spin. No pick. Spin again.', 'spin');
+    commit();
     setTimeout(() => {
         stamp.classList.remove('show');
         stamp.classList.add('out');
@@ -10,12 +15,33 @@ function showIllegalStamp() {
             stamp.classList.remove('out');
             isSpinning = false;
             sliceWeights = null;          // clear any power-up sizing before the retry
+            phase = 'ready';
             redraw();
-            updateButtons();
+            commit({ save: false });
             // Illegal spins are a no-op retry — keep an active autospin alive
             if (autoSpin && names.length >= 2) queueAutoSpin(600);
         }, 480);
     }, 2600);
+}
+
+/* ── Takeovers ──
+   No One Is Safe and the PANIC race take the whole screen. While one is up
+   the app behind it is inert, focus sits on its Skip button, and it goes
+   back where it was afterwards. */
+let takeoverReturn = null;
+function openTakeover(el) {
+    takeoverReturn = document.activeElement;
+    app.inert = true;
+    el.classList.add('show');
+    const skip = el.querySelector('.skip-btn');
+    if (skip) { skip.hidden = false; try { skip.focus({ preventScroll: true }); } catch (e) {} }
+}
+function closeTakeover(el) {
+    el.classList.remove('show');
+    app.inert = false;
+    const back = takeoverReturn && document.contains(takeoverReturn) ? takeoverReturn : spinBtn;
+    takeoverReturn = null;
+    try { back.focus({ preventScroll: true }); } catch (e) {}
 }
 
 
@@ -27,9 +53,18 @@ function showIllegalStamp() {
 const noisCanvas = document.getElementById('noisWheel');
 const noisCtx    = noisCanvas.getContext('2d');
 const NSW = noisCanvas.width, NCX = NSW/2, NCY = NSW/2, NR = NCX - 12;
-let   noisRotation = 0;
+let   noisRotation = 0, noisScale = 1, noisSkipped = false;
+
+// Drawn in 380-unit space, rendered at the screen's real resolution.
+function sizeNoisCanvas() {
+    const css = noisCanvas.offsetWidth || NSW;
+    const px  = Math.round(css * Math.min(window.devicePixelRatio || 1, 3));
+    if (noisCanvas.width !== px) { noisCanvas.width = noisCanvas.height = px; }
+    noisScale = noisCanvas.width / NSW;
+}
 
 function drawNoisWheel(arr, rot) {
+    noisCtx.setTransform(noisScale, 0, 0, noisScale, 0, 0);
     noisCtx.clearRect(0, 0, NSW, NSW);
     if (!arr.length) return;
     const arc = (2*Math.PI)/arr.length;
@@ -47,11 +82,10 @@ function drawNoisWheel(arr, rot) {
         noisCtx.fillStyle=shine; noisCtx.fill();
 
         noisCtx.save(); noisCtx.translate(NCX,NCY); noisCtx.rotate(mid);
-        const fs=arr.length>12?9:arr.length>7?11:13;
-        noisCtx.font=`bold ${fs}px Segoe UI,system-ui,sans-serif`;
+        const fs=arr.length>12?11:arr.length>7?13:15;
+        noisCtx.font=`600 ${fs}px ${LABEL_FONT}`;
         noisCtx.textAlign='center'; noisCtx.textBaseline='middle';
-        noisCtx.fillStyle='rgba(255,255,255,0.95)';
-        noisCtx.shadowColor='rgba(0,0,0,0.9)'; noisCtx.shadowBlur=5;
+        noisCtx.fillStyle=inkOn(arr[i].color);
         let label=arr[i].name, maxW=NR*0.52;
         while(noisCtx.measureText(label).width>maxW&&label.length>2) label=label.slice(0,-1);
         if(label!==arr[i].name) label+='…';
@@ -85,19 +119,26 @@ function drawNoisWheel(arr, rot) {
     noisCtx.fill(); noisCtx.shadowBlur=0;
 }
 
+const noisOverlay = document.getElementById('noisOverlay');
+document.getElementById('noisSkip').addEventListener('click', () => { noisSkipped = true; });
+
 function showNoisWheel(replacementPick, onDone) {
     if (!draftOrder.length) { onDone&&onDone(); return; }
     isBusy = true;
-    updateButtons();
+    phase = 'nois';
+    commit({ save: false });
 
-    const overlay    = document.getElementById('noisOverlay');
+    const overlay    = noisOverlay;
     const resultEl   = document.getElementById('noisResult');
     const candidates = draftOrder.map(p=>({name:p.name, color:p.color}));
 
     noisRotation = 0;
+    noisSkipped  = false;
     resultEl.textContent = '';
+    openTakeover(overlay);
+    sizeNoisCanvas();
     drawNoisWheel(candidates, noisRotation);
-    overlay.classList.add('show');
+    announce('No one is safe. Spinning for a drafted seat.');
 
     setTimeout(() => {
         const victimIdx  = Math.floor(Math.random()*candidates.length);
@@ -111,7 +152,8 @@ function showNoisWheel(replacementPick, onDone) {
 
         const extraSpins = 5 + Math.floor(Math.random()*4);
         const totalRot   = extraSpins*2*Math.PI + delta;
-        const duration   = 4200 + Math.random()*2000;
+        let   duration   = 4200 + Math.random()*2000;
+        if (calmEffects()) duration = 2000;
         const startRot   = noisRotation, endRot = noisRotation+totalRot;
         const startTime  = performance.now();
         const noisRing   = pegRing(candidates.length);
@@ -122,7 +164,9 @@ function showNoisWheel(replacementPick, onDone) {
         function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
 
         function frame(now) {
-            const t = Math.min((now-startTime)/duration, 1);
+            // Skip jumps straight to the landing: the victim was drawn above,
+            // before the wheel moved, so skipping changes nothing but the wait.
+            const t = noisSkipped ? 1 : Math.min((now-startTime)/duration, 1);
             noisRotation = startRot + (endRot-startRot)*easeOut(t);
             drawNoisWheel(candidates, noisRotation);
 
@@ -141,9 +185,14 @@ function showNoisWheel(replacementPick, onDone) {
             noisRotation = endRot;
             drawNoisWheel(candidates, noisRotation);
             const victim = candidates[victimIdx];
+            const seatNo = draftOrder.findIndex(p => p.name === victim.name) + 1;
             resultEl.textContent = replacementPick
-                ? `${victim.name} is UNDRAFTED! ${replacementPick.name} takes the seat.`
-                : `${victim.name} is UNDRAFTED!`;
+                ? `${victim.name} is undrafted! ${replacementPick.name} takes pick ${seatNo}.`
+                : `${victim.name} is undrafted!`;
+            announce(replacementPick
+                ? `${victim.name} is undrafted. ${replacementPick.name} takes pick ${seatNo}.`
+                : `${victim.name} is undrafted and back on the wheel.`);
+            document.getElementById('noisSkip').hidden = true;
 
             setTimeout(() => {
                 const di=draftOrder.findIndex(p=>p.name===victim.name);
@@ -151,19 +200,19 @@ function showNoisWheel(replacementPick, onDone) {
                     if (replacementPick) draftOrder[di] = replacementPick;
                     else draftOrder.splice(di,1);
                 }
-                const ui=undoStack.findIndex(p=>p.name===victim.name);
-                if (ui>=0) {
-                    if (replacementPick) undoStack[ui] = replacementPick;
-                    else undoStack.splice(ui,1);
-                }
                 names.push(victim.name);
+                history.push({ t: 'steal', seat: Math.max(di, 0), stealer: replacementPick ? replacementPick.name : null, victim: victim.name });
+                spinLog.steals++;
+                if (replacementPick) { lastPick = replacementPick.name; freshPick = replacementPick.name; }
                 if (names.length < 2 && autoSpin) setAutoSpin(false);
 
-                overlay.classList.remove('show');
+                closeTakeover(overlay);
                 isBusy = false;
-                renderList(); renderDraft(); redraw(); saveState(); updateButtons();
+                phase = 'ready';
+                redraw();
+                commit();                       // the only save of the whole event
                 onDone&&onDone();
-            }, 2600);
+            }, noisSkipped ? 1200 : 2600);
         }
 
         requestAnimationFrame(frame);
@@ -195,70 +244,47 @@ const SPRINT_PAD_R = 24;                      // right margin past the finish
 let TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
 let lastRunners = null, lastSafeCount = 0;    // so a resize can redraw a finished race
 
+let raceScale = 1;
 function sizeMarbleCanvas(runnerCount) {
+    // Fit the track to whatever the takeover's middle row has room for, with
+    // the finish board beside it on a wide screen and above it on a phone.
+    const stage  = marbleCanvas.parentElement.getBoundingClientRect();
     const wide   = window.innerWidth > 700;
-    const boardW = wide ? 200 : 0;                       // finish-order panel + gap
+    const boardW = wide ? 212 : 0;
+    const boardH = wide ? 0 : 108;
     // Lanes want about 95px each — past that a small field is just spread
     // thin down a tall canvas.
     const want = runnerCount ? runnerCount * 95 + 60 : 700;
-    const w = Math.round(Math.max(320, Math.min(window.innerWidth - boardW - 64, 1200)));
-    const h = Math.round(Math.max(380, Math.min(window.innerHeight - 150, want, 900)));
-    if (marbleCanvas.width === w && marbleCanvas.height === h) return;
-    marbleCanvas.width  = w;
-    marbleCanvas.height = h;
+    const w = Math.round(Math.max(280, Math.min((stage.width || window.innerWidth) - boardW, 1200)));
+    const h = Math.round(Math.max(200, Math.min((stage.height || window.innerHeight - 200) - boardH, want, 900)));
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    raceScale = dpr;
+    marbleCanvas.style.width = w + 'px';
+    marbleCanvas.style.height = h + 'px';
+    if (marbleCanvas.width === Math.round(w * dpr) && marbleCanvas.height === Math.round(h * dpr)) return;
+    marbleCanvas.width  = Math.round(w * dpr);
+    marbleCanvas.height = Math.round(h * dpr);
     CANVAS_W = w; MH = h;
     // Name column keeps its share of the width, so long names still fit.
     SPRINT_PAD_L = Math.round(Math.min(170, Math.max(96, w * 0.2)));
     TRACK_X0 = SPRINT_PAD_L;
     FINISH_X = w - SPRINT_PAD_R;
-    marbleBoard.style.maxHeight = h + 'px';
+    if (wide) marbleBoard.style.maxHeight = h + 'px';
+    else marbleBoard.style.maxHeight = '';
 }
-const SPRINT_BASE = 0.00048;                  // tuned: majority-safe quota fills in ~19-30s
 
-/* -- The hurdle --
-   One jump a quarter of the way in, with 75% of the track still to run.
-   Every horse carries its own posted chance of clearing it, and the
-   faster it is travelling relative to the rest of the field at the
-   moment it takes off, the more of that chance it gives back: coming in
-   hot is how you catch a rail. Clipping it costs momentum, not the race
-   — a stumbler can still recover and finish safe. */
-const HURDLE_FIRST  = 0.22;   // first rail, with most of the track still to run
-const HURDLE_LAST   = 0.74;   // last one, leaving a run-in to the line
-const HURDLE_LEAD   = 0.022;  // half-width of the leap, in track fraction
-const HURDLE_RISK   = 0.30;   // how hard being quicker than the field bites
-const HURDLE_RISKMAX= 0.25;   // ...capped, so a flier is never doomed
-const HURDLE_FLOOR  = 0.25;   // ...and never worse than one-in-four
-const STUMBLE_MS    = 1100;   // how long a clipped rail keeps you slow
 let   raceHurdles   = [];     // this race's rail positions along the track
 let   hurdleFlash   = null;   // {name, color, at} for the on-canvas callout
-
-// Two to four rails, evenly spread with a little jitter so no two races
-// are laid out the same.
-function makeHurdles() {
-    const n = 2 + Math.floor(Math.random() * 3);
-    const step = (HURDLE_LAST - HURDLE_FIRST) / (n - 1);
-    const out = [];
-    for (let i = 0; i < n; i++) {
-        out.push(HURDLE_FIRST + i * step + (Math.random() - 0.5) * 0.035);
-    }
-    return out;
-}
-
-// Posted chance, minus what the horse gives back for carrying more speed
-// into the jump than the field around it.
-function hurdleOdds(jump, speed, fieldSpeed) {
-    const ratio   = speed / (fieldSpeed || SPRINT_BASE);     // 1 = field average
-    const penalty = Math.min(Math.max((ratio - 1) * HURDLE_RISK, 0), HURDLE_RISKMAX);
-    return Math.max(jump - penalty, HURDLE_FLOOR);
-}
 
 function onPanicLanded() {
     sliceWeights = null;
     panicCooldown = true;       // no PANIC again until the next non-panic spin
     isSpinning = false;
     isBusy = true;              // block input through the whole event
+    spinLog.spins++; spinLog.panics++;
+    phase = 'panic'; activePowerUp = null; stunt = null;
     redraw();
-    updateButtons();
+    commit();                   // the cooldown is saved: a reload can't re-arm PANIC
     playPanicSound();
     setTimeout(startMarbleRace, 650);
 }
@@ -275,6 +301,7 @@ function mRoundRect(x, y, w, h, r) {
 // Sprint race: lanes drawn from scripted progress (r.p in 0..1). No physics,
 // so runners always advance and always finish — nothing can stall or shaft.
 function drawSprint(runners, safeCount, now) {
+    mctx.setTransform(raceScale, 0, 0, raceScale, 0, 0);
     const n = runners.length;
     const laneTop = 16, laneH = (MH - 32) / n;
     const trackLen = FINISH_X - TRACK_X0;
@@ -467,7 +494,7 @@ function drawSprint(runners, safeCount, now) {
 
 function addMarbleRankRow(m, rank, isSafe, safeCount) {
     if (rank === safeCount + 1) {
-        const cut = document.createElement('div');
+        const cut = document.createElement('li');
         cut.className = 'marble-cutoff';
         cut.textContent = '— safe cutoff —';
         marbleRankList.appendChild(cut);
@@ -490,13 +517,15 @@ function startMarbleRace() {
     const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
     const safeCount = racers.length - outCount;
 
+    openTakeover(marbleOverlay);
     sizeMarbleCanvas(racers.length);
     raceHurdles = makeHurdles();          // before the subtitle counts them
     hurdleFlash = null;
     marbleRankList.innerHTML = '';
     marbleResultEl.textContent = '';
-    marbleSubtitle.textContent = `${racers.length} running — ${raceHurdles.length} hurdles, first ${safeCount} across are safe, last ${outCount} drop out`;
-    marbleOverlay.classList.add('show');
+    marbleSubtitle.textContent = `${racers.length} running · ${raceHurdles.length} hurdles · first ${safeCount} across are safe, last ${outCount} drop out`;
+    announce(`Panic. Horse race: ${racers.length} running, first ${safeCount} are safe.`);
+    raceSkipped = false;
 
     // Each runner advances by a scripted, always-positive amount whose "form"
     // drifts (plus random surges) — that's what creates lead changes.
@@ -513,6 +542,11 @@ function startMarbleRace() {
 
     let frames = 0, lastTick = 0;
     const MAXF = 3900;                  // ~65s hard cap (races naturally end ~19-30s)
+    // The race advances in fixed 60Hz steps whatever the screen's refresh
+    // rate, so a 120Hz phone runs the same race — same odds, same stumbles —
+    // as the 60Hz screen it was tuned on.
+    const STEP = 1000 / 60;
+    let simNow = 0, lastReal = 0, over = false;
     const safe = [];                    // runners that claimed a SAFE spot, in finish order
 
     // Take-off. The posted chance is what the horse is worth on a level
@@ -534,17 +568,20 @@ function startMarbleRace() {
 
     // Decided the instant the safe quota fills — everyone still running is OUT.
     function finishRace() {
+        over = true;
+        document.getElementById('marbleSkip').hidden = true;
         const rest = runners.filter(r => !safe.includes(r)).sort((a, b) => b.p - a.p);
         while (safe.length < safeCount && rest.length) {      // rare failsafe
             const r = rest.shift(); safe.push(r); r.safeRank = safe.length;
             addMarbleRankRow(r, safe.length, true, safeCount);
         }
         rest.forEach((r, i) => addMarbleRankRow(r, safeCount + 1 + i, false, safeCount));
-        drawSprint(runners, safeCount, performance.now());
+        drawSprint(runners, safeCount, simNow);
         setTimeout(() => resolveMarbleRace(safe.map(r => r.pick), rest.map(r => r.pick)), 1100);
     }
 
-    function frame(now) {
+    // One 60Hz step of the race. `now` is race time, not wall time.
+    function step(now, quiet) {
         frames++;
 
         // Work out everyone's speed for this frame first — the hurdle needs
@@ -573,80 +610,111 @@ function startMarbleRace() {
                 if (safe.length < safeCount) {                          // grabbed a safe spot
                     safe.push(r); r.safeRank = safe.length;
                     addMarbleRankRow(r, safe.length, true, safeCount);
-                    playFinishPing();
+                    if (!quiet) playFinishPing();
                 }
             }
         }
-        if (now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
-        drawSprint(runners, safeCount, now);
+        if (!quiet && now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
+        return safe.length >= safeCount || frames >= MAXF;
+    }
 
-        if (safe.length >= safeCount || frames >= MAXF) { finishRace(); return; }
-        requestAnimationFrame(frame);
+    function frame(real) {
+        if (over) return;
+        try {
+            if (raceSkipped) {
+                // Skip runs the very same race to the end without drawing it:
+                // the same steps and the same dice, so the same result odds.
+                while (!step(simNow += STEP, true)) {}
+                finishRace();
+                return;
+            }
+            if (!lastReal) lastReal = real - STEP;
+            let todo = Math.min(Math.round((real - lastReal) / STEP), 8);
+            lastReal += todo * STEP;
+            if (real - lastReal > STEP * 8) lastReal = real;        // a hidden tab: don't sprint to catch up
+            while (todo-- > 0) { if (step(simNow += STEP, false)) { drawSprint(runners, safeCount, simNow); finishRace(); return; } }
+            drawSprint(runners, safeCount, simNow);
+            requestAnimationFrame(frame);
+        } catch (err) { console.error(err); finishRace(); }
     }
     requestAnimationFrame(frame);
 }
+
+let raceSkipped = false;
+document.getElementById('marbleSkip').addEventListener('click', () => { raceSkipped = true; });
 
 function resolveMarbleRace(safe, doomed) {
     marbleResultEl.textContent = doomed.length
         ? `${doomed.length} undrafted! ${safe.length} survive the panic.`
         : 'Everyone survived!';
+    announce(doomed.length
+        ? `Race over. Safe: ${safe.map(p => p.name).join(', ')}. Back on the wheel: ${doomed.map(p => p.name).join(', ')}.`
+        : 'Race over. Everyone survived.');
     playFanfare(2600);
 
     setTimeout(() => {
+        // Remember every seat before it empties, so Undo can put the whole
+        // race back exactly as it was.
+        const out = doomed.map(pick => ({ name: pick.name, seat: draftOrder.findIndex(p => p.name === pick.name) }))
+                          .filter(o => o.seat >= 0);
         doomed.forEach(pick => {
             const di = draftOrder.findIndex(p => p.name === pick.name);
             if (di >= 0) draftOrder.splice(di, 1);
-            const ui = undoStack.findIndex(p => p.name === pick.name);
-            if (ui >= 0) undoStack.splice(ui, 1);
             if (!names.some(n => n.toLowerCase() === pick.name.toLowerCase())) names.push(pick.name);
         });
+        if (out.length) history.push({ t: 'panic', out });
         endMarbleRace();
     }, 1900);
 }
 
 function endMarbleRace() {
-    marbleOverlay.classList.remove('show');
+    closeTakeover(marbleOverlay);
     isBusy = false;
+    phase = 'ready';
     if (names.length < 2 && autoSpin) setAutoSpin(false);
-    renderList(); renderDraft(); redraw(); saveState(); updateButtons();
+    redraw();
+    commit();
     if (autoSpin && names.length >= 2) queueAutoSpin(1400);
 }
 
-/* ── Draft complete splash ── */
+/* ── Draft complete ── */
 const splashOverlay = document.getElementById('splashOverlay');
 const splashList    = document.getElementById('splashList');
 
-document.getElementById('splashClose').addEventListener('click', () => {
-    splashOverlay.classList.remove('show');
-});
+document.getElementById('splashClose').addEventListener('click', () => closeDialog(splashOverlay));
+document.getElementById('splashCopy').addEventListener('click', e => copyDraft(e.currentTarget));
 
 function showSplash() {
-    const top = draftOrder.slice(0, getWinnerSlots());
-    if (top.length === 0) return;
-
-    const rankClass = ['gold','silver','bronze','plain','plain'];
+    if (draftOrder.length === 0) return;
+    const slots = getWinnerSlots();
+    const rankClass = ['gold', 'silver', 'bronze'];
 
     splashList.innerHTML = '';
-    top.forEach((pick, i) => {
-        const item = document.createElement('div');
+    draftOrder.forEach((pick, i) => {
+        const item = document.createElement('li');
         item.className = 'splash-item';
-        item.style.setProperty('--item-color', pick.color);
-        item.style.setProperty('--delay', `${0.15 + i * 0.1}s`);
+        item.style.setProperty('--c', pick.color);
+        item.style.setProperty('--delay', `${Math.min(0.1 + i * 0.06, 1.2)}s`);
 
-        const rank = document.createElement('div');
-        rank.className = `splash-rank ${rankClass[i] || 'plain'}`;
+        const rank = document.createElement('span');
+        rank.className = `splash-rank ${rankClass[i] || ''}`;
         rank.textContent = ordinal(i + 1);
 
-        const name = document.createElement('div');
+        const name = document.createElement('span');
         name.className = 'splash-name';
         name.textContent = pick.name;
 
-        item.append(rank, name);
+        const tag = document.createElement('span');
+        tag.className = 'splash-tag';
+        tag.textContent = i < slots ? 'Winner' : '';
+
+        item.append(rank, name, tag);
         splashList.appendChild(item);
     });
+    announce(`Draft complete. ${draftOrder.length} picks. Winner${slots > 1 ? 's' : ''}: ${draftOrder.slice(0, slots).map(p => p.name).join(', ')}.`);
 
-    // small delay so winner overlay finishes closing first
-    setTimeout(() => splashOverlay.classList.add('show'), 500);
+    // a moment for the nameplate to clear first
+    setTimeout(() => openDialog(splashOverlay, spinBtn), 500);
 }
 
 // One banner, two stunts — each names itself on the way in.
@@ -740,6 +808,11 @@ function showGoblin() {
     playGoblinArrive();
     shakeWheel();
     runBanner('Uninvited', 'Gremlin', 1250, true);
+    // Once per spin and never again until the result: announcing his fake
+    // stops would spoil them, and would be a lie.
+    stunt = 'gremlin';
+    announce('A gremlin has grabbed the wheel.');
+    commit({ save: false });
 }
 
 function jerkGoblin(kind) {
@@ -760,9 +833,13 @@ function hideGoblin() {
 
 // The wheel had stopped, and something has just shoved it the other way.
 function triggerWindBack() {
+    stunt = 'windback';
+    announce('Wind-back. The wheel is going round the other way.');
+    commit({ save: false });
     showWindBackBanner();
     playWindBack();
     playShove();
+    if (calmEffects()) return;                // the stunt still runs; the pyrotechnics don't
     shakeWheel();
     flashScreen();
     launchBoostElements();
@@ -777,48 +854,69 @@ function triggerWindBack() {
 /* ══════════════════════════════════════
    Win
 ══════════════════════════════════════ */
+/* The landing gets its moment ON the stage: the winning slice lights up,
+   everything else dims, and a nameplate rises over the lower third of the
+   wheel. Nothing blacks out — the scoreboard and the board stay lit, and
+   update the moment the pick is in. */
 function onSpinEnd(winnerIdx) {
     sliceWeights = null;                  // power-up sizing only lasts for its spin
     panicCooldown = false;                // a normal pick clears the no-back-to-back-PANIC lock
     const name=names[winnerIdx], c=colorOf(name);
-    winnerNameEl.textContent=name; winnerNameEl.style.color=c;
-    winnerSubEl.textContent = CONGRATS[Math.floor(Math.random()*CONGRATS.length)];
-    winnerCard.style.setProperty('--win-color',c);
-    winnerCard.style.setProperty('--win-glow',c+'28');
-    winnerOverlay.classList.add('show');
+    const pickNo = draftOrder.length + 1;
+    const inSlots = pickNo <= getWinnerSlots();
+    spinLog.spins++;
+    phase = 'landed'; activePowerUp = null; stunt = null;
+    landed = { name, color: c, pick: pickNo, winner: inSlots };
+    wheelHighlight = name;
+    redraw();
+    showWinCallout(name, c, pickNo, inSlots, CONGRATS[Math.floor(Math.random()*CONGRATS.length)]);
+    flashBulbs(c);
+    announce(autoSpin ? `Pick ${pickNo}: ${name}.`
+                      : `Pick ${pickNo}: ${name}.${inSlots ? ' Winner.' : ''} ${names.length - 1} left on the wheel.`, 'spin');
     playFanfare(winnerDisplayMs());
     launchConfetti(c);
+    commit({ save: false });
 
     setTimeout(()=>{
-        winnerOverlay.classList.remove('show');
+        hideWinCallout();
         setTimeout(()=>{
             const selectedPick = {name,color:c};
             names.splice(winnerIdx,1);
+            wheelHighlight = null;
+            landed = null;
             isSpinning=false;
             const hasNames=names.length>0;
-            // 25% chance of "No one is safe" — needs an existing drafted seat to replace
+            // 15% chance of "No one is safe" — needs an existing drafted seat to replace
             const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < 0.15;
 
             if (triggerNois) {
                 isBusy = true;
-                updateButtons();
-                renderList(); renderDraft(); redraw(); saveState();
+                // Nothing is saved here: the winner is off the wheel but not yet
+                // in a seat, and a reload now must not lose them.
+                commit({ save: false });
                 setTimeout(() => showNoisWheel(selectedPick, () => {
                     // After undraft: resume auto-spin if on and names remain
                     if (autoSpin && names.length >= 2) queueAutoSpin(1400);
                 }), 700);
             } else {
-                undoStack.push(selectedPick);
                 draftOrder.push(selectedPick);
+                const ev = { t: 'pick', names: [name] };
                 if (names.length === 1) {
+                    // The last name standing comes with this pick — and goes
+                    // with it if the pick is undone, instead of stranding a
+                    // one-name wheel.
                     const finalName = names[0], finalColor = colorOf(finalName);
-                    undoStack.push({name: finalName, color: finalColor});
                     draftOrder.push({name: finalName, color: finalColor});
+                    ev.names.push(finalName);
                     names.splice(0,1);
                 }
+                history.push(ev);
+                lastPick = freshPick = ev.names[ev.names.length - 1];
+                phase = 'ready';
                 const stillHasNames=names.length>0;
                 if (!stillHasNames&&autoSpin) setAutoSpin(false);
-                renderList(); renderDraft(); redraw(); saveState();
+                redraw();
+                commit();
                 if (!stillHasNames) {
                     showSplash();
                 } else if (autoSpin) {
@@ -840,21 +938,30 @@ function queueAutoSpin(ms) {
     }, ms);
 }
 
+let wakeLock = null;
 function setAutoSpin(val) {
     autoSpin=val;
-    autoBtn.classList.toggle('on',autoSpin);
-    autoBtn.textContent = autoSpin ? '◉ AUTOSPIN' : 'AUTOSPIN';
+    autoBtn.setAttribute('aria-pressed', String(autoSpin));
+    autoLabel.textContent = autoSpin ? 'Stop' : 'Auto';
+    autoBtn.title = autoSpin ? 'Stop autospin' : 'Spin automatically until the draft is done';
+    // A phone left on the table shouldn't lock itself halfway through a draft.
+    if (autoSpin && navigator.wakeLock && !wakeLock) {
+        navigator.wakeLock.request('screen').then(l => { wakeLock = l; l.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
+    } else if (!autoSpin && wakeLock) {
+        wakeLock.release().catch(() => {}); wakeLock = null;
+    }
+    commit({ save: false });
 }
 
 autoBtn.addEventListener('click', ()=>{
     ensureAudio();
     if (autoSpin) {                       // calling it off is allowed at any moment
         setAutoSpin(false);
-        updateButtons();
+        announce('Autospin off.');
         return;
     }
     if(names.length<2||isSpinning||isBusy)return;
     setAutoSpin(true);
-    updateButtons();
+    announce('Autospin on.');
     spin();
 });
