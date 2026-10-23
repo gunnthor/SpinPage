@@ -90,19 +90,19 @@ test('draftStats derives every number from the table', () => {
 test('undo reverses picks, stolen seats and panics exactly', () => {
   const run = load();
   // a pick that also drafted the last name standing
-  run(`names = []; draftOrder = [{name:'A'},{name:'B'},{name:'C'}]; history = [{t:'pick',names:['A']},{t:'pick',names:['B','C']}]; lastPick = 'C';`);
+  run(`names = []; draftOrder = [{name:'A'},{name:'B'},{name:'C'}]; draftHistory = [{t:'pick',names:['A']},{t:'pick',names:['B','C']}]; lastPick = 'C';`);
   run('undoLast()');
   assert.deepEqual(run('[names.slice(), draftOrder.map(p=>p.name), lastPick]'), [['B', 'C'], ['A'], 'A']);
   // a stolen seat: Y lost pick 2 to S
-  run(`names = ['Y', 'Q']; draftOrder = [{name:'X'},{name:'S'},{name:'Z'}]; history = [{t:'steal',seat:1,stealer:'S',victim:'Y'}]; lastPick = 'S';`);
+  run(`names = ['Y', 'Q']; draftOrder = [{name:'X'},{name:'S'},{name:'Z'}]; draftHistory = [{t:'steal',seat:1,stealer:'S',victim:'Y'}]; lastPick = 'S';`);
   run('undoLast()');
   assert.deepEqual(run('[names.slice(), draftOrder.map(p=>p.name)]'), [['Q', 'S'], ['X', 'Y', 'Z']]);
   // a panic that sent seats 2 and 4 back to the wheel
-  run(`names = ['P', 'B', 'D']; draftOrder = [{name:'A'},{name:'C'}]; history = [{t:'panic',out:[{name:'D',seat:3},{name:'B',seat:1}]}];`);
+  run(`names = ['P', 'B', 'D']; draftOrder = [{name:'A'},{name:'C'}]; draftHistory = [{t:'panic',out:[{name:'D',seat:3},{name:'B',seat:1}]}];`);
   run('undoLast()');
   assert.deepEqual(run('[names.slice(), draftOrder.map(p=>p.name)]'), [['P'], ['A', 'B', 'C', 'D']]);
   // a save from before history existed: the old rule, last seat back
-  run(`names = []; draftOrder = [{name:'A'},{name:'B'}]; history = [];`);
+  run(`names = []; draftOrder = [{name:'A'},{name:'B'}]; draftHistory = [];`);
   run('undoLast()');
   assert.deepEqual(run('[names.slice(), draftOrder.map(p=>p.name)]'), [['B'], ['A']]);
   assert.equal(run('undoLast() && undoLast()'), null, 'nothing left to undo');

@@ -38,17 +38,23 @@ let freshPick           = '';     // the seat to animate in on the next render
 let phase               = 'ready';  // ready | warping | spinning | landed | illegal | panic | nois
 // Reversible draft events, newest last. Undo walks this back, so it undoes
 // what actually happened last — a pick, a stolen seat or a PANIC race —
-// rather than blindly popping the last seat on the board.
-let history             = [];
+// rather than blindly popping the last seat on the board. (Not `history`:
+// a global of that name hides window.history from every other script on
+// the page, the analytics among them.)
+let draftHistory        = [];
+// A winner who has left the wheel but has no seat yet, while No One Is
+// Safe decides whose seat they take. Saves put them back on the wheel, so
+// a reload at that moment can never lose them.
+let pendingPick         = null;
 // What has happened since the draft began. Undo does not un-spin, so spins
 // only ever count up until the draft is restored, cleared or reset.
 let spinLog             = freshSpinLog();
 
 function freshSpinLog() { return { spins: 0, illegal: 0, panics: 0, steals: 0, undos: 0 }; }
-function newDraftLog()  { spinLog = freshSpinLog(); lastPick = ''; history = []; }
+function newDraftLog()  { spinLog = freshSpinLog(); lastPick = ''; draftHistory = []; }
 
 function totalEntrants() {
-    return names.length + draftOrder.length;
+    return names.length + draftOrder.length + (pendingPick ? 1 : 0);
 }
 
 function getWinnerSlots() {
@@ -57,13 +63,18 @@ function getWinnerSlots() {
 
 /* Every number the scoreboard shows comes out of here, derived from the
    wheel and the draft as they stand — so nothing can drift out of step
-   with what the game actually did, whatever order events happen in. */
+   with what the game actually did, whatever order events happen in.
+   The pick on the nameplate counts from the frame it lands: the room has
+   seen it, so Next, Left and Latest all move together, before the seat is
+   formally filled. */
 function draftStats() {
-    const picked = draftOrder.length, left = names.length, total = picked + left;
+    const onPlate = landed && names.includes(landed.name) ? 1 : 0;
+    const picked = draftOrder.length + onPlate, left = names.length - onPlate;
+    const total = draftOrder.length + names.length + (pendingPick ? 1 : 0);
     // "Latest" is whoever most recently won a seat and still holds it. If
     // PANIC or undo has taken it off them, the last seat on the board stands in.
     let at = lastPick ? draftOrder.findIndex(p => p.name === lastPick) : -1;
-    if (at < 0) at = picked - 1;
+    if (at < 0) at = draftOrder.length - 1;
     const slots = getWinnerSlots();
     return {
         total, left, picked, slots,
@@ -195,11 +206,13 @@ function isNameInUse(name) {
 }
 
 /* Pasted lists arrive as one string: split on new lines, tabs, commas and
-   semicolons, trim, and hold each name to the 30 characters a slice fits. */
+   semicolons, trim, and hold each name to the 30 characters a slice fits.
+   Characters, not UTF-16 units, so an emoji is never cut in half. */
 const NAME_MAX = 30;
+function clip(text, n) { const a = Array.from(text); return a.length > n ? a.slice(0, n).join('') : text; }
 function splitNames(text) {
     return String(text || '').split(/[\r\n\t,;]+/)
-        .map(s => s.trim().replace(/\s+/g, ' ').slice(0, NAME_MAX).trim())
+        .map(s => clip(s.trim().replace(/\s+/g, ' '), NAME_MAX).trim())
         .filter(Boolean);
 }
 
@@ -211,7 +224,7 @@ function splitNames(text) {
    them Undo falls back to the old rule and returns the last seat.
 ══════════════════════════════════════ */
 function nextUndo() {
-    if (history.length) return history[history.length - 1];
+    if (draftHistory.length) return draftHistory[draftHistory.length - 1];
     if (draftOrder.length) return { t: 'pick', names: [draftOrder[draftOrder.length - 1].name] };
     return null;
 }
@@ -221,7 +234,7 @@ function seat(name) { return { name, color: colorOf(name) }; }
 function undoLast() {
     const ev = nextUndo();
     if (!ev) return null;
-    if (history.length) history.pop();
+    if (draftHistory.length) draftHistory.pop();
     if (ev.t === 'pick') {
         ev.names.forEach(n => {
             const i = draftOrder.findIndex(p => p.name === n);
@@ -246,8 +259,8 @@ function undoLast() {
 
 // After an undo, "Latest" is whoever the newest remaining event seated.
 function latestFromHistory() {
-    for (let i = history.length - 1; i >= 0; i--) {
-        const ev = history[i];
+    for (let i = draftHistory.length - 1; i >= 0; i--) {
+        const ev = draftHistory[i];
         if (ev.t === 'pick')  return ev.names[ev.names.length - 1];
         if (ev.t === 'steal' && ev.stealer) return ev.stealer;
     }
@@ -257,11 +270,11 @@ function latestFromHistory() {
 // Snapshot and restore the whole table, for the undo toast after Restore,
 // Clear and Reset.
 function snapshotTable() {
-    return JSON.stringify({ names, draftOrder, history, spinLog, lastPick, nameColors, winnerSlots, panicCooldown });
+    return JSON.stringify({ names, draftOrder, history: draftHistory, spinLog, lastPick, nameColors, winnerSlots, panicCooldown });
 }
 function restoreTable(json) {
     const s = JSON.parse(json);
-    names = s.names; draftOrder = s.draftOrder; history = s.history; spinLog = s.spinLog;
+    names = s.names; draftOrder = s.draftOrder; draftHistory = s.history; spinLog = s.spinLog;
     lastPick = s.lastPick; nameColors = s.nameColors; winnerSlots = s.winnerSlots; panicCooldown = s.panicCooldown;
 }
 
@@ -374,6 +387,30 @@ const CONGRATS = [
     'CONGRATULATIONS, YOU BEAUTIFUL DEGENERATE! 😄',
 ];
 
+// For the picks after the winner cut: still a moment, just not a jackpot.
+const CONSOLATION = [
+    'BETTER LUCK NEXT SPIN!',
+    'THE HOUSE ALWAYS WINS!',
+    'THE WHEEL GIVETH, THE WHEEL TAKETH AWAY!',
+    'PARTICIPATION TROPHY UNLOCKED!',
+    'IT\'S NOT YOU, IT\'S THE RNG!',
+    'SO CLOSE! (NOT REALLY.)',
+    'A NOBLE DEFEAT!',
+    'THE ODDS SEND THEIR REGARDS!',
+    'TOUGH BREAK, HIGH ROLLER!',
+    'THE DEALER SAYS SORRY. HE ISN\'T.',
+    'NO JACKPOT TODAY!',
+    'FORTUNE HAS LEFT THE CHAT!',
+    'THAT\'S THE WAY THE WHEEL SPINS!',
+    'MORAL VICTORY ACHIEVED!',
+    'CHIN UP, CHAMP!',
+    'THE REELS SAID NO!',
+    'BUST! PLACE YOUR NEXT BET!',
+    'COMMON DROP. STILL COUNTS!',
+    'THE CROWD GOES MILD!',
+    'YOU\'LL GET THEM NEXT DRAFT!',
+];
+
 /* ══════════════════════════════════════
    localStorage
    ─────────────────────────────────────
@@ -384,14 +421,17 @@ const CONGRATS = [
 const SAVE_VERSION = 2;
 
 function saveState() {
+    // A winner waiting on No One Is Safe is saved back on the wheel: the
+    // event has not happened until it resolves, so a reload simply undoes it.
+    const wheel = pendingPick && !names.includes(pendingPick.name) ? names.concat(pendingPick.name) : names;
     try {
         localStorage.setItem('spinpage', JSON.stringify({
             v: SAVE_VERSION,
-            names, draftOrder, undoStack: draftOrder.map(p => ({ name: p.name, color: p.color })),
+            names: wheel, draftOrder, undoStack: draftOrder.map(p => ({ name: p.name, color: p.color })),
             winnerSlots, nameColors,
             noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, goblinEnabled, popOffEnabled,
             displayDuration, autoDisplay, riggedValue,
-            soundOn, calmPref, lastPick, spinLog, history, panicCooldown,
+            soundOn, calmPref, lastPick, spinLog, history: draftHistory, panicCooldown,
         }));
         return true;
     } catch (e) { return false; }
@@ -406,7 +446,7 @@ function loadState() {
     windBackEnabled = s.windBackEnabled; goblinEnabled = s.goblinEnabled; popOffEnabled = s.popOffEnabled;
     displayDuration = s.displayDuration; autoDisplay = s.autoDisplay; riggedValue = s.riggedValue;
     soundOn = s.soundOn; calmPref = s.calmPref; lastPick = s.lastPick; spinLog = s.spinLog;
-    history = s.history; panicCooldown = s.panicCooldown;
+    draftHistory = s.history; panicCooldown = s.panicCooldown;
     // Re-sync stable colors: current wheel names first, then drafted picks,
     // so old/positional pick colors are migrated to the consistent scheme.
     names.forEach(colorOf);

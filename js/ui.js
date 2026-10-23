@@ -24,6 +24,11 @@ function setParts(el, parts) {
    Render
 ══════════════════════════════════════ */
 function render() {
+    // Anything that changes the table ends the winner moment, and retires an
+    // Undo toast that would now put back a table older than the change.
+    const key = tableKey();
+    if (plateHold && plateHold.key !== key) endWinnerMoment();
+    if (toastKey !== null && toastKey !== key) hideToast();
     const st = draftStats();
     // Setup lasts until the first spin: the guide and the phone quick-add stay
     // up while the table fills.
@@ -77,12 +82,14 @@ function hot(el) { el.classList.remove('hot'); void el.offsetWidth; el.classList
 /* ── Status line ── */
 let readout = null;     // { name, color } under the pointer while spinning
 
+function riggedOn() { return riggedEnabled && !!riggedValue.trim(); }
+
 function oddsSummary() {
     if (names.length < 2) return [];
     const flat = names.map(() => 1);
     const each = pct(chanceOf(flat, 0));
     const seg  = buildSegments(flat);
-    const tight = layout() === 'phone';
+    const tight = layout() === 'phone' || layout() === 'landscape';
     if (seg.panicIndex < 0) return [tight ? 'Each ' : 'Odds ', { text: each }, tight ? '' : ' each'];
     const total = seg.weights.reduce((a, b) => a + b, 0);
     const p = pct(seg.weights[seg.panicIndex] / total);
@@ -107,9 +114,11 @@ function renderTicker(st) {
         else if (activePowerUp) {
             const pu = activePowerUp;
             kind = 'powerup'; ticker.style.setProperty('--pu', pu.color);
+            // The name is the part that gives way on a narrow screen, never the odds.
+            const who = { text: pu.who, tag: 'span', cls: 'who' };
             text = pu.type === 'wildcard'
-                ? [{ text: pu.emoji + ' Wildcard' }, ` every slice re-rolled · best ${pu.who} ${pct(pu.from)} → ${pct(pu.to)}`]
-                : [{ text: pu.emoji + ' ' + pu.label }, ` ${pu.who}: ${pct(pu.from)} → ${pct(pu.to)} this spin`];
+                ? [{ text: pu.emoji + ' Wildcard' }, ' best ', who, ` ${pct(pu.from)} → ${pct(pu.to)}`]
+                : [{ text: pu.emoji + ' ' + pu.label }, ' ', who, `: ${pct(pu.from)} → ${pct(pu.to)}`, layout() === 'desktop' || layout() === 'tablet' ? ' this spin' : ''];
         } else {
             kind = 'spinning'; text = [`Spinning for pick #${st.next}`, autoSpin ? ' · auto' : ''];
         }
@@ -121,9 +130,10 @@ function renderTicker(st) {
         kind = 'setup'; text = [draftOrder.length ? 'One name left — add another or undo' : 'Add one more name to spin'];
     } else {
         kind = 'ready';
-        text = layout() === 'phone' ? [{ text: 'Ready' }, ` · pick #${st.next}`, autoSpin ? ' · auto' : '']
+        text = (layout() === 'phone' || layout() === 'landscape') ? [{ text: 'Ready' }, ` · pick #${st.next}`, autoSpin ? ' · auto' : '']
                                     : [{ text: 'Ready' }, ` — spin for pick #${st.next}`, autoSpin ? ' · autospin on' : ''];
-        odds = oddsSummary();
+        // Rigged: the fair odds would be a lie, so none are shown at all.
+        odds = riggedOn() ? [] : oddsSummary();
     }
     ticker.dataset.kind = kind;
     setParts(tickerText, text);
@@ -170,7 +180,10 @@ function renderControls(st) {
     undoBtn.setAttribute('aria-label', undoText);
     undoBtn.title = undoText;
     canvas.classList.toggle('locked', !st.canSpin || busy);
-    rigDot.hidden = !(riggedEnabled && riggedValue.trim());
+    rigDot.hidden = !riggedOn();
+    [optionsBtn, tabSettings].forEach(b => {
+        if (riggedOn()) b.setAttribute('aria-label', 'Settings, rigged mode on'); else b.removeAttribute('aria-label');
+    });
     soundBtn.setAttribute('aria-pressed', String(soundOn));
     soundBtn.title = soundOn ? 'Sound on — click to mute' : 'Sound off — click to turn on';
     soundBtn.setAttribute('aria-label', 'Sound');
@@ -265,6 +278,7 @@ function renderRiggedSuggestions() {
    and the empty ones still to come, with the winner cut drawn where it
    falls. A long draft scrolls inside the board, never the page. */
 let boardKey = '';
+const PINNED_WINNERS = 3;
 function renderBoard(st) {
     boardCount.textContent = `${st.picked} / ${st.total}`;
     draftSubtitle.textContent = st.slots === 1 ? 'First pick wins. Everyone after loses.' : `First ${st.slots} picks win. Everyone after loses.`;
@@ -273,7 +287,8 @@ function renderBoard(st) {
     const busy = isSpinning || isBusy;
     [copyBtn, restoreBtn, draftClear].forEach(b => b.setAttribute('aria-disabled', String(busy || st.picked === 0)));
 
-    const latestName = st.latest ? st.latest.name : '';
+    // While a pick is on the nameplate it is the new one, not the seat before it.
+    const latestName = landed ? '' : st.latest ? st.latest.name : '';
     const key = [draftOrder.map(p => p.name + p.color).join(','), st.total, st.slots, latestName,
                  phase, landed ? landed.name : '', freshPick].join('|');
     if (key === boardKey) return;
@@ -285,6 +300,11 @@ function renderBoard(st) {
         li.textContent = 'No one at the table yet. Picks line up here, seat by seat.';
         draftGrid.appendChild(li);
     }
+    // Pin the winners when the list can spare the room for all of them —
+    // pinning some and letting the rest scroll away would mislead — and
+    // never on a short list, where they would cover the seat on the clock.
+    const rows = Math.floor(draftGrid.clientHeight / 38);
+    const pinMax = st.slots <= Math.min(PINNED_WINNERS, Math.floor((rows - 3) / 2)) ? st.slots : 0;
     let nextRow = null;
     for (let i = 0; i < st.total; i++) {
         if (i === st.slots && st.slots < st.total) {
@@ -299,30 +319,37 @@ function renderBoard(st) {
         const nm  = document.createElement('span'); nm.className = 'pick-name';
         const tag = document.createElement('span'); tag.className = 'pick-tag';
         const winner = i < st.slots;
+        // The first few winners stay pinned to the top of the board while a
+        // long draft scrolls under them.
+        const pin = winner && i < pinMax && st.slots < st.total ? ' pin' : '';
+        if (pin) li.style.setProperty('--pin', i);
         if (pick) {
-            li.className = 'pick' + (winner ? ' winner' : '') + (pick.name === latestName ? ' latest' : '') + (pick.name === freshPick ? ' fresh' : '');
+            li.className = 'pick' + (winner ? ' winner' : '') + pin + (pick.name === latestName ? ' latest' : '') + (pick.name === freshPick ? ' fresh' : '');
             pip.style.setProperty('--c', pick.color);
             nm.textContent = pick.name;
             tag.textContent = winner ? 'Winner' : 'Loser';
         } else if (i === draftOrder.length && st.left > 0) {
-            li.className = 'pick next' + (winner ? ' winner' : '');
+            li.className = 'pick next' + (winner ? ' winner' : '') + pin + (landed ? ' latest' : '');
             nm.textContent = landed ? landed.name : isSpinning ? 'Spinning…' : 'On the clock';
             if (landed) pip.style.setProperty('--c', landed.color);
             tag.textContent = winner ? 'Winner' : '';
             nextRow = li;
         } else {
-            li.className = 'pick empty';
+            li.className = 'pick empty' + pin;
             nm.textContent = '—';
         }
         li.append(num, pip, nm, tag);
         draftGrid.appendChild(li);
     }
-    // Keep the action in view: the seat on the clock, or the newest pick.
+    // Keep the action in view: the seat on the clock, or the newest pick,
+    // in the part of the list the pinned winners don't cover.
     const focusRow = nextRow || draftGrid.querySelector('.pick.latest');
-    if (focusRow) {
+    if (focusRow && !focusRow.classList.contains('pin')) {
+        const pins = draftGrid.querySelectorAll('.pick.pin');
+        const cover = pins.length ? pins.length * (pins[0].offsetHeight + 2) : 0;
         const top = focusRow.offsetTop - draftGrid.offsetTop, h = draftGrid.clientHeight;
-        if (top < draftGrid.scrollTop || top + focusRow.offsetHeight > draftGrid.scrollTop + h) {
-            draftGrid.scrollTop = Math.max(0, top - h / 2);
+        if (top < draftGrid.scrollTop + cover || top + focusRow.offsetHeight > draftGrid.scrollTop + h) {
+            draftGrid.scrollTop = Math.max(0, top - cover - (h - cover - focusRow.offsetHeight) / 2);
         }
     }
 
@@ -460,6 +487,9 @@ function showHint(text, isError) {
     hintError = text;
     starterHint.textContent = text;
     starterHint.classList.toggle('error', !!isError);
+    // On a phone the hint lives in the Players sheet; typed into the dock,
+    // nobody would see it there.
+    if (sheetMode() && openSheet !== playersPanel) showToast(text, null, { quiet: true });
     clearTimeout(hintTimer);
     hintTimer = setTimeout(() => { hintError = ''; nameInput.removeAttribute('aria-invalid'); quickInput.removeAttribute('aria-invalid'); commit({ save: false }); }, 4000);
 }
@@ -557,17 +587,34 @@ undoBtn.addEventListener('click', () => {
 
 // Restore, Delete picks and Reset act at once and offer a way back, rather
 // than asking "are you sure?" every time.
-let toastTimer = null, toastUndo = null;
+let toastTimer = null, toastUndo = null, toastKey = null;
 const toast = $('toast'), toastText = $('toastText'), toastUndoBtn = $('toastUndo');
-function showToast(text, undoFn) {
+function showToast(text, undoFn, opts) {
     toastText.textContent = text;
     toastUndo = undoFn;
+    toastUndoBtn.hidden = !undoFn;
+    // Its Undo puts back the table as it was before this action, so it is
+    // retired the moment the table changes again (see render()).
+    toastKey = undoFn ? tableKey() : null;
+    placeToast();
     toast.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(hideToast, 10000);
-    announce(text + ' Undo is available.');
+    toastTimer = setTimeout(hideToast, undoFn ? 10000 : 4000);
+    if (!(opts && opts.quiet)) announce(text + (undoFn ? ' Undo is available.' : ''));
 }
-function hideToast() { toast.classList.remove('show'); toastUndo = null; }
+function hideToast() { toast.classList.remove('show'); toastUndo = null; toastKey = null; }
+// Just above whatever is in front: an open sheet, or else the console, so
+// it never covers SPIN, the tab bar or the board's own buttons. A drawer
+// (a phone on its side) leaves the toast the space beside it. Sheets are
+// measured by offsetTop, which ignores the slide-in transform.
+function placeToast() {
+    let bottom, x = '', max = '';
+    if (openSheet && layout() === 'phone') bottom = innerHeight - openSheet.offsetTop;
+    else if (openSheet) { bottom = 0; x = Math.round((innerWidth - openSheet.offsetWidth) / 2) + 'px'; max = (innerWidth - openSheet.offsetWidth - 24) + 'px'; }
+    else bottom = innerHeight - controls.getBoundingClientRect().top;
+    toast.style.setProperty('--toast-bottom', Math.max(8, Math.round(bottom + 10)) + 'px');
+    toast.style.left = x; toast.style.maxWidth = max;
+}
 toastUndoBtn.addEventListener('click', () => {
     const fn = toastUndo;
     hideToast();
@@ -679,6 +726,7 @@ function openPanel(panel, invoker) {
     openSheet = panel;
     sheetReturn = invoker || document.activeElement;
     panel.classList.add('open');
+    if (toast.classList.contains('show')) requestAnimationFrame(placeToast);
     scrim.hidden = false;
     requestAnimationFrame(() => scrim.classList.add('show'));
     [...app.children].forEach(el => { if (el !== panel) el.inert = true; });
@@ -700,6 +748,7 @@ function closeSheets(returnFocus = true) {
     tabBoard.setAttribute('aria-expanded', 'false');
     const back = sheetReturn;
     openSheet = null; sheetReturn = null;
+    if (toast.classList.contains('show')) placeToast();
     if (returnFocus && back && document.contains(back)) { try { back.focus({ preventScroll: true }); } catch (e) {} }
 }
 
@@ -724,10 +773,13 @@ document.querySelectorAll('.app > .panel .panel-head').forEach(head => {
         openSheet.style.transition = 'none';
         openSheet.style.transform = `translateY(${dy}px)`;
     });
+    let lastDy = 0;
+    head.addEventListener('pointermove', e => { if (y0 !== null && e.pointerId === id) lastDy = e.clientY - y0; });
     const end = e => {
         if (y0 === null || e.pointerId !== id) return;
-        const dy = e.clientY - y0;
-        y0 = null;
+        // A cancelled pointer has no trustworthy position: go by the last move.
+        const dy = e.type === 'pointercancel' ? lastDy : e.clientY - y0;
+        y0 = null; lastDy = 0;
         if (!openSheet) return;
         openSheet.style.transition = '';
         if (dy > 80) closeSheets(); else openSheet.style.transform = '';
@@ -789,16 +841,32 @@ wheelEmpty.addEventListener('click', () => {
    wants Space for itself. A button focused by a CLICK doesn't keep it:
    otherwise Space after clicking Undo would undo again instead of spinning.
 ══════════════════════════════════════ */
-let swallowKeyup = false;
+// How focus last moved: by pointer or by keyboard. (:focus-visible can't
+// tell: Chromium turns it on for the focused button the moment any key is
+// pressed, Space included.)
+let swallowKeyup = false, keyboardNav = false;
+document.addEventListener('pointerdown', () => { keyboardNav = false; }, true);
 document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && openSheet) { e.preventDefault(); closeSheets(); return; }
+    if (/^(Tab|Arrow|Home|End|Page)/.test(e.key)) keyboardNav = true;
+}, true);
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+        // Esc on a takeover is Skip, as About promises.
+        const skip = document.querySelector('.takeover.show .skip-btn:not([hidden]):not([data-auto-stop])');
+        if (skip) { e.preventDefault(); skip.click(); return; }
+        if (openSheet) { e.preventDefault(); closeSheets(); return; }
+    }
     if (e.code !== 'Space' && e.key !== ' ') return;
-    if (e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
     if (document.querySelector('dialog[open]') || app.inert) return;
     const t = e.target instanceof Element ? e.target : document.body;
     if (t.closest('input, textarea, select, [contenteditable]')) return;
-    const ctl = t.closest('button, a, summary, [role="button"]');
-    if (ctl && ctl.matches(':focus-visible')) return;
+    // A control, or a scrolling list, reached by keyboard keeps Space for
+    // itself. Clicked, it doesn't: Space after clicking Undo spins.
+    const scroller = t !== document.body && t !== document.documentElement &&
+                     (t.matches('[tabindex]:not([tabindex="-1"])') || t.scrollHeight > t.clientHeight + 1);
+    const ctl = t.closest('button, a, summary, [role="button"]') || (scroller ? t : null);
+    if (ctl && keyboardNav) return;
     e.preventDefault();
     if (ctl) swallowKeyup = true;
     if (names.length < 2) { alertNow('Add at least 2 names to spin.'); return; }
@@ -812,6 +880,16 @@ document.addEventListener('keyup', e => {
 /* ══════════════════════════════════════
    Settings
 ══════════════════════════════════════ */
+// Each switch is named by its title and described by its explanation,
+// rather than read out as one thirty-word label.
+document.querySelectorAll('.setting').forEach((row, i) => {
+    const sw = row.querySelector('.switch'), nm = row.querySelector('.set-name'), desc = row.querySelector('.set-desc');
+    if (!sw || !nm) return;
+    nm.id = nm.id || 'set-name-' + i;
+    sw.setAttribute('aria-labelledby', nm.id);
+    if (desc) { desc.id = desc.id || 'set-desc-' + i; sw.setAttribute('aria-describedby', desc.id); }
+});
+
 function bindToggle(input, set) {
     input.addEventListener('change', () => { set(input.checked); commit(); });
 }
@@ -881,6 +959,7 @@ const refreshPopRect = () => { if (popOff.active) popOff.rect = wheelWrap.getBou
 let lastLayout = '';
 window.addEventListener('resize', () => {
     resizeFire(); resizeOverlay(); refreshPopRect();
+    if (toast.classList.contains('show')) placeToast();
     const now = layout();
     if (now !== lastLayout) {
         lastLayout = now;
@@ -901,12 +980,6 @@ if (typeof ResizeObserver === 'function') {
     }).observe(wheelStage);
 }
 
-// The reverb is costly to build; do it in a quiet moment after the first
-// touch instead of on top of the first winner's fanfare.
-document.addEventListener('pointerdown', function warm() {
-    document.removeEventListener('pointerdown', warm);
-    setTimeout(() => { if (audioCtx && soundOn) try { getFxBus(); } catch (e) {} }, 300);
-});
 
 /* ══════════════════════════════════════
    Init
@@ -935,6 +1008,18 @@ syncViewport();
 lastLayout = layout();
 render();
 if (document.fonts && document.fonts.ready) {
-    // The face is cached, so repaint it once the label font has arrived.
-    document.fonts.ready.then(() => { faceKey = ''; if (!isSpinning) redraw(); });
+    // The face is cached, so repaint it once the label font has arrived —
+    // and again whenever another subset arrives (a name with Þ or Ł in it).
+    const repaint = () => { faceKey = ''; if (!isSpinning) redraw(); };
+    document.fonts.ready.then(repaint);
+    if (document.fonts.addEventListener) document.fonts.addEventListener('loadingdone', repaint);
 }
+// Dragged to a sharper screen at the same CSS size: the ResizeObserver
+// doesn't fire, so watch the pixel ratio itself.
+(function watchDpr() {
+    if (!window.matchMedia) return;
+    const mq = matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+    const on = () => { mq.removeEventListener ? mq.removeEventListener('change', on) : mq.removeListener(on);
+                       if (sizeWheelCanvas() && !isSpinning) redraw(); watchDpr(); };
+    mq.addEventListener ? mq.addEventListener('change', on) : mq.addListener(on);
+})();

@@ -3,6 +3,7 @@
 ══════════════════════════════════════ */
 const overlayCanvas = document.createElement('canvas');
 overlayCanvas.style.cssText = 'position:fixed;inset:0;z-index:1002;pointer-events:none;';
+overlayCanvas.setAttribute('aria-hidden', 'true');
 document.body.appendChild(overlayCanvas);
 const octx = overlayCanvas.getContext('2d');
 

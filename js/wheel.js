@@ -58,8 +58,12 @@ function sliceArcs(weights) {
    name count: the largest size at which the thinnest ordinary slice still
    has room for a few letters. The thinnest slice is measured at the table's
    resting geometry, so a power-up warping the slices doesn't make every
-   label jump. Each label is then cut to its own slice: surname or initial
-   first ("Gwen F." → "Gwen"), an ellipsis only after that. */
+   label jump. A crowded wheel steps down to 9px before it gives up on
+   type, and then only the slices too thin for it go without — a slice a
+   power-up has swollen still gets its name. Each label is cut to its own
+   slice: surname or initial first ("Gwen F." → "Gwen"), an ellipsis only
+   after that. */
+const LABEL_ROOM = 2.4;             // a label needs room for this many ems
 function labelPlan(seg) {
     const css   = canvas.offsetWidth || SIZE;
     const unit  = SIZE / css;                                    // wheel units per CSS px
@@ -71,7 +75,8 @@ function labelPlan(seg) {
     const angMin = 2 * Math.PI / Math.max(restW, 1);
     let fs = maxFs;
     while (fs > minFs && roomFor(fs, angMin) < fs * 4.5) fs -= 0.5;
-    return { fs, show: roomFor(fs, angMin) >= fs * 2.4 };
+    while (fs > 9 * unit && roomFor(fs, angMin) < fs * LABEL_ROOM) fs -= 0.5;
+    return { fs };
 }
 // Radial room for a label of size fs in a slice of angle ang: from the rim
 // inward until the slice is too narrow to hold the letters' height.
@@ -83,9 +88,9 @@ function fitText(c, text, room) {
     if (c.measureText(text).width <= room) return text;
     const first = text.split(' ')[0];
     if (first !== text && c.measureText(first).width <= room) return first;
-    let cut = text;
-    while (cut.length > 1 && c.measureText(cut + '…').width > room) cut = cut.slice(0, -1);
-    return cut.length > 1 ? cut + '…' : '';
+    const chars = Array.from(text);           // whole characters: never half an emoji
+    while (chars.length > 1 && c.measureText(chars.join('') + '…').width > room) chars.pop();
+    return chars.length > 1 ? chars.join('') + '…' : '';
 }
 
 let panicStripe = null;
@@ -143,24 +148,22 @@ function paintFace(seg) {
     });
 
     const plan = labelPlan(seg);
-    if (plan.show) {
-        arcs.forEach(({ a0, a1 }, i) => {
-            const panic = i === seg.panicIndex;
-            const room  = roomFor(plan.fs, a1 - a0);
-            if (room < plan.fs * 1.8) return;                 // a sliver: colour only
-            c.save();
-            c.translate(cx, cy); c.rotate(base + (a0 + a1) / 2);
-            c.font = `${panic ? 700 : 600} ${plan.fs.toFixed(2)}px ${LABEL_FONT}`;
-            c.textAlign = 'right'; c.textBaseline = 'middle';
-            const text = fitText(c, panic ? PANIC.label : seg.labels[i], room);
-            if (text) {
-                if (panic) { c.shadowColor = 'rgba(255,61,139,0.75)'; c.shadowBlur = 6; }
-                c.fillStyle = panic ? PANIC.textColor : inkOn(seg.colors[i]);
-                c.fillText(text, LABEL_R, plan.fs * 0.04);
-            }
-            c.restore();
-        });
-    }
+    arcs.forEach(({ a0, a1 }, i) => {
+        const panic = i === seg.panicIndex;
+        const room  = roomFor(plan.fs, a1 - a0);
+        if (room < plan.fs * LABEL_ROOM) return;              // a sliver: colour only
+        c.save();
+        c.translate(cx, cy); c.rotate(base + (a0 + a1) / 2);
+        c.font = `${panic ? 700 : 600} ${plan.fs.toFixed(2)}px ${LABEL_FONT}`;
+        c.textAlign = 'right'; c.textBaseline = 'middle';
+        const text = fitText(c, panic ? PANIC.label : seg.labels[i], room);
+        if (text) {
+            if (panic) { c.shadowColor = 'rgba(255,61,139,0.75)'; c.shadowBlur = 6; }
+            c.fillStyle = panic ? PANIC.textColor : inkOn(seg.colors[i]);
+            c.fillText(text, LABEL_R, plan.fs * 0.04);
+        }
+        c.restore();
+    });
     paintPegs(c, seg.labels.length);
 }
 
@@ -296,25 +299,34 @@ function redraw() { drawWheel(); flapPointer(); }
 /* ══════════════════════════════════════
    Spin
 ══════════════════════════════════════ */
-spinBtn.addEventListener('click', spin);
+spinBtn.addEventListener('click', () => {
+    if (names.length < 2) { alertNow(names.length ? 'Add one more name to spin.' : 'Add at least 2 names to spin.'); return; }
+    spin();
+});
 
 function spin() { beginSpin(null); }
 
 // launch === null  → button/spacebar spin (the wheel builds its own speed)
 // launch === {...} → hand flick: { vel, dir, power, popOff } from the drag
-function beginSpin(launch) {
+// auto             → queued by autospin, not asked for by a person
+function beginSpin(launch, auto) {
     if (isSpinning||isBusy||names.length<2) return;
     // Hands on the wheel win: an autospin tick that lands mid-drag waits
     // its turn instead of fighting the player for the rotation.
     if (drag.active && !launch) { if (autoSpin) queueAutoSpin(900); return; }
     ensureAudio();
 
+    endWinnerMoment();
+    hideToast();
     isSpinning = true;
     phase = 'spinning';
     stunt = null;
     wheelHighlight = null;
+    spinSeg = null;
     hideWinCallout();
-    closeSheets();
+    // A spin you asked for puts the panels away so you see it land; one
+    // autospin queued leaves alone a sheet you have just opened to look.
+    if (!auto) closeSheets();
     // Put the phone keyboard away: the landing is the thing to watch.
     if (document.activeElement && document.activeElement.matches('input')) document.activeElement.blur();
 
@@ -337,7 +349,7 @@ function beginSpin(launch) {
             startSpin(pu.weights, launch);
         } else {
             animateWeights(pu.weights, 650, () => {
-                setTimeout(() => startSpin(pu.weights), 320);
+                setTimeout(guarded(() => startSpin(pu.weights)), 320);
             });
         }
     } else {
@@ -366,14 +378,15 @@ function rollPowerUp() {
 function animateWeights(targetW, duration, done) {
     const startW = getWeights().slice();
     const t0 = performance.now();
-    (function step(now) {
+    const step = guarded(function (now) {
         const t = Math.min((now - t0) / duration, 1);
         const e = 1 - Math.pow(1 - t, 3);
         sliceWeights = startW.map((s, i) => s + (targetW[i] - s) * e);
         redraw();
         if (t < 1) requestAnimationFrame(step);
         else { sliceWeights = targetW.slice(); redraw(); done && done(); }
-    })(performance.now());
+    });
+    step(performance.now());
 }
 
 /* ── What a power-up did to the odds ──
@@ -574,7 +587,11 @@ function startSpin(spinWeights, launch) {
             if (popOff.active) endPopOff();       // safety: never finish mid-flight
             if (goblinRun) hideGoblin();          // ...and never leave him on the rim
             rotation = endRot; redraw();
-            spinSeg = null;
+            // spinSeg stays: the landing is shown on the very slices it was
+            // solved against until the pick is seated (or the void stamp
+            // clears, or the race opens). Power-up sizes and the PANIC wedge
+            // change back only after that, so the pointer never sits on a
+            // different name from the one announced.
             if (isIllegal) { showIllegalStamp(); }
             else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
             else { onSpinEnd(winnerIdx); }
@@ -585,15 +602,28 @@ function startSpin(spinWeights, launch) {
     requestAnimationFrame(frame);
 }
 
-/* If anything throws mid-spin, put the wheel back in a usable state instead
-   of leaving every control locked until a reload. */
+/* If anything throws mid-event, put the table back in a usable state instead
+   of leaving every control locked until a reload: takeovers closed, the
+   nameplate down, and a winner caught between the wheel and a seat put
+   back on the wheel. */
 function recoverFromError(err) {
     console.error(err);
-    spinSeg = null;
-    try { if (popOff.active) endPopOff(); hideGoblin(); } catch (e) {}
-    isSpinning = false; isBusy = false; phase = 'ready'; activePowerUp = null;
+    spinSeg = null; wheelHighlight = null; landed = null; plateHold = null;
+    try { if (popOff.active) endPopOff(); hideGoblin(); hideWinCallout(); } catch (e) {}
+    try { [noisOverlay, marbleOverlay].forEach(el => { if (el.classList.contains('show')) closeTakeover(el); }); } catch (e) {}
+    if (pendingPick) {
+        if (!onWheel(pendingPick.name) && !draftOrder.some(p => p.name === pendingPick.name)) names.push(pendingPick.name);
+        pendingPick = null;
+    }
+    app.inert = false;
+    isSpinning = false; isBusy = false; phase = 'ready'; activePowerUp = null; stunt = null;
     sliceWeights = null;
     commit();
+}
+// Every timer and frame of an event runs through this, so one exception
+// anywhere in a takeover recovers instead of locking the app.
+function guarded(fn) {
+    return function () { try { return fn.apply(this, arguments); } catch (err) { recoverFromError(err); } };
 }
 
 /* ── Marquee bulbs ──

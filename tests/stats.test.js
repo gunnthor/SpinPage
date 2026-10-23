@@ -145,7 +145,8 @@ test('a refresh during No One Is Safe never loses the winner', async () => {
   await p.evaluate(() => {
     let n = 0; const real = Math.random;
     Math.random = () => 0.5;
-    window.__forceNois = () => { Math.random = () => (n++ === 0 ? 0.1 : 0.5); };
+    // every draw, not just the next: the confetti draws too
+    window.__forceNois = () => { Math.random = () => 0.1; };
   });
   await p.evaluate(() => spin());
   await p.clock.runFor(8600);                             // landed, nameplate up

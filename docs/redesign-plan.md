@@ -214,3 +214,66 @@ resolution. At idle the original ran 181 style recalculations per 3 seconds
 
 **Tests.** 84 automated checks, all passing: the 28 gameplay checks written
 against the original page pass unchanged on the redesign.
+
+## 8. Final independent review
+
+The six specialists reviewed the finished build against their own baseline
+reports (reports in the session scratchpad). Verdicts: every one judged it
+decisively better on desktop and phones; the page never scrolls in any of
+the 168 states rendered; the draw is untouched (the RNG call order and every
+probability match the original). What they found, and what was done:
+
+**Fixed (each pinned by `tests/review.test.js`)**
+- `let history` shadowed `window.history`, so the live analytics script threw
+  on every load. Renamed `draftHistory`; the saved key is unchanged.
+- On the winner card the wheel snapped back to equal slices (and the PANIC
+  wedge returned), so after a power-up the pointer sat on a different name
+  from the one announced. The landing now stays on the slices it was solved
+  against until the pick is seated, the void stamp clears or the race opens.
+- A save in the gap between the wheel and No One Is Safe (the sound button, a
+  switch in a Settings dialog opened mid-spin) lost the winner on reload. The
+  waiting winner is now `pendingPick`, saved back on the wheel; takeovers close
+  any open dialog.
+- The Restore/Delete/Reset toast's Undo restored a stale table, erasing picks
+  and names added since. It is retired the moment the table changes, and the
+  toast now sits above the console (or an open sheet), never over SPIN.
+- Space after *clicking* Undo or Auto pressed it again (`:focus-visible` is on
+  for any focused button once a key is down). Input modality is tracked
+  instead; Space on a keyboard-reached scroller scrolls it; Shift+Space never
+  spins.
+- Autospin could not be stopped during the race or No One Is Safe: both
+  takeovers have a Stop autospin button. Esc skips a takeover; Calm effects
+  run the race straight to its result (same steps, same dice).
+- Next and Left lagged the nameplate; they now move on the landing frame. The
+  nameplate holds at least 2.4s on auto timing (it flashed for ~40ms at 18+
+  names) without changing when the pick is seated or the next autospin starts;
+  a display time set by hand is kept exactly.
+- One exception in a takeover or the power-up tween left the app locked. Every
+  event timer and frame is `guarded()`; recovery closes takeovers and returns
+  a waiting winner to the wheel.
+- The tote truncated at 1024x700 and in phone landscape: a 900-1180px desktop
+  band gives the stage the room (wheel 268px → 470px at 1024x700), and the tote
+  goes compact from its own width (container query).
+- The PANIC verdict on a phone showed only the runners who were out; the race
+  board in phone landscape overlapped the result. The verdict now shows the
+  finish order with the survivors first; the race sizes itself from the
+  stylesheet's layout instead of a second breakpoint.
+- Smaller: every event was announced twice (a live hint, a status toast);
+  switch names were whole paragraphs; the rigged state was a 7px dot and the
+  odds line showed fair odds while rigged (now no odds, and the button says
+  so); loser picks got jackpot lines; refused names were invisible on phones;
+  sheets could not be swiped shut by finger; the players guide hid the list
+  with the keyboard up; emoji names were cut mid-character; labels on a dense
+  wheel all vanished at once; disabled labels and control edges were under
+  contrast; stunt signs had no plate; long drafts scrolled in the splash; the
+  reverb was still built on the first winner; `.claude/` and `TODO.md` were
+  served by the live site.
+
+**Left, deliberately**
+- The No One Is Safe wheel keeps its flat red pie, and power-ups and horses
+  are still OS emoji: art work, not defects.
+- On short Android phones the keyboard can tip the layout into landscape
+  (`orientation` follows the shrunken viewport).
+- `migrate()` drops keys a future version might add.
+- Pop-off bounds use the layout viewport, so after a pinch-zoom the wheel can
+  fly outside the visible area.

@@ -6,7 +6,12 @@ let audioCtx = null;
 function ensureAudio() {
     if (!soundOn) return;                    // muted: don't even wake the context
     try {
-        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            // The reverb is costly to build: do it now, while names are being
+            // typed, rather than on top of the first winner's fanfare.
+            setTimeout(() => { if (soundOn) try { getFxBus(); } catch (e) {} }, 300);
+        }
         if (audioCtx.state === 'suspended') audioCtx.resume();
     } catch (e) { audioCtx = null; }         // no Web Audio: play silently
 }

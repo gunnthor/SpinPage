@@ -95,11 +95,11 @@ test('phones: the players and board sheets open over an inert app and close on E
   await p.evaluate(() => tabBoard.click());
   await p.clock.runFor(300);
   assert.equal(await p.evaluate(() => boardPanel.classList.contains('open')), true);
-  assert.equal(await p.evaluate(() => document.getElementById('wheelZone').inert), true, 'the wheel cannot be spun under a sheet');
+  assert.equal(await p.evaluate(() => !!document.getElementById('wheelZone').closest('[inert]')), true, 'the wheel cannot be spun under a sheet');
   assert.equal(await p.evaluate(() => tabBoard.getAttribute('aria-expanded')), 'true');
   await p.keyboard.press('Escape');
   assert.equal(await p.evaluate(() => boardPanel.classList.contains('open')), false);
-  assert.equal(await p.evaluate(() => document.getElementById('wheelZone').inert), false);
+  assert.equal(await p.evaluate(() => !!document.getElementById('wheelZone').closest('[inert]')), false);
   assert.equal(await p.evaluate(() => document.activeElement === tabBoard), true, 'focus goes back to the tab');
   await p.context().close();
 });

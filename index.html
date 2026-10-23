@@ -140,7 +140,7 @@
             <input type="text" id="nameInput" placeholder="Add a name — or paste a list" autocomplete="off" enterkeyhint="done" spellcheck="false" aria-describedby="starterHint">
             <button type="submit" class="add-btn" id="addBtn" aria-label="Add"><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg></button>
         </form>
-        <p class="field-hint" id="starterHint" aria-live="polite">Add at least 2 names to spin.</p>
+        <p class="field-hint" id="starterHint">Add at least 2 names to spin.</p>
         <ol class="setup-steps" id="setupSteps" aria-label="Getting started">
             <li><div class="setup-step" id="step1"><span class="step-num">1</span><span class="step-text"><b>Add names</b> — type one and press Enter, or paste a whole list.</span></div></li>
             <li><button type="button" class="setup-step" id="step2"><span class="step-num">2</span><span class="step-text"><b>Winner slots</b> — how many picks count as winners. Set it on the board.</span></button></li>
@@ -156,6 +156,7 @@
         </div>
     </aside>
 
+    <main class="stage-main">
     <!-- ── Status line: what the wheel is doing right now ── -->
     <div class="ticker" id="ticker" data-kind="setup">
         <span class="ticker-icon" id="tickerIcon" aria-hidden="true"></span>
@@ -367,6 +368,7 @@
         </button>
         <p class="spin-hint" id="spinHint">Press <kbd>Space</kbd> or drag the wheel and let go.</p>
     </div>
+    </main>
 
     <!-- ── Phone dock: quick add while setting up, the latest picks after ── -->
     <div class="dock" id="dock">
@@ -423,7 +425,7 @@
 <div class="scrim" id="scrim" hidden></div>
 
 <!-- Restore, Delete picks and Reset act at once; this is the way back -->
-<div class="toast" id="toast" role="status">
+<div class="toast" id="toast">
     <span class="toast-text" id="toastText"></span>
     <button type="button" class="text-btn" id="toastUndo">Undo</button>
 </div>
@@ -579,7 +581,7 @@
             <li><kbd>Esc</kbd> closes any panel or dialog.</li>
         </ul>
         <h3 class="about-h">Is it fair?</h3>
-        <p class="about-p">The winner is drawn by your browser's random number generator the moment a spin starts, weighted by slice size. Power-ups change slice sizes and the real odds, and the new odds are shown. Hand flicks, wind-backs, the gremlin and pop-offs only change how the wheel gets there. The one exception is Rigged, which you have to switch on yourself.</p>
+        <p class="about-p">The winner is drawn by your browser's random number generator the moment a spin starts, weighted by slice size. Power-ups change slice sizes and the real odds, and the new odds are shown. Hand flicks, wind-backs, the gremlin and pop-offs only change how the wheel gets there. About one spin in twenty is ruled illegal: the wheel is stamped, nobody is picked, and you spin again. The one exception is Rigged, which you have to switch on yourself.</p>
         <p class="about-quote">Built for the sacred moment when everyone says, “Just spin it already.”</p>
         <section class="guide" aria-label="How to use SpinPage, and questions">
         <div class="foot-rule"></div>
@@ -678,7 +680,10 @@
     <div class="takeover-title" id="noisTitle">No one is safe</div>
     <div class="nois-wrap" aria-hidden="true"><canvas id="noisWheel" width="380" height="380"></canvas></div>
     <div class="takeover-result" id="noisResult"></div>
-    <button type="button" class="skip-btn" id="noisSkip">Skip to the result</button>
+    <div class="takeover-actions">
+        <button type="button" class="skip-btn" id="noisSkip">Skip to the result</button>
+        <button type="button" class="skip-btn" data-auto-stop hidden>Stop autospin</button>
+    </div>
 </div>
 
 <div class="takeover marble-overlay" id="marbleOverlay" role="dialog" aria-modal="true" aria-labelledby="marbleTitle">
@@ -692,7 +697,10 @@
         </div>
     </div>
     <div class="takeover-result" id="marbleResult"></div>
-    <button type="button" class="skip-btn" id="marbleSkip">Skip to the result</button>
+    <div class="takeover-actions">
+        <button type="button" class="skip-btn" id="marbleSkip">Skip to the result</button>
+        <button type="button" class="skip-btn" data-auto-stop hidden>Stop autospin</button>
+    </div>
 </div>
 
 <script src="js/core.js"></script>
