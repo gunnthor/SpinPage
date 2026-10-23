@@ -185,3 +185,32 @@ Spins and events reset when the draft is restored, cleared or reset.
 9. **Sound**: a persisted mute that silences everything.
 10. **Contrast**: text >= 4.5:1, large text and UI parts >= 3:1.
 11. **No console errors** in any scenario; no animation loop left running at idle.
+
+## 7. Results (measured, not assumed)
+
+**Fit.** At 320x568, 360x640, 375x667, 375x548, 390x844, 430x932, 768x1024,
+667x375, 844x390, 1024x700, 1280x620, 1366x768, 1440x900 and 1920x1080, with
+an empty table, 12 players and 50 players: the page never scrolls, nothing
+overflows sideways, and the wheel, SPIN, the scoreboard and the status line
+are fully on screen and uncovered (`tests/layout.test.js`).
+
+| Viewport | Page scroll before | after | Wheel (drawn canvas) after |
+|---|---|---|---|
+| 1366x768 | 2,289px | none | 442px |
+| 1280x620 | 2,289px (SPIN below the fold) | none | 368px |
+| 1920x1080 | 2,289px | none | 715px |
+| 768x1024 | 3,411px + sideways overflow | none | 425px |
+| 390x844 | 4,098px | none | 340px |
+| 375x667 | 4,106px | none | 326px |
+| 320x568 | 4,456px | none | 275px |
+| 844x390 | 2,637px + sideways overflow | none | 345px |
+
+**Performance** (headless Chromium, 4x CPU throttle; relative numbers):
+a spin holds 60fps at 375x667@2x and 1366x768 with 12 and 50 names, as the
+original did, while one fully rasterised frame costs 3.9-7.1ms against
+11.8-13.3ms — at up to 1.85x the pixels, because the redesign draws at device
+resolution. At idle the original ran 181 style recalculations per 3 seconds
+(animations on hidden overlays); the redesign runs none.
+
+**Tests.** 84 automated checks, all passing: the 28 gameplay checks written
+against the original page pass unchanged on the redesign.
