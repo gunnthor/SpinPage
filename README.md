@@ -26,7 +26,7 @@ The **scoreboard** always shows the next pick, how many are left on the wheel, t
 - **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the screen or drops to the floor and rolls away, then hops back onto the hub to finish the very same spin.
 - **The winner's moment**: the winning slice lights up, the rest dim, and a nameplate rises over the wheel with the pick number. Nothing blacks out the board or the scoreboard.
 - **Draft board**: every seat from first to last — the picks so far, the one on the clock, the empty ones still to come — with the winner cut drawn where it falls.
-- **Autospin** for hands-free draft generation — and it can be called off mid-spin. The phone stays awake while it runs.
+- **Autospin** for hands-free draft generation. Auto can be switched on or off at any moment — mid-spin, mid-event, even from inside the PANIC race — and takes over from the next pick. The phone stays awake while it runs.
 - **Undo** reverses whatever happened last: a pick, a stolen seat or a whole PANIC race. **Restore all**, **Delete picks** and **Reset table** act at once and offer an Undo for ten seconds.
 - **Paste a list**: a column copied from a spreadsheet or a notes app becomes one player per line.
 - **Wind-back**: the wheel runs an ordinary spin, creeps to a stop on a slice — and then gets dragged backwards, held, and thrown forward again onto the real winner.
@@ -34,7 +34,7 @@ The **scoreboard** always shows the next pick, how many are left on the wheel, t
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) swell or shrink a slice before a spin and genuinely shift the odds; the status line spells out the change (`14% → 33%`) for the whole spin, on every screen.
 - **PANIC slice** that drops every drafted player into a horse race over 2-4 hurdles where only the majority keep their seats. It runs at a fixed 60 steps a second, so a 120Hz phone runs the same race as a 60Hz monitor, and it can be skipped to the result.
 - **Illegal spin moments** with a stamped invalid result and retry.
-- **No One Is Safe** wheel that can steal a drafted player's seat.
+- **No One Is Safe**: after a pick, the wheel can turn over to show the drafted seats under a red light and spin once to steal one. It plays on the stage, so the scoreboard, the board (seats at risk, then the one lost) and the console stay up; SPIN becomes Skip, and Auto stays live.
 - **Sound**: synthesized peg clicks, fanfare and stunt sounds, with a mute that is remembered.
 - **Calm effects**: follows your system's reduce-motion setting (or the switch in Settings) — no confetti, fire, shaking or flashing, and a three-second spin to the same result.
 - **Accessible**: every result is announced to screen readers, everything works from the keyboard (Space spins), dialogs and sheets manage focus, and phone targets are at least 44px.

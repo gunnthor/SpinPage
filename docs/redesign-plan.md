@@ -270,10 +270,47 @@ probability match the original). What they found, and what was done:
   served by the live site.
 
 **Left, deliberately**
-- The No One Is Safe wheel keeps its flat red pie, and power-ups and horses
-  are still OS emoji: art work, not defects.
+- Power-ups and horses are still OS emoji: art work, not defects. (The No
+  One Is Safe wheel was the other half of this item; see section 9.)
 - On short Android phones the keyboard can tip the layout into landscape
   (`orientation` follows the shrunken viewport).
 - `migrate()` drops keys a future version might add.
 - Pop-off bounds use the layout viewport, so after a pinch-zoom the wheel can
   fly outside the visible area.
+
+## 9. No One Is Safe on the stage
+
+The old event was a full-screen takeover with its own flat red pie: labels
+upside down, no rim, pegs or flapper, the app inert behind it, and the only
+autospin control a Stop button that appeared once autospin was already on.
+
+It now plays on the main wheel:
+
+- The wheel turns over (a 0.5s flip; instant under Calm) to show the drafted
+  seats, under a red light: the brass ring, rim and hub go blood-red, the
+  bulbs run red, a "Plot twist / No one is safe" sign drops and a short
+  brass sting plays (the fanfare's voices, a diminished chord; peak 0.95).
+- The same renderer draws it, so the seats get the jewel slices, upright
+  labels, pegs, the flapper and the name-under-the-pointer readout.
+- The scoreboard, the board and the console stay up. The board marks every
+  seat at risk and the pick that set it off as "Stealing", then the seat
+  lost ("Out") and where the pick goes ("Takes #3").
+- SPIN reads Skip while the seats spin (Esc too); Auto is live throughout.
+- The landing lights the lost seat in red, with a red nameplate (the name
+  struck through, "Hiro takes the seat"), then the wheel turns back over
+  with the victim on it.
+
+The draw is unchanged: the same four random calls in the same order (victim,
+landing, laps, duration). Only the landing's spread within the slice moved
+off the dividers, 12-88% like the main wheel instead of 1-99%.
+
+Auto can now be switched on at any moment, not just when idle: mid-spin or
+mid-event it arms, and the event's own ending hands on to it, as every event
+already did. The race takeover's Stop button is now an on/off toggle.
+
+Pinned by six new tests in `tests/review.test.js`: no takeover and the
+console in reach at five viewports; Auto on mid-event carries the draft on;
+Auto off mid-event stops it; pointer, nameplate and board agree on the seat
+lost; Skip (button or Esc) never changes which seat is lost; Auto on
+mid-spin takes over from the next pick. 107 tests, all passing; the
+gameplay suite is unchanged.

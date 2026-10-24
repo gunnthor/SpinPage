@@ -34,7 +34,7 @@ async function spinIntoNois(p) {
   await p.evaluate(() => spin());
   await p.clock.runFor(8600);                     // landed, nameplate up
   await p.evaluate(() => window.__forceNois());
-  await p.clock.runFor(700);                      // off the wheel, the takeover not open yet
+  await p.clock.runFor(700);                      // off the wheel, the seats not up yet
   assert.ok(await p.evaluate(() => !!pendingPick), 'a winner is waiting on No One Is Safe');
 }
 
@@ -80,7 +80,7 @@ test('no save during No One Is Safe can lose the winner: Sound clicked in the ga
   await done(p);
 });
 
-test('a dialog opened mid-spin gives way to the takeover', async () => {
+test('a dialog opened mid-spin gives way to No One Is Safe', async () => {
   const p = await open(browser, site.url, { state: table(N12, ['X', 'Y'], { noisEnabled: true }) });
   await p.evaluate(() => { Math.random = () => 0.5; });
   await p.evaluate(() => spin());
@@ -89,21 +89,108 @@ test('a dialog opened mid-spin gives way to the takeover', async () => {
   await p.evaluate(() => { window.__f = () => { Math.random = () => 0.1; }; });
   await p.clock.runFor(6600);
   await p.evaluate(() => window.__f());
-  await p.clock.runFor(2000);                        // the takeover is up
-  assert.equal(await p.evaluate(() => noisOverlay.classList.contains('show')), true);
-  assert.equal(await p.evaluate(() => settingsDialog.open), false, 'Settings closed, Skip is reachable');
+  await p.clock.runFor(2000);                        // the seats are up
+  assert.equal(await p.evaluate(() => !!seatWheel), true);
+  assert.equal(await p.evaluate(() => settingsDialog.open), false, 'Settings closed, the wheel is in view');
   await done(p);
 });
 
-test('if a takeover throws, the app recovers and the winner goes back on the wheel', async () => {
+test('if No One Is Safe throws, the app recovers and the winner goes back on the wheel', async () => {
   const p = await open(browser, site.url, { state: table(N12, ['X', 'Y'], { noisEnabled: true }) });
   await spinIntoNois(p);
-  await p.evaluate(() => { drawNoisWheel = () => { throw new Error('boom in the takeover'); }; });
-  await p.clock.runFor(3000);
-  const s = await p.evaluate(() => ({ busy: isBusy, spinning: isSpinning, inert: app.inert, open: noisOverlay.classList.contains('show'),
+  await p.evaluate(() => { seatLanded = () => { throw new Error('boom on the seats'); }; });
+  await p.clock.runFor(9000);
+  const s = await p.evaluate(() => ({ busy: isBusy, spinning: isSpinning, seats: !!seatWheel, event: app.dataset.event || null,
                                       count: names.length + draftOrder.length, pending: pendingPick }));
-  assert.deepEqual(s, { busy: false, spinning: false, inert: false, open: false, count: 14, pending: null });
-  await done(p, ['boom in the takeover']);
+  assert.deepEqual(s, { busy: false, spinning: false, seats: false, event: null, count: 14, pending: null });
+  await done(p, ['boom on the seats']);
+});
+
+/* ── No One Is Safe on the stage ── */
+
+// spinIntoNois's timings assume a big table: these keep it at 16.
+const SEATS = ['Xavi', 'Yara', 'Zoe', 'Wren'];
+// Forced into the event, then run until the seats are up and turning.
+async function seatsUp(vp) {
+  const p = await open(browser, site.url, { viewport: vp, state: table(N12, SEATS, { noisEnabled: true }) });
+  await spinIntoNois(p);
+  await p.clock.runFor(2000);
+  return p;
+}
+// Is the centre of this control the control itself, i.e. nothing on top of it?
+const reachable = (p, id) => p.evaluate(id => {
+  const el = document.getElementById(id), b = el.getBoundingClientRect();
+  return b.width > 0 && b.bottom <= innerHeight && el.contains(document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2));
+}, id);
+
+test('No One Is Safe plays on the wheel: no takeover, the drafted seats on the face, the console in reach', async () => {
+  for (const vp of ['d1366', 'd1024', 'm375', 'm320', 'l667']) {
+    const p = await seatsUp(vp);
+    const s = await p.evaluate(() => ({
+      phase, inert: app.inert, event: app.dataset.event,
+      seats: seatWheel && seatWheel.seg.labels.join(','), drafted: draftOrder.map(d => d.name).join(','),
+      takeover: !!document.querySelector('.takeover.show'),
+      spin: spinLabel.textContent, autoOff: autoBtn.getAttribute('aria-disabled'),
+    }));
+    assert.deepEqual(s, { phase: 'nois', inert: false, event: 'nois', seats: s.drafted, drafted: s.drafted,
+                          takeover: false, spin: 'Skip', autoOff: 'false' }, vp);
+    for (const id of ['autoBtn', 'spinBtn', 'wheel', 'statNext', 'statLeftNum']) assert.equal(await reachable(p, id), true, `${vp}: ${id} in reach`);
+    await done(p);
+  }
+});
+
+test('Auto switched on during No One Is Safe carries the draft on afterwards', async () => {
+  const p = await seatsUp('m375');
+  await p.click('#autoBtn');
+  const mid = await p.evaluate(() => ({ auto: autoSpin, spinning: isSpinning, phase, pressed: autoBtn.getAttribute('aria-pressed') }));
+  assert.deepEqual(mid, { auto: true, spinning: false, phase: 'nois', pressed: 'true' }, 'armed, not spinning the table mid-event');
+  await p.evaluate(() => { Math.random = () => 0.5; });
+  await p.clock.runFor(10000);                       // the event ends; autospin takes the next pick
+  const after = await p.evaluate(() => ({ seats: !!seatWheel, spinning: isSpinning, steals: spinLog.steals }));
+  assert.deepEqual(after, { seats: false, spinning: true, steals: 1 }, 'autospin spun again after the event');
+  await done(p);
+});
+
+test('Auto switched off during No One Is Safe stops the draft after it', async () => {
+  const p = await open(browser, site.url, { state: table(N12, SEATS, { noisEnabled: true }) });
+  await p.evaluate(() => setAutoSpin(true));
+  await spinIntoNois(p);
+  await p.clock.runFor(2000);
+  await p.click('#autoBtn');
+  assert.equal(await p.evaluate(() => autoSpin), false);
+  await p.evaluate(() => { Math.random = () => 0.5; });
+  await p.clock.runFor(15000);
+  assert.equal(await p.evaluate(() => isSpinning || isBusy), false, 'nothing spun after the event');
+  await done(p);
+});
+
+test('the seat wheel lands with the pointer on the seat that is lost, and the board agrees', async () => {
+  const p = await seatsUp('d1366');
+  await p.clock.runFor(5000);                        // landed (a 4.4s spin), the seat not swapped yet
+  const s = await p.evaluate(() => ({
+    victim: seatWheel && seatWheel.victim,
+    under: seatWheel && seatWheel.seg.labels[underPointer(seatWheel.seg)],
+    plate: winName.textContent, lost: [...draftGrid.querySelectorAll('.pick.lost .pick-name')].map(e => e.textContent),
+  }));
+  assert.ok(s.victim);
+  assert.equal(s.under, s.victim, 'pointer on the lost seat');
+  assert.equal(s.plate, s.victim, 'nameplate names it');
+  assert.deepEqual(s.lost, [s.victim], 'the board marks it');
+  await done(p);
+});
+
+test('SPIN is Skip while the seats spin, and Esc skips too; the seat lost is the one drawn', async () => {
+  const drawn = [];
+  for (const how of ['none', 'click', 'esc']) {
+    const p = await seatsUp('d1366');
+    if (how === 'click') await p.click('#spinBtn');
+    if (how === 'esc') await p.keyboard.press('Escape');
+    await p.clock.runFor(how === 'none' ? 5000 : 200);
+    drawn.push(await p.evaluate(() => seatWheel && seatWheel.victim));
+    await done(p);
+  }
+  assert.ok(drawn[0]);
+  assert.deepEqual(drawn, [drawn[0], drawn[0], drawn[0]]);
 });
 
 test('Space after clicking Undo spins; it does not undo a second pick', async () => {
@@ -225,15 +312,31 @@ test('the live numbers are never cut off: 1024x700, 667x375 and 844x390', async 
   }
 });
 
-test('autospin can be called off from inside a takeover', async () => {
+test('autospin can be switched off and on from inside the race takeover', async () => {
   const p = await open(browser, site.url, { state: table(['A', 'B', 'C'], ['X', 'Y', 'Z']) });
   await scriptRandom(p);
   await p.evaluate(() => { setAutoSpin(true); isBusy = true; startMarbleRace(); });
   await p.clock.runFor(500);
-  const btn = '#marbleOverlay [data-auto-stop]';
-  assert.equal(await p.evaluate(s => !document.querySelector(s).hidden, btn), true, 'Stop autospin is offered');
+  const btn = '#marbleOverlay [data-auto-toggle]';
+  assert.equal(await p.evaluate(s => document.querySelector(s).textContent, btn), 'Stop autospin');
   await p.click(btn);
   assert.equal(await p.evaluate(() => autoSpin), false);
+  assert.equal(await p.evaluate(s => document.querySelector(s).textContent, btn), 'Autospin after this');
+  await p.click(btn);
+  assert.equal(await p.evaluate(() => autoSpin), true);
+  assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('show')), true, 'the race runs on');
+  await done(p);
+});
+
+test('Auto switched on mid-spin takes over from the next pick', async () => {
+  const p = await open(browser, site.url, { state: table(N12) });
+  await scriptRandom(p);
+  await p.evaluate(() => spin());
+  await p.clock.runFor(2000);
+  assert.equal(await p.evaluate(() => autoBtn.getAttribute('aria-disabled')), 'false', 'Auto is live mid-spin');
+  await p.click('#autoBtn');
+  await p.clock.runFor(30000);
+  assert.ok(await p.evaluate(() => draftOrder.length) >= 2, 'it kept spinning');
   await done(p);
 });
 

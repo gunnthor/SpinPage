@@ -683,6 +683,27 @@ function playReseatSound() {
 }
 
 
+/* -- No One Is Safe --
+   The fanfare's own brass, turned sour: two stabs on D, then a diminished
+   chord that hangs while the wheel turns over to the drafted seats. Same
+   voices and room as the win, so it sounds like the same show going wrong. */
+function playSeatAlarm() {
+    if (!sfx()) return;
+    const t0 = audioCtx.currentTime + 0.02;
+    winStab(t0,        146.83, 0.15, 0.24, -0.25);
+    winStab(t0 + 0.21, 146.83, 0.15, 0.24,  0.25);
+    const chordT = t0 + 0.46, hold = 1.4;
+    winImpact(chordT);
+    [146.83, 174.61, 207.65, 293.66].forEach((f, i) => winStab(chordT, f, hold, 0.12, (i - 1.5) * 0.2));
+    const sub = audioCtx.createOscillator(), sg = audioCtx.createGain();
+    sub.type = 'sine'; sub.frequency.setValueAtTime(73.42, chordT);
+    sg.gain.setValueAtTime(0.0001, chordT);
+    sg.gain.exponentialRampToValueAtTime(0.3, chordT + 0.03);
+    sg.gain.exponentialRampToValueAtTime(0.0006, chordT + hold);
+    sub.connect(sg); sg.connect(getFxBus().dry);
+    sub.start(chordT); sub.stop(chordT + hold + 0.05);
+}
+
 function playPanicSound() {
     if (!sfx()) return;
     const now = audioCtx.currentTime;

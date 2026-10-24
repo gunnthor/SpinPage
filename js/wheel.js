@@ -22,6 +22,7 @@ let lightKey       = '';
 let wheelScale     = 1;          // backing-store px per wheel unit
 let wheelHighlight = null;       // name whose slice is spotlit after a landing
 let spinSeg        = null;       // the slices a spin in flight was solved against
+let seatWheel      = null;       // No One Is Safe: the drafted seats have the wheel
 
 const HUB_R   = 31;              // hub radius, wheel units
 const PEG_R   = R - 8;           // radius of the peg ring
@@ -184,7 +185,8 @@ function paintBlankFace() {
     paintPegs(c, n);
 }
 
-function paintLight(blank) {
+// danger: No One Is Safe — the same wheel under a red light.
+function paintLight(blank, danger) {
     const c = lightCtx;
     prepare(c, lightCanvas);
     // Fall-off: brighter toward the hub, darker into the rim...
@@ -201,12 +203,22 @@ function paintLight(blank) {
     key.addColorStop(0.45, 'rgba(255,246,220,0.05)');
     key.addColorStop(1, 'rgba(0,0,0,0.06)');
     c.fill(); c.fillStyle = key; c.fill();
+    if (danger) {
+        const wash = c.createRadialGradient(cx, cy, R * 0.3, cx, cy, R);
+        wash.addColorStop(0, 'rgba(190,16,28,0)');
+        wash.addColorStop(0.7, 'rgba(190,16,28,0.14)');
+        wash.addColorStop(1, 'rgba(150,8,20,0.42)');
+        c.fillStyle = wash; c.fill();
+    }
 
-    // The brass rim: dark seat, bright lip lit from above, shadow groove.
+    // The rim: dark seat, bright lip lit from above, shadow groove. Brass,
+    // or blood-red lacquer while the seats are up.
+    const rim = danger ? ['#3d0b0a', '#ffd4cc', '#e0463a', '#6e1410', '#d0473a']
+                       : ['#3d2d09', '#fff1b8', '#e2b94a', '#7c5c16', '#d9b04a'];
     c.beginPath(); c.arc(cx, cy, R, 0, 2 * Math.PI);
-    c.lineWidth = 7; c.strokeStyle = '#3d2d09'; c.stroke();
+    c.lineWidth = 7; c.strokeStyle = rim[0]; c.stroke();
     const lip = c.createLinearGradient(0, cy - R, 0, cy + R);
-    lip.addColorStop(0, '#fff1b8'); lip.addColorStop(0.3, '#e2b94a'); lip.addColorStop(0.68, '#7c5c16'); lip.addColorStop(1, '#d9b04a');
+    lip.addColorStop(0, rim[1]); lip.addColorStop(0.3, rim[2]); lip.addColorStop(0.68, rim[3]); lip.addColorStop(1, rim[4]);
     c.beginPath(); c.arc(cx, cy, R - 1.2, 0, 2 * Math.PI);
     c.lineWidth = 3.6; c.strokeStyle = lip; c.stroke();
     c.beginPath(); c.arc(cx, cy, R - 4.8, 0, 2 * Math.PI);
@@ -216,7 +228,8 @@ function paintLight(blank) {
     // wheel has words where the hub would be, so it goes without.
     if (blank) return;
     const ring = c.createLinearGradient(cx - HUB_R, cy - HUB_R, cx + HUB_R, cy + HUB_R);
-    ring.addColorStop(0, '#fff3c2'); ring.addColorStop(0.32, '#e0b84e'); ring.addColorStop(0.64, '#7c5c16'); ring.addColorStop(1, '#f2d77c');
+    const hub = danger ? ['#ffd4cc', '#d8443a', '#6e1410', '#f08a7c'] : ['#fff3c2', '#e0b84e', '#7c5c16', '#f2d77c'];
+    ring.addColorStop(0, hub[0]); ring.addColorStop(0.32, hub[1]); ring.addColorStop(0.64, hub[2]); ring.addColorStop(1, hub[3]);
     c.save();
     c.shadowColor = 'rgba(0,0,0,0.6)'; c.shadowBlur = 10; c.shadowOffsetY = 3;
     c.beginPath(); c.arc(cx, cy, HUB_R, 0, 2 * Math.PI); c.fillStyle = ring; c.fill();
@@ -243,23 +256,26 @@ function paintHighlight(seg) {
     ctx.fillStyle = 'rgba(4,3,9,0.6)'; ctx.fill();
     ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R - 3, base + a0, base + a1); ctx.closePath();
     ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(255,214,102,0.9)'; ctx.shadowBlur = 22;
-    ctx.lineWidth = 4; ctx.strokeStyle = '#ffe07a'; ctx.stroke();
-    ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = '#fffbe8'; ctx.stroke();
+    const lamp = seatWheel ? ['rgba(255,70,60,0.95)', '#ff6b5f', '#ffe3df']      // the seat that is lost
+                           : ['rgba(255,214,102,0.9)', '#ffe07a', '#fffbe8'];
+    ctx.shadowColor = lamp[0]; ctx.shadowBlur = 22;
+    ctx.lineWidth = 4; ctx.strokeStyle = lamp[1]; ctx.stroke();
+    ctx.shadowBlur = 0; ctx.lineWidth = 1.5; ctx.strokeStyle = lamp[2]; ctx.stroke();
     ctx.restore();
 }
 
 function drawWheel() {
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    const blank = names.length < 2;
-    const seg = blank ? null : (spinSeg || buildSegments(getWeights()));
+    const seats = !!seatWheel;
+    const blank = !seats && names.length < 2;
+    const seg = blank ? null : seats ? seatWheel.seg : (spinSeg || buildSegments(getWeights()));
     const key = blank ? 'blank|' + canvas.width
         : [canvas.width, canvas.offsetWidth, seg.panicIndex, seg.labels.join('\u0001'), seg.colors.join(','),
            seg.weights.map(w => w.toFixed(4)).join(',')].join('|');
     if (key !== faceKey) { blank ? paintBlankFace() : paintFace(seg); faceKey = key; }
-    const lk = canvas.width + (blank ? '|blank' : '');
-    if (lightKey !== lk) { paintLight(blank); lightKey = lk; }
+    const lk = canvas.width + (blank ? '|blank' : '') + (seats ? '|seats' : '');
+    if (lightKey !== lk) { paintLight(blank, seats); lightKey = lk; }
 
     const W = canvas.width;
     ctx.translate(W / 2, W / 2);
@@ -282,7 +298,7 @@ function flapPointer() {
     if (!wheelPointer) return;
     if (calmEffects()) { wheelPointer.style.transform = ''; return; }
     const now = performance.now();
-    const ring = pegRing(names.length < 2 ? 12 : segCount());
+    const ring = pegRing(seatWheel ? seatWheel.seg.labels.length : names.length < 2 ? 12 : segCount());
     const moved = rotation - flapRot;
     const speed = Math.abs(moved) / Math.max(now - flapT, 1);
     flapRot = rotation; flapT = now;
@@ -300,6 +316,7 @@ function redraw() { drawWheel(); flapPointer(); }
    Spin
 ══════════════════════════════════════ */
 spinBtn.addEventListener('click', () => {
+    if (phase === 'nois') { skipSeats(); return; }      // SPIN is Skip while the seats are up
     if (names.length < 2) { alertNow(names.length ? 'Add one more name to spin.' : 'Add at least 2 names to spin.'); return; }
     spin();
 });
@@ -610,7 +627,8 @@ function recoverFromError(err) {
     console.error(err);
     spinSeg = null; wheelHighlight = null; landed = null; plateHold = null;
     try { if (popOff.active) endPopOff(); hideGoblin(); hideWinCallout(); } catch (e) {}
-    try { [noisOverlay, marbleOverlay].forEach(el => { if (el.classList.contains('show')) closeTakeover(el); }); } catch (e) {}
+    try { if (marbleOverlay.classList.contains('show')) closeTakeover(marbleOverlay); } catch (e) {}
+    try { endSeatStage(); canvas.classList.remove('flip'); } catch (e) {}
     if (pendingPick) {
         if (!onWheel(pendingPick.name) && !draftOrder.some(p => p.name === pendingPick.name)) names.push(pendingPick.name);
         pendingPick = null;

@@ -33,7 +33,7 @@ function render() {
     // Setup lasts until the first spin: the guide and the phone quick-add stay
     // up while the table fills.
     app.dataset.phase = (draftOrder.length === 0 && spinLog.spins === 0 && !isSpinning && !isBusy) ? 'setup' : 'play';
-    app.dataset.wheel = names.length < 2 ? 'empty' : 'ready';
+    app.dataset.wheel = names.length < 2 && !seatWheel ? 'empty' : 'ready';
     renderScore(st);
     renderTicker(st);
     renderControls(st);
@@ -101,7 +101,12 @@ function renderTicker(st) {
     let kind = 'ready', text = [], odds = [];
     ticker.style.removeProperty('--pu');
     if (phase === 'nois') {
-        kind = 'nois'; text = [{ text: 'No one is safe' }, ' — a drafted seat is up for grabs'];
+        kind = 'nois';
+        const sw = seatWheel, roomy = layout() === 'desktop' || layout() === 'tablet';
+        text = sw && sw.victim ? [{ text: sw.victim }, ` loses pick #${sw.seat}`, sw.by ? ` — ${sw.by.name} takes it` : '']
+             : sw && sw.by && roomy ? [{ text: 'No one is safe' }, ` — ${sw.by.name} is taking a drafted seat`]
+             : roomy ? [{ text: 'No one is safe' }, ' — a drafted seat is up for grabs']
+             :         [{ text: 'No one is safe' }];
     } else if (phase === 'panic') {
         kind = 'panic'; text = [{ text: 'PANIC' }, ' — the drafted field is racing for their seats'];
     } else if (phase === 'illegal') {
@@ -137,14 +142,18 @@ function renderTicker(st) {
     }
     ticker.dataset.kind = kind;
     setParts(tickerText, text);
-    if (isSpinning && phase !== 'landed' && readout) paintReadout();
+    if (readoutLive() && readout) paintReadout();
     else setParts(tickerOdds, odds);
 }
+
+// The name under the pointer shows while a wheel is moving: the table's,
+// or the seats' during No One Is Safe.
+function readoutLive() { return (isSpinning && phase !== 'landed') || !!(seatWheel && seatWheel.spinning); }
 
 // The name under the pointer, every time it changes during a spin.
 function setReadout(name, color) {
     readout = { name, color };
-    if (isSpinning && phase !== 'landed') paintReadout();
+    if (readoutLive()) paintReadout();
 }
 function paintReadout() {
     tickerOdds.textContent = '';
@@ -168,12 +177,15 @@ function describeUndo(ev) {
 
 function renderControls(st) {
     const busy = isSpinning || isBusy;
-    spinBtn.setAttribute('aria-disabled', String(!st.canSpin || busy));
-    spinBtn.classList.toggle('busy', busy);
-    spinLabel.textContent = (isSpinning && phase !== 'landed') ? 'Spinning' : isBusy ? 'Wait' : 'Spin';
-    // While autospin is running it stays live, so it can be called off
-    // mid-spin — otherwise you have to sit through the rest of the draft.
-    autoBtn.setAttribute('aria-disabled', String(autoSpin ? false : (!st.canSpin || busy)));
+    // While the seats are spinning, SPIN is Skip: the victim is already drawn.
+    const skip = canSkipSeats();
+    spinBtn.setAttribute('aria-disabled', String(skip ? false : (!st.canSpin || busy)));
+    spinBtn.classList.toggle('busy', busy && !skip);
+    spinLabel.textContent = skip ? 'Skip' : (isSpinning && phase !== 'landed') ? 'Spinning' : isBusy ? 'Wait' : 'Spin';
+    if (skip) spinBtn.setAttribute('aria-label', 'Skip to the result'); else spinBtn.removeAttribute('aria-label');
+    // Auto is never locked out: it can be called off mid-spin, or switched
+    // on mid-spin or mid-event to carry on from the next pick.
+    autoBtn.setAttribute('aria-disabled', String(!(autoSpin || canArmAuto())));
     const ev = nextUndo();
     undoBtn.setAttribute('aria-disabled', String(!ev || busy));
     const undoText = describeUndo(ev);
@@ -192,6 +204,7 @@ function renderControls(st) {
 }
 
 function wheelSummary() {
+    if (seatWheel) return `No one is safe: the wheel holds the ${seatWheel.seg.labels.length} drafted seats.`;
     if (names.length < 2) return 'The wheel. Add at least two names to spin.';
     const seg = buildSegments(getWeights());
     const panic = seg.panicIndex >= 0 ? ', plus a Panic wedge' : '';
@@ -289,8 +302,10 @@ function renderBoard(st) {
 
     // While a pick is on the nameplate it is the new one, not the seat before it.
     const latestName = landed ? '' : st.latest ? st.latest.name : '';
+    // No One Is Safe: every seat is at risk until the wheel picks one.
+    const seats = phase === 'nois' && seatWheel, lost = seats ? seatWheel.victim : null;
     const key = [draftOrder.map(p => p.name + p.color).join(','), st.total, st.slots, latestName,
-                 phase, landed ? landed.name : '', freshPick].join('|');
+                 phase, landed ? landed.name : '', freshPick, seats ? 'seats|' + lost : ''].join('|');
     if (key === boardKey) return;
     boardKey = key;
 
@@ -324,10 +339,17 @@ function renderBoard(st) {
         const pin = winner && i < pinMax && st.slots < st.total ? ' pin' : '';
         if (pin) li.style.setProperty('--pin', i);
         if (pick) {
-            li.className = 'pick' + (winner ? ' winner' : '') + pin + (pick.name === latestName ? ' latest' : '') + (pick.name === freshPick ? ' fresh' : '');
+            li.className = 'pick' + (winner ? ' winner' : '') + pin + (pick.name === latestName ? ' latest' : '') + (pick.name === freshPick ? ' fresh' : '')
+                         + (seats ? (pick.name === lost ? ' lost' : lost ? '' : ' at-risk') : '');
             pip.style.setProperty('--c', pick.color);
             nm.textContent = pick.name;
-            tag.textContent = winner ? 'Winner' : 'Loser';
+            tag.textContent = seats && pick.name === lost ? 'Out' : winner ? 'Winner' : 'Loser';
+        } else if (seats && i === draftOrder.length && pendingPick) {
+            // The pick that set it off, waiting for a seat to come free.
+            li.className = 'pick next stealer' + pin;
+            nm.textContent = pendingPick.name;
+            pip.style.setProperty('--c', pendingPick.color);
+            tag.textContent = lost ? 'Takes #' + seatWheel.seat : 'Stealing';
         } else if (i === draftOrder.length && st.left > 0) {
             li.className = 'pick next' + (winner ? ' winner' : '') + pin + (landed ? ' latest' : '');
             nm.textContent = landed ? landed.name : isSpinning ? 'Spinning…' : 'On the clock';
@@ -419,13 +441,16 @@ function renderWheelState(st) {
                : (phase === 'panic' || phase === 'nois') ? 'danger'
                : isSpinning ? 'spin' : 'idle';
     if (wheelFrame.dataset.mode !== mode) wheelFrame.dataset.mode = mode;
-    if (mode !== 'spin') { delete wheelFrame.dataset.chase; chaseStep = -1; }
-    if (calmEffects() && mode === 'spin') wheelFrame.dataset.chase = '0';
+    // The bulbs chase whichever wheel is moving: the seats' run red.
+    const chasing = mode === 'spin' || !!(seatWheel && seatWheel.spinning);
+    if (!chasing) { delete wheelFrame.dataset.chase; chaseStep = -1; }
+    if (calmEffects() && chasing) wheelFrame.dataset.chase = '0';
     if (!isSpinning) redraw();
 }
 
 /* ── Winner nameplate ── */
 function showWinCallout(name, color, pickNo, winner, quip) {
+    winCallout.classList.remove('danger');
     winCallout.style.setProperty('--win', color);
     wheelFrame.style.setProperty('--win-jewel', color);
     setParts(winKicker, [`${ordinal(pickNo)} pick · `, { text: winner ? 'Winner' : 'Loser', tag: 'span', cls: winner ? '' : 'tag-loser' }]);
@@ -851,9 +876,10 @@ document.addEventListener('keydown', e => {
 }, true);
 document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
-        // Esc on a takeover is Skip, as About promises.
-        const skip = document.querySelector('.takeover.show .skip-btn:not([hidden]):not([data-auto-stop])');
+        // Esc on a takeover, or on No One Is Safe, is Skip, as About promises.
+        const skip = document.querySelector('.takeover.show .skip-btn:not([hidden]):not([data-auto-toggle])');
         if (skip) { e.preventDefault(); skip.click(); return; }
+        if (canSkipSeats() && !document.querySelector('dialog[open]')) { e.preventDefault(); skipSeats(); return; }
         if (openSheet) { e.preventDefault(); closeSheets(); return; }
     }
     if (e.code !== 'Space' && e.key !== ' ') return;
@@ -869,8 +895,10 @@ document.addEventListener('keydown', e => {
     if (ctl && keyboardNav) return;
     e.preventDefault();
     if (ctl) swallowKeyup = true;
-    if (names.length < 2) { alertNow('Add at least 2 names to spin.'); return; }
+    // Mid-event the wheel can briefly hold one name (No One Is Safe has the
+    // other in hand): busy comes first, so that isn't reported as a problem.
     if (isSpinning || isBusy) return;
+    if (names.length < 2) { alertNow('Add at least 2 names to spin.'); return; }
     spin();
 });
 document.addEventListener('keyup', e => {

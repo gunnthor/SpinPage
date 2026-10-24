@@ -26,9 +26,9 @@ function showIllegalStamp() {
 }
 
 /* ── Takeovers ──
-   No One Is Safe and the PANIC race take the whole screen. While one is up
-   the app behind it is inert, focus sits on its Skip button, and it goes
-   back where it was afterwards. */
+   The PANIC race takes the whole screen. While it is up the app behind it
+   is inert, focus sits on its Skip button, and it goes back where it was
+   afterwards. (No One Is Safe plays on the stage instead: see below.) */
 let takeoverReturn = null;
 function openTakeover(el) {
     endWinnerMoment();
@@ -54,176 +54,164 @@ function closeTakeover(el) {
    Boost FX
 ══════════════════════════════════════ */
 
-/* ── No one is safe wheel ── */
-const noisCanvas = document.getElementById('noisWheel');
-const noisCtx    = noisCanvas.getContext('2d');
-const NSW = noisCanvas.width, NCX = NSW/2, NCY = NSW/2, NR = NCX - 12;
-let   noisRotation = 0, noisScale = 1, noisSkipped = false;
+/* ── No One Is Safe ──
+   Plays on the stage, not over it. The wheel turns over to show the
+   drafted seats, under a red light, and spins once for one of them; the
+   scoreboard, the board and the console stay up the whole time, so
+   autospin can be switched on or off mid-event. The victim is drawn
+   before the wheel moves: Skip (the SPIN button, or Esc) only cuts the
+   wait. */
+const SEAT_HOLD_MS = 1400;          // the seats on show before the spin
+let noisSkipped = false;
 
-// Drawn in 380-unit space, rendered at the screen's real resolution.
-function sizeNoisCanvas() {
-    const css = noisCanvas.offsetWidth || NSW;
-    const px  = Math.round(css * Math.min(window.devicePixelRatio || 1, 3));
-    if (noisCanvas.width !== px) { noisCanvas.width = noisCanvas.height = px; }
-    noisScale = noisCanvas.width / NSW;
+function canSkipSeats() { return !!seatWheel && !seatWheel.victim && !noisSkipped; }
+function skipSeats() {
+    if (!canSkipSeats()) return;
+    noisSkipped = true;
+    commit({ save: false });
 }
 
-function drawNoisWheel(arr, rot) {
-    noisCtx.setTransform(noisScale, 0, 0, noisScale, 0, 0);
-    noisCtx.clearRect(0, 0, NSW, NSW);
-    if (!arr.length) return;
-    const arc = (2*Math.PI)/arr.length;
-
-    for (let i=0;i<arr.length;i++) {
-        const start=rot-Math.PI/2+i*arc, end=start+arc, mid=(start+end)/2;
-        noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
-        noisCtx.arc(NCX,NCY,NR,start,end); noisCtx.closePath();
-        noisCtx.fillStyle=arr[i].color; noisCtx.fill();
-
-        const shine=noisCtx.createRadialGradient(NCX,NCY,0,NCX,NCY,NR);
-        shine.addColorStop(0,'rgba(255,255,255,0.08)'); shine.addColorStop(1,'rgba(0,0,0,0.3)');
-        noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
-        noisCtx.arc(NCX,NCY,NR,start,end); noisCtx.closePath();
-        noisCtx.fillStyle=shine; noisCtx.fill();
-
-        noisCtx.save(); noisCtx.translate(NCX,NCY); noisCtx.rotate(mid);
-        const fs=arr.length>12?11:arr.length>7?13:15;
-        noisCtx.font=`600 ${fs}px ${LABEL_FONT}`;
-        noisCtx.textAlign='center'; noisCtx.textBaseline='middle';
-        noisCtx.fillStyle=inkOn(arr[i].color);
-        const chars=Array.from(arr[i].name), maxW=NR*0.52;
-        let label=arr[i].name;
-        while(noisCtx.measureText(label).width>maxW&&chars.length>2) { chars.pop(); label=chars.join(''); }
-        if(label!==arr[i].name) label+='…';
-        noisCtx.fillText(label,NR*0.62,0); noisCtx.restore();
-    }
-
-    for (let i=0;i<arr.length;i++) {
-        const angle=rot-Math.PI/2+i*arc;
-        noisCtx.beginPath(); noisCtx.moveTo(NCX,NCY);
-        noisCtx.lineTo(NCX+Math.cos(angle)*NR, NCY+Math.sin(angle)*NR);
-        noisCtx.strokeStyle='rgba(192,57,43,0.5)'; noisCtx.lineWidth=1.5; noisCtx.stroke();
-    }
-
-    noisCtx.beginPath(); noisCtx.arc(NCX,NCY,NR,0,2*Math.PI);
-    noisCtx.strokeStyle='rgba(192,57,43,0.65)'; noisCtx.lineWidth=4; noisCtx.stroke();
-
-    const hub=noisCtx.createRadialGradient(NCX,NCY,0,NCX,NCY,20);
-    hub.addColorStop(0,'#ff6b6b'); hub.addColorStop(0.45,'#c0392b'); hub.addColorStop(1,'#7b1c1c');
-    noisCtx.beginPath(); noisCtx.arc(NCX,NCY,20,0,2*Math.PI);
-    noisCtx.fillStyle=hub; noisCtx.fill();
-    noisCtx.strokeStyle='rgba(255,107,107,0.4)'; noisCtx.lineWidth=1.5; noisCtx.stroke();
-
-    const px=NCX, py=20, hw=15;
-    noisCtx.shadowColor='rgba(192,57,43,0.9)'; noisCtx.shadowBlur=18;
-    const pg=noisCtx.createLinearGradient(px-hw,0,px+hw,0);
-    pg.addColorStop(0,'#7b1c1c'); pg.addColorStop(0.5,'#ff6b6b'); pg.addColorStop(1,'#7b1c1c');
-    noisCtx.beginPath(); noisCtx.moveTo(px-hw,3); noisCtx.lineTo(px+hw,3); noisCtx.lineTo(px,py);
-    noisCtx.closePath(); noisCtx.fillStyle=pg; noisCtx.fill(); noisCtx.shadowBlur=0;
-    noisCtx.beginPath(); noisCtx.arc(px,py,4.5,0,2*Math.PI);
-    noisCtx.fillStyle='#fff'; noisCtx.shadowColor='rgba(255,255,255,0.9)'; noisCtx.shadowBlur=6;
-    noisCtx.fill(); noisCtx.shadowBlur=0;
+// Turn the wheel over, swapping what is on its face at the edge-on moment.
+let flipTimer = null;
+function flipWheel(swap) {
+    clearTimeout(flipTimer);
+    if (calmEffects()) { swap(); redraw(); return; }
+    canvas.classList.remove('flip');
+    void canvas.offsetWidth;
+    canvas.classList.add('flip');
+    flipTimer = setTimeout(guarded(() => { swap(); redraw(); }), 260);
 }
+canvas.addEventListener('animationend', e => { if (e.animationName === 'wheelFlip') canvas.classList.remove('flip'); });
 
-const noisOverlay = document.getElementById('noisOverlay');
-document.getElementById('noisSkip').addEventListener('click', () => { noisSkipped = true; });
+// Clears the stage after the event, or after an error mid-event.
+function endSeatStage() {
+    seatWheel = null;
+    wheelHighlight = null;
+    delete app.dataset.event;
+    winCallout.classList.remove('danger');
+}
 
 function showNoisWheel(replacementPick, onDone) {
     if (!draftOrder.length) { onDone&&onDone(); return; }
     isBusy = true;
     phase = 'nois';
+    endWinnerMoment();
+    // The event is the thing to watch: nothing stays in front of the wheel.
+    document.querySelectorAll('dialog[open]').forEach(closeDialog);
+    closeSheets(false);
+
+    const candidates = draftOrder.map(p=>({name:p.name, color:p.color}));
+    const seg = { labels: candidates.map(c => c.name), colors: candidates.map(c => c.color),
+                  weights: candidates.map(() => 1), panicIndex: -1 };
+    noisSkipped = false;
+    app.dataset.event = 'nois';
+    flipWheel(() => {
+        seatWheel = { seg, by: replacementPick, victim: null, seat: 0, spinning: false };
+        commit({ save: false });            // SPIN becomes Skip, the board's seats go at risk
+    });
+    runBanner('Plot twist', 'No one is safe', 1500, 'danger');
+    playSeatAlarm();
+    announce('No one is safe. Spinning for a drafted seat.');
     commit({ save: false });
 
-    const overlay    = noisOverlay;
-    const resultEl   = document.getElementById('noisResult');
-    const candidates = draftOrder.map(p=>({name:p.name, color:p.color}));
+    setTimeout(guarded(() => spinSeats(candidates, replacementPick, onDone)), calmEffects() ? 900 : SEAT_HOLD_MS);
+}
 
-    noisRotation = 0;
-    noisSkipped  = false;
-    resultEl.textContent = '';
-    openTakeover(overlay);
-    sizeNoisCanvas();
-    drawNoisWheel(candidates, noisRotation);
-    announce('No one is safe. Spinning for a drafted seat.');
+function spinSeats(candidates, replacementPick, onDone) {
+    const TAU        = 2*Math.PI;
+    const victimIdx  = Math.floor(Math.random()*candidates.length);
+    const arc        = TAU/candidates.length;
+    // Kept off the dividers, like the main wheel, so the pointer is
+    // never on the line between two seats.
+    const landingPos = 0.12 + Math.random()*0.76;
+    const victimMid  = (victimIdx + landingPos)*arc;
+    const targetNorm = ((TAU - victimMid%TAU)+TAU)%TAU;
+    const curNorm    = ((rotation%TAU)+TAU)%TAU;
+    let delta = targetNorm - curNorm;
+    if (delta<0) delta += TAU;
+
+    const extraSpins = 5 + Math.floor(Math.random()*4);
+    const totalRot   = extraSpins*TAU + delta;
+    let   duration   = 4200 + Math.random()*2000;
+    if (calmEffects()) duration = 2000;
+    const startRot   = rotation, endRot = rotation+totalRot;
+    const startTime  = performance.now();
+    const ring       = pegRing(candidates.length);
+    let lastTick     = Math.floor(rotation/ring.arc);
+    let prevT        = startTime, prevRot = rotation;
+
+    seatWheel.spinning = true;
+    readoutAt = -1;                     // the readout names seats now, not wheel slots
+    commit({ save: false });
+
+    const frame = guarded(function (now) {
+        const t = noisSkipped ? 1 : Math.min((now-startTime)/duration, 1);
+        rotation = startRot + (endRot-startRot)*easeOut(t);
+        redraw();
+        chaseBulbs();
+        showUnderPointer(seatWheel.seg);
+
+        setTickSpeed((rotation - prevRot) / Math.max(now - prevT, 1));
+        prevT = now; prevRot = rotation;
+
+        const sIdx = Math.floor(rotation/ring.arc);
+        if (sIdx!==lastTick) {
+            const crossed = Math.min(Math.abs(sIdx-lastTick),2);
+            for(let i=0;i<crossed;i++) playTick(i === 0 && isAccentPeg(sIdx, ring.per));
+            lastTick=sIdx;
+        }
+
+        if (t<1) { requestAnimationFrame(frame); return; }
+        rotation = endRot;
+        seatLanded(candidates[victimIdx], replacementPick, onDone);
+    });
+    requestAnimationFrame(frame);
+}
+
+function seatLanded(victim, replacementPick, onDone) {
+    const seatNo = draftOrder.findIndex(p => p.name === victim.name) + 1;
+    Object.assign(seatWheel, { spinning: false, victim: victim.name, seat: seatNo });
+    wheelHighlight = victim.name;
+    redraw();
+
+    setParts(winKicker, [`${ordinal(seatNo)} pick · `, { text: 'Undrafted', tag: 'span', cls: 'tag-out' }]);
+    winName.textContent = victim.name;
+    winSub.textContent  = replacementPick ? `${replacementPick.name} takes the seat` : 'Back on the wheel';
+    winCallout.style.setProperty('--win', victim.color);
+    winCallout.classList.add('danger', 'show');
+    flashBulbs(victim.color);
+    playStampSound();
+    if (!calmEffects()) shakeWheel();
+    announce(replacementPick
+        ? `${victim.name} is undrafted. ${replacementPick.name} takes pick ${seatNo}.`
+        : `${victim.name} is undrafted and back on the wheel.`);
+    commit({ save: false });
 
     setTimeout(guarded(() => {
-        const victimIdx  = Math.floor(Math.random()*candidates.length);
-        const arc        = (2*Math.PI)/candidates.length;
-        const landingPos = 0.01 + Math.random()*0.98;
-        const victimMid  = (victimIdx + landingPos)*arc;
-        const targetNorm = ((2*Math.PI - victimMid%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
-        const curNorm    = ((noisRotation%(2*Math.PI))+2*Math.PI)%(2*Math.PI);
-        let delta = targetNorm - curNorm;
-        if (delta<0) delta += 2*Math.PI;
+        const di=draftOrder.findIndex(p=>p.name===victim.name);
+        if (di>=0) {
+            if (replacementPick) draftOrder[di] = replacementPick;
+            else draftOrder.splice(di,1);
+        }
+        names.push(victim.name);
+        pendingPick = null;             // seated: saves no longer need to hold them
+        draftHistory.push({ t: 'steal', seat: Math.max(di, 0), stealer: replacementPick ? replacementPick.name : null, victim: victim.name });
+        spinLog.steals++;
+        if (replacementPick) { lastPick = replacementPick.name; freshPick = replacementPick.name; }
+        if (names.length < 2 && autoSpin) setAutoSpin(false);
+        commit();
 
-        const extraSpins = 5 + Math.floor(Math.random()*4);
-        const totalRot   = extraSpins*2*Math.PI + delta;
-        let   duration   = 4200 + Math.random()*2000;
-        if (calmEffects()) duration = 2000;
-        const startRot   = noisRotation, endRot = noisRotation+totalRot;
-        const startTime  = performance.now();
-        const noisRing   = pegRing(candidates.length);
-        let noisLastTick = Math.floor(noisRotation/noisRing.arc);
-        let noisPrevT    = startTime, noisPrevRot = noisRotation;
-
-        // Same gentle final glide as the main wheel for a suspenseful finish.
-        function easeOut(t) { return 1 - (0.55*Math.pow(1-t,9) + 0.45*Math.pow(1-t,1.7)); }
-
-        const frame = guarded(function (now) {
-            // Skip jumps straight to the landing: the victim was drawn above,
-            // before the wheel moved, so skipping changes nothing but the wait.
-            const t = noisSkipped ? 1 : Math.min((now-startTime)/duration, 1);
-            noisRotation = startRot + (endRot-startRot)*easeOut(t);
-            drawNoisWheel(candidates, noisRotation);
-
-            setTickSpeed((noisRotation - noisPrevRot) / Math.max(now - noisPrevT, 1));
-            noisPrevT = now; noisPrevRot = noisRotation;
-
-            const sIdx = Math.floor(noisRotation/noisRing.arc);
-            if (sIdx!==noisLastTick) {
-                const crossed = Math.min(Math.abs(sIdx-noisLastTick),2);
-                for(let i=0;i<crossed;i++) playTick(i === 0 && isAccentPeg(sIdx, noisRing.per));
-                noisLastTick=sIdx;
-            }
-
-            if (t<1) { requestAnimationFrame(frame); return; }
-
-            noisRotation = endRot;
-            drawNoisWheel(candidates, noisRotation);
-            const victim = candidates[victimIdx];
-            const seatNo = draftOrder.findIndex(p => p.name === victim.name) + 1;
-            resultEl.textContent = replacementPick
-                ? `${victim.name} is undrafted! ${replacementPick.name} takes pick ${seatNo}.`
-                : `${victim.name} is undrafted!`;
-            announce(replacementPick
-                ? `${victim.name} is undrafted. ${replacementPick.name} takes pick ${seatNo}.`
-                : `${victim.name} is undrafted and back on the wheel.`);
-            document.getElementById('noisSkip').hidden = true;
-
-            setTimeout(guarded(() => {
-                const di=draftOrder.findIndex(p=>p.name===victim.name);
-                if (di>=0) {
-                    if (replacementPick) draftOrder[di] = replacementPick;
-                    else draftOrder.splice(di,1);
-                }
-                names.push(victim.name);
-                pendingPick = null;             // seated: saves no longer need to hold them
-                draftHistory.push({ t: 'steal', seat: Math.max(di, 0), stealer: replacementPick ? replacementPick.name : null, victim: victim.name });
-                spinLog.steals++;
-                if (replacementPick) { lastPick = replacementPick.name; freshPick = replacementPick.name; }
-                if (names.length < 2 && autoSpin) setAutoSpin(false);
-
-                closeTakeover(overlay);
-                isBusy = false;
-                phase = 'ready';
-                redraw();
-                commit();
-                onDone&&onDone();
-            }), noisSkipped ? 1200 : 2600);
+        // Back over to the table, with the victim on it. The console waits
+        // for the face to change, so a spin can't start on the seats.
+        hideWinCallout();
+        flipWheel(() => {
+            endSeatStage();
+            isBusy = false;
+            phase = 'ready';
+            commit();
+            onDone&&onDone();
         });
-
-        requestAnimationFrame(frame);
-    }), 900);
+    }), noisSkipped ? 1200 : 2600);
 }
 
 /* ══════════════════════════════════════
@@ -740,12 +728,13 @@ function showSplash() {
     setTimeout(() => openDialog(splashOverlay, spinBtn), 500);
 }
 
-// One banner, two stunts — each names itself on the way in.
-function runBanner(kicker, label, holdMs, gremlin) {
+// One banner, three events — each names itself on the way in.
+// variant: 'gremlin' (stands clear of him) or 'danger' (No One Is Safe).
+function runBanner(kicker, label, holdMs, variant) {
     const el = document.getElementById('windBackPopup');
     el.querySelector('.wb-kicker').textContent = kicker;
     el.querySelector('.wb-label').textContent  = label;
-    el.classList.toggle('gremlin', !!gremlin);
+    ['gremlin', 'danger'].forEach(v => el.classList.toggle(v, v === variant));
     el.classList.remove('in', 'hold', 'out');
     void el.offsetWidth;
     el.classList.add('in');
@@ -760,7 +749,7 @@ function runBanner(kicker, label, holdMs, gremlin) {
     }, 520);
 }
 
-function showWindBackBanner() { runBanner('Not so fast', 'Wind-back', 1500, false); }
+function showWindBackBanner() { runBanner('Not so fast', 'Wind-back', 1500); }
 
 /* ── The gremlin's beats ──
    He turns up once, shoves a handful of times, and the last shove is him
@@ -830,7 +819,7 @@ function showGoblin() {
     goblinEl.classList.add('in');
     playGoblinArrive();
     shakeWheel();
-    runBanner('Uninvited', 'Gremlin', 1250, true);
+    runBanner('Uninvited', 'Gremlin', 1250, 'gremlin');
     // Once per spin and never again until the result: announcing his fake
     // stops would spoil them, and would be a lie.
     stunt = 'gremlin';
@@ -995,9 +984,11 @@ function setAutoSpin(val) {
     autoBtn.setAttribute('aria-pressed', String(autoSpin));
     autoLabel.textContent = autoSpin ? 'Stop' : 'Auto';
     autoBtn.title = autoSpin ? 'Stop autospin' : 'Spin automatically until the draft is done';
-    // The takeovers lock the app behind them, so each has its own way to
-    // call autospin off.
-    document.querySelectorAll('[data-auto-stop]').forEach(b => { b.hidden = !autoSpin; });
+    // The race takeover locks the app behind it, so it has its own switch.
+    document.querySelectorAll('[data-auto-toggle]').forEach(b => {
+        b.setAttribute('aria-pressed', String(autoSpin));
+        b.textContent = autoSpin ? 'Stop autospin' : 'Autospin after this';
+    });
     // A phone left on the table shouldn't lock itself halfway through a draft.
     if (autoSpin && navigator.wakeLock && !wakeLock) {
         navigator.wakeLock.request('screen').then(l => { wakeLock = l; l.addEventListener('release', () => { wakeLock = null; }); }).catch(() => {});
@@ -1007,22 +998,24 @@ function setAutoSpin(val) {
     commit({ save: false });
 }
 
-document.querySelectorAll('[data-auto-stop]').forEach(b => b.addEventListener('click', () => {
-    setAutoSpin(false);
-    announce('Autospin off. The draft stops after this.');
-    const skip = b.closest('.takeover').querySelector('.skip-btn:not([hidden]):not([data-auto-stop])');
-    try { (skip || b.closest('.takeover')).focus({ preventScroll: true }); } catch (e) {}
-}));
-
-autoBtn.addEventListener('click', ()=>{
+// Autospin can be switched on at any moment. Idle, it spins now; mid-spin
+// or mid-event, it takes over from the next pick (every event's ending
+// already hands on to it). A seat is always coming back to the wheel
+// after No One Is Safe, so a one-name wheel doesn't block it there.
+function canArmAuto() { return names.length >= 2 || phase === 'nois'; }
+function toggleAutoSpin() {
     ensureAudio();
     if (autoSpin) {                       // calling it off is allowed at any moment
         setAutoSpin(false);
-        announce('Autospin off.');
+        announce(isSpinning || isBusy ? 'Autospin off. The draft stops after this.' : 'Autospin off.');
         return;
     }
-    if(names.length<2||isSpinning||isBusy)return;
+    if (!canArmAuto()) return;
     setAutoSpin(true);
+    if (isSpinning || isBusy) { announce('Autospin on. It carries on after this.'); return; }
     announce('Autospin on.');
     spin();
-});
+}
+
+autoBtn.addEventListener('click', toggleAutoSpin);
+document.querySelectorAll('[data-auto-toggle]').forEach(b => b.addEventListener('click', toggleAutoSpin));

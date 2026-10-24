@@ -510,7 +510,7 @@
             <div class="setting">
                 <label class="set-main" for="noisToggle">
                     <span class="set-name">No One Is Safe</span>
-                    <span class="set-desc">15% of picks steal a drafted player's seat. They go back on the wheel.</span>
+                    <span class="set-desc">15% of picks turn the wheel over to the drafted seats and steal one. Whoever loses it goes back on the wheel.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="noisToggle" checked>
             </div>
@@ -578,7 +578,7 @@
         <ul class="about-list">
             <li><kbd>Space</kbd> spins the wheel when you're not typing.</li>
             <li><kbd>Enter</kbd> in the name box adds a name; paste a list to add many at once.</li>
-            <li><kbd>Esc</kbd> closes any panel or dialog.</li>
+            <li><kbd>Esc</kbd> closes any panel or dialog, and skips No One Is Safe or the Panic race to the result.</li>
         </ul>
         <h3 class="about-h">Is it fair?</h3>
         <p class="about-p">The winner is drawn by your browser's random number generator the moment a spin starts, weighted by slice size. Power-ups change slice sizes and the real odds, and the new odds are shown. Hand flicks, wind-backs, the gremlin and pop-offs only change how the wheel gets there. About one spin in twenty is ruled illegal: the wheel is stamped, nobody is picked, and you spin again. The one exception is Rigged, which you have to switch on yourself.</p>
@@ -676,16 +676,6 @@
     </div>
 </dialog>
 
-<div class="takeover nois-overlay" id="noisOverlay" role="dialog" aria-modal="true" aria-labelledby="noisTitle">
-    <div class="takeover-title" id="noisTitle">No one is safe</div>
-    <div class="nois-wrap" aria-hidden="true"><canvas id="noisWheel" width="380" height="380"></canvas></div>
-    <div class="takeover-result" id="noisResult"></div>
-    <div class="takeover-actions">
-        <button type="button" class="skip-btn" id="noisSkip">Skip to the result</button>
-        <button type="button" class="skip-btn" data-auto-stop hidden>Stop autospin</button>
-    </div>
-</div>
-
 <div class="takeover marble-overlay" id="marbleOverlay" role="dialog" aria-modal="true" aria-labelledby="marbleTitle">
     <div class="takeover-title" id="marbleTitle">Panic</div>
     <div class="takeover-sub" id="marbleSubtitle">Only half survive the horse race</div>
@@ -699,7 +689,7 @@
     <div class="takeover-result" id="marbleResult"></div>
     <div class="takeover-actions">
         <button type="button" class="skip-btn" id="marbleSkip">Skip to the result</button>
-        <button type="button" class="skip-btn" data-auto-stop hidden>Stop autospin</button>
+        <button type="button" class="skip-btn auto-toggle" data-auto-toggle aria-pressed="false">Autospin after this</button>
     </div>
 </div>
 
