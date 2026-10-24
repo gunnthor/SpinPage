@@ -17,6 +17,7 @@ let winnerSlots     = 1;        // what the user asked for; clamped to the table
 let lastTickSection     = -1;
 let windBackEnabled     = true;
 let goblinEnabled       = true;   // rare: something climbs on and creeps the wheel round by hand
+let goblinSeen          = false;  // he has turned up on this device: his first-sighting odds are spent
 let noisEnabled         = true;
 let riggedEnabled       = false;  // session only, never saved
 let riggedValue         = '';     // name/prefix the rigged mode forces to win
@@ -431,7 +432,7 @@ function saveState() {
             winnerSlots, nameColors,
             noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, goblinEnabled, popOffEnabled,
             displayDuration, autoDisplay, riggedValue,
-            soundOn, calmPref, lastPick, spinLog, history: draftHistory, panicCooldown,
+            soundOn, calmPref, lastPick, spinLog, history: draftHistory, panicCooldown, goblinSeen,
         }));
         return true;
     } catch (e) { return false; }
@@ -446,7 +447,7 @@ function loadState() {
     windBackEnabled = s.windBackEnabled; goblinEnabled = s.goblinEnabled; popOffEnabled = s.popOffEnabled;
     displayDuration = s.displayDuration; autoDisplay = s.autoDisplay; riggedValue = s.riggedValue;
     soundOn = s.soundOn; calmPref = s.calmPref; lastPick = s.lastPick; spinLog = s.spinLog;
-    draftHistory = s.history; panicCooldown = s.panicCooldown;
+    draftHistory = s.history; panicCooldown = s.panicCooldown; goblinSeen = s.goblinSeen;
     // Re-sync stable colors: current wheel names first, then drafted picks,
     // so old/positional pick colors are migrated to the consistent scheme.
     names.forEach(colorOf);
@@ -462,6 +463,7 @@ function migrate(raw) {
         windBackEnabled: true, goblinEnabled: true, popOffEnabled: true,
         displayDuration: 2800, autoDisplay: true, riggedValue: '',
         soundOn: true, calmPref: null, lastPick: '', spinLog: freshSpinLog(), history: [], panicCooldown: false,
+        goblinSeen: false,
     };
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
 
@@ -477,7 +479,7 @@ function migrate(raw) {
     });
 
     out.winnerSlots = normalizeWinnerSlots(raw.winnerSlots);
-    for (const k of ['noisEnabled', 'powerUpsEnabled', 'panicEnabled', 'goblinEnabled', 'popOffEnabled', 'autoDisplay', 'soundOn', 'panicCooldown']) {
+    for (const k of ['noisEnabled', 'powerUpsEnabled', 'panicEnabled', 'goblinEnabled', 'popOffEnabled', 'autoDisplay', 'soundOn', 'panicCooldown', 'goblinSeen']) {
         if (typeof raw[k] === 'boolean') out[k] = raw[k];
     }
     // plotTwistsEnabled was this setting's name before the makeover

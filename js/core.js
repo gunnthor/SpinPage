@@ -102,6 +102,10 @@ const GOBLIN = {
     chanceNear: 0.30,        // with 3 names left
     chanceFar:  0.05,        // with 3 + fadeOver names, and beyond
     fadeOver:   9,
+    // Until he has been seen once on this device he is a little likelier,
+    // so a new table gets to meet him; after that, the odds above.
+    firstNear:  0.40,
+    firstFar:   0.10,
 
     // Rounds, weighted: 1..6. Most gremlins are over inside fifteen seconds;
     // the six-round one runs well over a minute and is rare enough that people
@@ -145,7 +149,14 @@ function goblinChance(namesLeft) {
     const t = Math.min(Math.max((namesLeft - 3) / GOBLIN.fadeOver, 0), 1);
     return GOBLIN.chanceNear + (GOBLIN.chanceFar - GOBLIN.chanceNear) * t;
 }
-function goblinFires(namesLeft) { return Math.random() < goblinChance(namesLeft); }
+function goblinFirstChance(namesLeft) {
+    const t = Math.min(Math.max((namesLeft - 3) / GOBLIN.fadeOver, 0), 1);
+    return GOBLIN.firstNear + (GOBLIN.firstFar - GOBLIN.firstNear) * t;
+}
+// seen: has he turned up on this device before? One draw either way.
+function goblinFires(namesLeft, seen) {
+    return Math.random() < (seen ? goblinChance(namesLeft) : goblinFirstChance(namesLeft));
+}
 
 function goblinRounds() {
     const odds = GOBLIN.roundOdds;

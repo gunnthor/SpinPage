@@ -30,7 +30,7 @@ The source is the authority. Every item below is covered by
 | Rigged | session-only switch; first name starting with the saved prefix always wins; prefix persists |
 | Hand flick | release speed sets laps/duration/direction/pop-off, never the winner |
 | Wind-back | 20% of eligible spins; overshoot then reversal, lands on the drawn winner |
-| Gremlin | chance 30% at 3 names fading to 5% at 12+; 1-6 rounds weighted 40/22/15/11/7/5; never under reduced motion |
+| Gremlin | chance 30% at 3 names fading to 5% at 12+ (40% fading to 10% until he has been seen once on the device); 1-6 rounds weighted 40/22/15/11/7/5; never under reduced motion |
 | Pop-off | power >= 0.88, 35% + (power-0.88)x4; never under reduced motion; roll or bounce |
 | Stunt eligibility | no stunts on illegal spins, pop-offs, flicks with power >= 0.6 or backwards |
 | No One Is Safe | 15% after a pick when a seat is drafted and names remain; new pick takes the victim's seat (same index), victim back on the wheel |

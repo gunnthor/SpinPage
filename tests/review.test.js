@@ -312,6 +312,19 @@ test('the live numbers are never cut off: 1024x700, 667x375 and 844x390', async 
   }
 });
 
+test('the first gremlin sighting is remembered, so his odds settle after it', async () => {
+  const p = await open(browser, site.url, { state: table(N12.slice(0, 4), [], { goblinEnabled: true }) });
+  assert.equal(await p.evaluate(() => goblinSeen), false);
+  await scriptRandom(p, [0.5, 0.5, 0.5, 0.01]);       // pick, landing, illegal, gremlin fires
+  await p.evaluate(() => spin());
+  await p.clock.runFor(6000);                         // he has climbed on
+  assert.equal(await p.evaluate(() => stunt), 'gremlin');
+  assert.equal((await saved(p)).goblinSeen, true, 'saved the moment he turns up');
+  await p.reload();
+  assert.equal(await p.evaluate(() => goblinSeen), true, 'and still true after a reload');
+  await done(p);
+});
+
 test('autospin can be switched off and on from inside the race takeover', async () => {
   const p = await open(browser, site.url, { state: table(['A', 'B', 'C'], ['X', 'Y', 'Z']) });
   await scriptRandom(p);

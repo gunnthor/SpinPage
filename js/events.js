@@ -766,7 +766,12 @@ function goblinFace(face, revertAfter) {
 }
 
 function triggerGoblinBeat(kind) {
-    if (kind === 'arrive') { showGoblin(); return; }
+    if (kind === 'arrive') {
+        showGoblin();
+        // Met him: from now on he keeps to his ordinary odds on this device.
+        if (!goblinSeen) { goblinSeen = true; commit(); }
+        return;
+    }
 
     // FAKE STOP. One last little nudge, then his hands come off the rim and
     // he looks anywhere but at the wheel while it crawls to a halt on its

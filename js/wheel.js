@@ -485,7 +485,7 @@ function startSpin(spinWeights, launch) {
     // of the landing that the creep genuinely changes hands a few times.
     const goblin   = stuntOk && !windBack && goblinEnabled &&
                      !prefersReducedMotion() && seg.labels.length >= 3 &&
-                     goblinFires(names.length);
+                     goblinFires(names.length, goblinSeen);
 
     const dir = (manual && !windBack && !goblin) ? manual.dir : 1;
 

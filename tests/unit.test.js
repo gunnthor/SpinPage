@@ -144,6 +144,24 @@ test('the gremlin chance fades from 30% to 5% as the table grows', () => {
   assert.ok(Math.abs(c[3] - 0.05) < 1e-9 && Math.abs(c[5] - 0.05) < 1e-9);
 });
 
+test('until he has been seen once the gremlin is a little likelier: 40% fading to 10%', () => {
+  const run = load();
+  const first = run('[2,3,6,12,13,40].map(n => goblinFirstChance(n))');
+  const after = run('[2,3,6,12,13,40].map(n => goblinChance(n))');
+  assert.ok(Math.abs(first[1] - 0.40) < 1e-9 && Math.abs(first[3] - 0.10) < 1e-9 && Math.abs(first[5] - 0.10) < 1e-9);
+  first.forEach((f, i) => assert.ok(f > after[i], 'likelier at every table size'));
+  // One draw either way; the same draw fires him before he is seen and not after.
+  run('Math.random = () => 0.35');
+  assert.deepEqual(run('[goblinFires(3, false), goblinFires(3, true)]'), [true, false]);
+});
+
+test('the first sighting is saved: missing means not yet, and it survives a save', () => {
+  const run = load();
+  assert.equal(run('migrate({}).goblinSeen'), false);
+  assert.equal(run('migrate({ goblinSeen: true }).goblinSeen'), true);
+  assert.equal(run('migrate({ goblinSeen: "yes" }).goblinSeen'), false, 'only a real boolean counts');
+});
+
 test('the peg ring gives at least 30 clicks a lap and accents each slice', () => {
   const run = load();
   for (const n of [2, 3, 7, 12, 30, 50]) {
