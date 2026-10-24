@@ -1,3 +1,7 @@
 # Per-machine Claude Code permissions. The shared allowlist lives in
 # .claude/settings.json; this one is whatever the local session has approved.
 .claude/settings.local.json
+
+# Test tooling (the site itself has no dependencies)
+tests/node_modules/
+tests/artifacts/

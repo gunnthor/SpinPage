@@ -1,0 +1,11 @@
+{
+  "name": "spinpage-tests",
+  "private": true,
+  "description": "Browser regression tests for SpinPage. The site itself has no dependencies.",
+  "scripts": {
+    "test": "node --test --test-concurrency=4"
+  },
+  "devDependencies": {
+    "playwright-core": "1.56.1"
+  }
+}
