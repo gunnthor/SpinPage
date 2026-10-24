@@ -116,6 +116,11 @@ npm test
 
 The browser suites need a Chromium: they use one already downloaded by Playwright, or set `CHROME_PATH`, or run `npx playwright-core install chromium`.
 
+## Versions
+
+- **2.0** (October 2026), tag `v2.0`: the one-screen redesign. The wheel, the controls, the scoreboard and the draft board all fit on one screen with no scrolling, on desktop and on phones. It also brings a new wheel and winner moment, No One Is Safe played on the main wheel, Auto that works at any moment, accessibility and performance work, and the test suite. The full write-up is in [docs/redesign-plan.md](docs/redesign-plan.md).
+- **1.0**, tag `v1.0`: the original single-file page. To look at it, run `git checkout v1.0` (and `git checkout master` to come back), or browse the `v1.0` tag on GitHub.
+
 ## Roadmap Ideas
 
 See [TODO.md](TODO.md) for the running backlog (including the proposed multiplayer "host a room" feature).
