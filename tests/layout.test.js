@@ -207,6 +207,43 @@ test('calm effects: no confetti, no shake, a short spin, and the winner still li
   await p.context().close();
 });
 
+test('the slot machines fit every screen: every cabinet on the canvas, the canvas and Skip on screen', async () => {
+  for (const [vp, vpSize] of Object.entries(VIEWPORTS)) {
+    for (const n of [3, 12, 30]) {
+      const p = await open(browser, site.url, { viewport: vp, state: table(['W1', 'W2'], N50.slice(0, n)) });
+      await p.evaluate(() => { isBusy = true; startSlotRace(); });
+      await p.clock.runFor(600);
+      const m = await p.evaluate(() => {
+        const c = marbleCanvas.getBoundingClientRect(), s = marbleSkip.getBoundingClientRect();
+        const boxes = lastSlots.map((_, i) => machineRect(i));
+        return {
+          canvasOn: c.top >= -1 && c.left >= -1 && c.bottom <= innerHeight + 1 && c.right <= innerWidth + 1,
+          skipOn: s.bottom <= innerHeight + 1 && s.top >= 0,
+          inside: boxes.every(b => b.x >= -0.5 && b.y >= -0.5 && b.x + b.w <= CANVAS_W + 0.5 && b.y + b.h <= MH + 0.5),
+          minW: Math.min(...boxes.map(b => b.w)),
+          scroll: document.documentElement.scrollHeight > innerHeight || document.documentElement.scrollWidth > innerWidth,
+        };
+      });
+      assert.deepEqual({ canvasOn: m.canvasOn, skipOn: m.skipOn, inside: m.inside, scroll: m.scroll },
+                       { canvasOn: true, skipOn: true, inside: true, scroll: false }, `${vp} x${n}`);
+      if (n <= 12) assert.ok(m.minW >= 60, `${vp} x${n}: machines ${Math.round(m.minW)}px wide`);
+      assert.deepEqual(p.errors, [], `${vp} x${n}`);
+      await p.context().close();
+    }
+  }
+});
+
+test('Calm effects play the slots at double pace rather than skipping them', async () => {
+  const p = await open(browser, site.url, { state: table(['A'], ['D', 'E', 'F', 'G']), reducedMotion: 'reduce' });
+  await scriptRandom(p);                              // 0.5 forever: no 7 ever lands
+  await p.evaluate(() => { isBusy = true; startSlotRace(); });
+  await p.clock.runFor(3000);
+  assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('done')), false, 'still playing');
+  assert.ok(await p.evaluate(() => lastSlotsAt) > 5000, 'two seconds of game for every one on the clock');
+  assert.deepEqual(p.errors, []);
+  await p.context().close();
+});
+
 test('the Calm effects switch overrides the system setting and is remembered', async () => {
   const p = await open(browser, site.url, { viewport: 'd1366', state: table(N12), clock: false });
   assert.equal(await p.evaluate(() => calmToggle.checked), false);

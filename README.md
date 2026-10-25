@@ -26,17 +26,21 @@ The **scoreboard** always shows the next pick, how many are left on the wheel, t
 - **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the screen or drops to the floor and rolls away, then hops back onto the hub to finish the very same spin.
 - **The winner's moment**: the winning slice lights up, the rest dim, and a nameplate rises over the wheel with the pick number. Nothing blacks out the board or the scoreboard.
 - **Draft board**: every seat from first to last — the picks so far, the one on the clock, the empty ones still to come — with the winner cut drawn where it falls.
-- **Autospin** for hands-free draft generation. Auto can be switched on or off at any moment — mid-spin, mid-event, even from inside the PANIC race — and takes over from the next pick. The phone stays awake while it runs.
-- **Undo** reverses whatever happened last: a pick, a stolen seat or a whole PANIC race. **Restore all**, **Delete picks** and **Reset table** act at once and offer an Undo for ten seconds.
+- **Autospin** for hands-free draft generation. Auto can be switched on or off at any moment — mid-spin, mid-event, even from inside a PANIC game — and takes over from the next pick. The phone stays awake while it runs.
+- **Undo** reverses whatever happened last: a pick, a stolen seat or a whole PANIC game. **Restore all**, **Delete picks** and **Reset table** act at once and offer an Undo for ten seconds.
 - **Paste a list**: a column copied from a spreadsheet or a notes app becomes one player per line.
 - **Wind-back**: the wheel runs an ordinary spin, creeps to a stop on a slice — and then gets dragged backwards, held, and thrown forward again onto the real winner.
 - **The Gremlin**: as the wheel crawls through its last degree, something climbs onto the rim, creeps it round by hand, fakes the stop, looks innocently away — and grabs it again. A slow burn from ten seconds to a minute and a half; rare at a full table, up to about one spin in four with three names left. Until he has turned up once on a device he is a little likelier (10% of spins at a full table, 40% near the end, against 5% and 30% after), so a new table gets to meet him.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) swell or shrink a slice before a spin and genuinely shift the odds; the status line spells out the change (`14% → 33%`) for the whole spin, on every screen.
-- **PANIC slice** that drops every drafted player into a horse race over 2-4 hurdles where only the majority keep their seats. It runs at a fixed 60 steps a second, so a 120Hz phone runs the same race as a 60Hz monitor, and it can be skipped to the result.
+- **PANIC slice** that throws every drafted player into one of two games, on a coin flip, where only the majority keep their seats:
+  - a **horse race** over 2-4 hurdles: the first across the line are safe;
+  - the **slot machines**: everyone gets a one-armed bandit and they all pull together. Any 7 that lands stays held, so every machine wears its score, and the first to line up **7-7-7** are safe. A last reel with two 7s showing teases before it stops.
+
+  Both run at a fixed 60 steps a second, so a 120Hz phone plays the same game as a 60Hz monitor, and both can be skipped to the result (Skip, or Esc). Skip ignores presses for the first second, and focus is not put on it, so the Space, Enter or click that spun the wheel can't skip the game as it opens.
 - **Illegal spin moments** with a stamped invalid result and retry.
-- **No One Is Safe**: after a pick, the wheel can turn over to show the drafted seats under a red light and spin once to steal one. It plays on the stage, so the scoreboard, the board (seats at risk, then the one lost) and the console stay up; SPIN becomes Skip, and Auto stays live.
-- **Sound**: synthesized peg clicks, fanfare and stunt sounds, with a mute that is remembered.
-- **Calm effects**: follows your system's reduce-motion setting (or the switch in Settings) — no confetti, fire, shaking or flashing, and a three-second spin to the same result.
+- **No One Is Safe**: after a pick, the wheel can turn over to show the drafted seats under a red light and spin once to steal one. It plays on the stage, so the scoreboard, the board (seats at risk, then the one lost) and the console stay up; Esc skips to the result (SPIN doesn't: it's the button everyone presses to spin again), and Auto stays live.
+- **Sound**: all synthesized, nothing downloaded: peg clicks that get their body back (and a flapper bounce) as the wheel slows, a reveal as the name comes up (the wheel locking, a swoosh with the nameplate, then a ta-DAA for a winner or a lighter ding-ding for a later pick), a marimba-and-brass fanfare with a coin shower when a PANIC game is decided, a bugle call, hoofbeats and a bell for every safe finisher in the race, lever, reel whirr, clunks, 7 dings, a drum roll, the sad trombone and a jackpot at the slots, a sound for each power-up, a buzzer on an illegal spin, and a pop for every name added. The mute is remembered.
+- **Calm effects**: follows your system's reduce-motion setting (or the switch in Settings) — no confetti, fire, shaking or flashing, a three-second spin to the same result, and the PANIC games at double speed.
 - **Accessible**: every result is announced to screen readers, everything works from the keyboard (Space spins), dialogs and sheets manage focus, and phone targets are at least 44px.
 - **Local persistence** through `localStorage`, so your table survives refreshes — including in the middle of an event.
 - **Zero runtime dependencies.**
@@ -80,6 +84,7 @@ SpinPage/
 │   ├── fx.js             #   confetti, sparks, fire, flash, shake
 │   ├── wheel.js          #   rendering, spin flow, grab-to-spin, pop-off
 │   ├── events.js         #   illegal spins, No One Is Safe, PANIC race, gremlin, the winner's moment, autospin
+│   ├── slots.js          #   PANIC's other game: the slot machines
 │   └── ui.js             #   render(), panels, sheets, dialogs, keyboard, settings, boot
 ├── fonts/                # Cinzel and Oswald (SIL Open Font License), latin + latin-ext
 ├── tests/                # node:test + playwright-core (dev only)
@@ -109,7 +114,7 @@ npm test
 
 84 checks in four suites:
 
-- `gameplay.test.js` — every mechanic, written against the original single-file page and still passing unchanged: selection odds, illegal spins, rigged, flicks, wind-back, gremlin, pop-off, power-ups, the PANIC wedge and race, No One Is Safe, autospin, undo/restore/clear/reset, copy, persistence.
+- `gameplay.test.js` — every mechanic, written against the original single-file page and still passing unchanged: selection odds, illegal spins, rigged, flicks, wind-back, gremlin, pop-off, power-ups, the PANIC wedge, race and slots, No One Is Safe, autospin, undo/restore/clear/reset, copy, persistence.
 - `stats.test.js` — the scoreboard against the game state through every kind of event and reload.
 - `layout.test.js` — no scroll and nothing off screen at 14 viewports from 320x568 to 1920x1080 and phone landscape; touch targets, keyboard, dialogs, announcements, calm effects.
 - `unit.test.js` — the pure logic in Node, no browser.

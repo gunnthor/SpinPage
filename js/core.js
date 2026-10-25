@@ -388,3 +388,53 @@ function hurdleOdds(jump, speed, fieldSpeed) {
     const penalty = Math.min(Math.max((ratio - 1) * HURDLE_RISK, 0), HURDLE_RISKMAX);
     return Math.max(jump - penalty, HURDLE_FLOOR);
 }
+
+/* ══════════════════════════════════════
+   Slot machines (PANIC's other game)
+   ─────────────────────────────────────
+   Every reel that spins stops on a 7 one time in SLOT_SEVEN — the same
+   for every machine on every pull — and a 7 stays held once it lands.
+   So the race to 7-7-7 is pure luck with a score you can watch: how many
+   7s each machine is holding. Nothing is rigged.
+══════════════════════════════════════ */
+const SLOT_SYMBOLS   = ['7', '🍒', '🍋', '🔔', '💎', '🍇', '⭐', 'BAR'];   // index 0 is the 7
+const SLOT_SEVEN     = 0.26;   // a spinning reel's chance of stopping on a 7
+const SLOT_KICK_MS   = 150;    // the lever comes down before the reels go
+const SLOT_SPIN_MS   = 950;    // the first reel's run, from the lever
+const SLOT_REEL_GAP  = 300;    // each reel after it runs this much longer
+const SLOT_JITTER_MS = 380;    // machines stop out of step, so ties break on the reels
+const SLOT_TEASE_MS  = 1100;   // two 7s showing: the last reel takes its time
+const SLOT_SETTLE_MS = 200;    // the bounce as a reel stops
+const SLOT_REST_MS   = 560;    // the beat between pulls
+const SLOT_MAX_PULLS = 40;     // failsafe: a table needs ~6-9
+
+// One pull of one machine. held[i] is true for a reel already showing a 7.
+// Per reel: null if held, else { sym, stop, tease } — the symbol it lands
+// on, when it stops (ms after the lever), and whether it is the last reel
+// with a 7 on both the others, which makes it take its time.
+function slotPull(held, rnd) {
+    const jitter = rnd() * SLOT_JITTER_MS;
+    const out = held.map((h, i) => h ? null : {
+        sym:  rnd() < SLOT_SEVEN ? 0 : 1 + Math.floor(rnd() * (SLOT_SYMBOLS.length - 1)),
+        stop: SLOT_SPIN_MS + i * SLOT_REEL_GAP + jitter,
+        tease: false,
+    });
+    const last = out.reduce((a, r, i) => r ? i : a, -1);
+    if (last >= 0 && out.every((r, i) => i === last || !r || r.sym === 0)) {
+        out[last].tease = true;
+        out[last].stop += SLOT_TEASE_MS;
+    }
+    return out;
+}
+
+// Columns and rows that give n cells of the given shape (height over
+// width) the most room in a w x h stage.
+function slotGrid(n, w, h, aspect) {
+    let best = { cols: 1, rows: Math.max(1, n), cellW: 0 };
+    for (let cols = 1; cols <= Math.max(1, n); cols++) {
+        const rows  = Math.ceil(n / cols);
+        const cellW = Math.min(w / cols, h / rows / aspect);
+        if (cellW > best.cellW + 0.01) best = { cols, rows, cellW };
+    }
+    return best;
+}

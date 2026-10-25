@@ -188,6 +188,87 @@ test('hurdles: two to four rails inside the track, odds with a floor', () => {
   assert.equal(run('hurdleOdds(0.3, 10, 1)'), 0.25);
 });
 
+test('slots: a held 7 stays put, a spinning reel lands 7 at SLOT_SEVEN, reels stop left to right', () => {
+  const run = load();
+  assert.deepEqual(run('slotPull([true, true, true], Math.random)'), [null, null, null]);
+  const s = run(`(() => {
+    const n = 200000, hits = new Array(SLOT_SYMBOLS.length).fill(0);
+    let ordered = true;
+    for (let i = 0; i < n / 3; i++) {
+      const p = slotPull([false, false, false], Math.random);
+      p.forEach(r => hits[r.sym]++);
+      if (!(p[0].stop < p[1].stop && p[1].stop < p[2].stop)) ordered = false;
+    }
+    return { share: hits.map(h => h / (3 * Math.floor(n / 3))), ordered };
+  })()`);
+  assert.ok(Math.abs(s.share[0] - 0.26) < 0.005, `sevens ${s.share[0]}`);
+  s.share.slice(1).forEach((x, i) => assert.ok(Math.abs(x - 0.74 / 7) < 0.005, `symbol ${i + 1}: ${x}`));
+  assert.equal(s.ordered, true);
+});
+
+test('slots: the last reel teases only with a 7 on both the others', () => {
+  const run = load();
+  const r = run(`(() => {
+    const seven = () => 0.1, blank = () => 0.9;
+    return {
+      twoHeld:   slotPull([true, false, true], blank),            // one reel left: it always teases
+      twoLand:   slotPull([false, false, false], seven),          // all three land 7: the last teases
+      noTease:   slotPull([false, false, false], blank),
+      heldFirst: slotPull([true, false, false], blank),
+    };
+  })()`);
+  assert.equal(r.twoHeld[1].tease, true);
+  assert.ok(r.twoHeld[1].stop >= 1300 + 1100, 'and takes its time');
+  assert.deepEqual(r.twoLand.map(x => x.tease), [false, false, true]);
+  assert.deepEqual(r.noTease.map(x => x.tease), [false, false, false]);
+  assert.deepEqual(r.heldFirst.map(x => x && x.tease), [null, false, false]);
+});
+
+test('slots: a table hits its safe quota in a handful of pulls', () => {
+  // The whole game in pure logic: pulls until the safe quota has 7-7-7.
+  const run = load();
+  const med = run(`(() => {
+    const out = {};
+    for (const n of [2, 4, 10, 20]) {
+      const safe = n - Math.max(1, Math.ceil(n / 2) - 1), runs = [];
+      for (let k = 0; k < 2000; k++) {
+        const held = Array.from({ length: n }, () => [false, false, false]);
+        let pulls = 0, done = 0;
+        while (done < safe && pulls < SLOT_MAX_PULLS) {
+          pulls++;
+          held.forEach(h => { if (h.every(Boolean)) return;
+            slotPull(h, Math.random).forEach((r, i) => { if (r && r.sym === 0) h[i] = true; });
+            if (h.every(Boolean)) done++; });
+        }
+        runs.push(pulls);
+      }
+      runs.sort((a, b) => a - b);
+      out[n] = { median: runs[1000], worst: runs[1999] };
+    }
+    return out;
+  })()`);
+  for (const [n, m] of Object.entries(med)) {
+    assert.ok(m.median >= 3 && m.median <= 10, `${n} machines: median ${m.median} pulls`);
+    assert.ok(m.worst < 40, `${n} machines: worst ${m.worst} pulls never needs the failsafe`);
+  }
+});
+
+test('slots: the grid fits every table and gives it the most room', () => {
+  const run = load();
+  const bad = run(`(() => {
+    const bad = [];
+    for (const [w, h] of [[1100, 600], [360, 420], [700, 260], [1600, 880]])
+      for (let n = 1; n <= 40; n++) {
+        const g = slotGrid(n, w, h, 0.76);
+        if (g.cols * g.rows < n || g.cols * g.cellW > w + 0.01 || g.rows * g.cellW * 0.76 > h + 0.01) bad.push([w, h, n]);
+      }
+    return bad;
+  })()`);
+  assert.deepEqual(bad, []);
+  assert.deepEqual(run('slotGrid(4, 1000, 500, 0.6)').cols, 2, 'two by two beats a strip of four');
+  assert.deepEqual(run('slotGrid(4, 2000, 300, 0.6)').cols, 4, 'but not on a wide, short stage');
+});
+
 test('every jewel label reads at 4.5:1 or better on its slice', () => {
   const run = load();
   const worst = run(`(() => {
