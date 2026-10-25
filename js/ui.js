@@ -177,12 +177,9 @@ function describeUndo(ev) {
 
 function renderControls(st) {
     const busy = isSpinning || isBusy;
-    // While the seats are spinning, SPIN is Skip: the victim is already drawn.
-    const skip = canSkipSeats();
-    spinBtn.setAttribute('aria-disabled', String(skip ? false : (!st.canSpin || busy)));
-    spinBtn.classList.toggle('busy', busy && !skip);
-    spinLabel.textContent = skip ? 'Skip' : (isSpinning && phase !== 'landed') ? 'Spinning' : isBusy ? 'Wait' : 'Spin';
-    if (skip) spinBtn.setAttribute('aria-label', 'Skip to the result'); else spinBtn.removeAttribute('aria-label');
+    spinBtn.setAttribute('aria-disabled', String(!st.canSpin || busy));
+    spinBtn.classList.toggle('busy', busy);
+    spinLabel.textContent = (isSpinning && phase !== 'landed') ? 'Spinning' : isBusy ? 'Wait' : 'Spin';
     // Auto is never locked out: it can be called off mid-spin, or switched
     // on mid-spin or mid-event to carry on from the next pick.
     autoBtn.setAttribute('aria-disabled', String(!(autoSpin || canArmAuto())));
@@ -543,6 +540,7 @@ function addNames(input) {
         return;
     }
     input.removeAttribute('aria-invalid');
+    playAddPop(names.length);
     if (dupes.length) showHint(`Added ${added.length}. Skipped ${dupes.length} already in the draw.`, false);
     else { hintError = ''; }
     announce(added.length === 1 ? `Added ${added[0]}. ${names.length} on the wheel.`
@@ -554,6 +552,8 @@ function addNames(input) {
 function removeName(i) {
     if (isSpinning || isBusy || !names[i]) return;
     const gone = names.splice(i, 1)[0];
+    ensureAudio();
+    playRemovePop();
     if (names.length < 2 && autoSpin) setAutoSpin(false);
     announce(`Removed ${gone}. ${names.length} on the wheel.`);
     rovingIdx = Math.min(i, Math.max(0, names.length - 1));
@@ -878,14 +878,24 @@ document.addEventListener('keydown', e => {
     if (e.key === 'Escape') {
         // Esc on a takeover, or on No One Is Safe, is Skip, as About promises.
         const skip = document.querySelector('.takeover.show .skip-btn:not([hidden]):not([data-auto-toggle])');
+        // ...but not in its first beat, when an Esc is still about the spin.
+        if (skip && !skipReady()) { e.preventDefault(); return; }
         if (skip) { e.preventDefault(); skip.click(); return; }
         if (canSkipSeats() && !document.querySelector('dialog[open]')) { e.preventDefault(); skipSeats(); return; }
         if (openSheet) { e.preventDefault(); closeSheets(); return; }
     }
     if (e.code !== 'Space' && e.key !== ' ') return;
-    if (e.repeat || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
-    if (document.querySelector('dialog[open]') || app.inert) return;
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+    if (document.querySelector('dialog[open]')) return;
     const t = e.target instanceof Element ? e.target : document.body;
+    // A PANIC game is up. Space is what spins, so it is pressed out of habit
+    // here: it only presses a control that was reached with the keyboard,
+    // never one the mouse happened to leave focused.
+    if (app.inert) {
+        if (!(keyboardNav && t.closest('button'))) { e.preventDefault(); swallowKeyup = true; }
+        return;
+    }
+    if (e.repeat) return;
     if (t.closest('input, textarea, select, [contenteditable]')) return;
     // A control, or a scrolling list, reached by keyboard keeps Space for
     // itself. Clicked, it doesn't: Space after clicking Undo spins.
@@ -994,11 +1004,8 @@ window.addEventListener('resize', () => {
         if (openSheet && !sheetMode()) closeSheets(false);
         commit({ save: false });
     }
-    // Keep the race fitted if the window changes shape mid-race
-    if (marbleOverlay.classList.contains('show')) {
-        sizeMarbleCanvas(lastRunners ? lastRunners.length : 0);
-        if (lastRunners) drawSprint(lastRunners, lastSafeCount, performance.now());
-    }
+    // Keep the PANIC game fitted if the window changes shape mid-game
+    if (marbleOverlay.classList.contains('show')) refitPanicGame();
 });
 if (typeof ResizeObserver === 'function') {
     new ResizeObserver(() => {

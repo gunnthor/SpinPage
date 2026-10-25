@@ -2,6 +2,7 @@ function showIllegalStamp() {
     const stamp = document.getElementById('illegalStamp');
     stamp.classList.remove('out');
     stamp.classList.add('show');
+    playBuzzer();
     playStampSound();
     // It counts as a spin — it happened — but it never touches the draft.
     spinLog.spins++; spinLog.illegal++;
@@ -26,21 +27,28 @@ function showIllegalStamp() {
 }
 
 /* ── Takeovers ──
-   The PANIC race takes the whole screen. While it is up the app behind it
-   is inert, focus sits on its Skip button, and it goes back where it was
-   afterwards. (No One Is Safe plays on the stage instead: see below.) */
-let takeoverReturn = null;
+   The PANIC games take the whole screen. While one is up the app behind it
+   is inert, focus sits on the takeover itself, and it goes back where it
+   was afterwards. (No One Is Safe plays on the stage instead: see below.)
+   Focus is NOT put on Skip: the Space or Enter that spun the wheel, or the
+   click meant for SPIN a moment too late, would skip the game the instant
+   it opened. For the same reason Skip ignores presses for its first beat. */
+const SKIP_GRACE_MS = 1000;
+let takeoverReturn = null, takeoverAt = 0;
 function openTakeover(el) {
     endWinnerMoment();
     // A dialog opened mid-spin would sit in the top layer, over the takeover
     // and its Skip button.
     document.querySelectorAll('dialog[open]').forEach(closeDialog);
     takeoverReturn = document.activeElement;
+    takeoverAt = performance.now();
     app.inert = true;
     el.classList.add('show');
     const skip = el.querySelector('.skip-btn');
-    if (skip) { skip.hidden = false; try { skip.focus({ preventScroll: true }); } catch (e) {} }
+    if (skip) skip.hidden = false;
+    try { el.focus({ preventScroll: true }); } catch (e) {}
 }
+function skipReady() { return performance.now() - takeoverAt >= SKIP_GRACE_MS; }
 function closeTakeover(el) {
     el.classList.remove('show');
     app.inert = false;
@@ -59,8 +67,9 @@ function closeTakeover(el) {
    drafted seats, under a red light, and spins once for one of them; the
    scoreboard, the board and the console stay up the whole time, so
    autospin can be switched on or off mid-event. The victim is drawn
-   before the wheel moves: Skip (the SPIN button, or Esc) only cuts the
-   wait. */
+   before the wheel moves: Esc only cuts the wait. SPIN is not Skip: it
+   is the button everyone reaches for to spin again, and it was cutting
+   the event short the moment it began. */
 const SEAT_HOLD_MS = 1400;          // the seats on show before the spin
 let noisSkipped = false;
 
@@ -228,6 +237,7 @@ const marbleRankList = document.getElementById('marbleRankList');
 const marbleResultEl = document.getElementById('marbleResult');
 const marbleSubtitle = document.getElementById('marbleSubtitle');
 const marbleBoard    = marbleRankList.parentElement;
+const marbleBoardTitle = document.getElementById('marbleBoardTitle');
 
 // The race is a full-screen takeover, so the track is sized to the screen
 // rather than pinned to the markup's 388x560 — on a wide monitor that left
@@ -240,7 +250,8 @@ let TRACK_X0 = SPRINT_PAD_L, FINISH_X = CANVAS_W - SPRINT_PAD_R;
 let lastRunners = null, lastSafeCount = 0;    // so a resize can redraw a finished race
 
 let raceScale = 1;
-function sizeMarbleCanvas(runnerCount) {
+// fit(w, h), if given, says how much of the h on offer the game wants.
+function sizeMarbleCanvas(runnerCount, fit) {
     // Fit the track to whatever the takeover's middle row has room for, with
     // the finish board beside it on a wide screen and above it on a phone.
     // Whether the finish board sits beside the track or above it, and how
@@ -254,9 +265,10 @@ function sizeMarbleCanvas(runnerCount) {
     const boardH = wide ? 0 : (parseFloat(getComputedStyle(marbleBoard).maxHeight) || 96) + gap;
     // Lanes want about 95px each — past that a small field is just spread
     // thin down a tall canvas.
-    const want = runnerCount ? runnerCount * 95 + 60 : 700;
+    const want = fit ? 900 : runnerCount ? runnerCount * 95 + 60 : 700;
     const w = Math.round(Math.max(280, Math.min((stage.width || window.innerWidth) - boardW, 1200)));
-    const h = Math.round(Math.max(200, Math.min((stage.height || window.innerHeight - 200) - boardH, want, 900)));
+    let   h = Math.round(Math.max(200, Math.min((stage.height || window.innerHeight - 200) - boardH, want, 900)));
+    if (fit) h = Math.round(Math.max(160, Math.min(h, fit(w, h))));
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     raceScale = dpr;
     marbleCanvas.style.width = w + 'px';
@@ -286,7 +298,25 @@ function onPanicLanded() {
     redraw();
     commit();                   // the cooldown is saved: a reload can't re-arm PANIC
     playPanicSound();
-    setTimeout(guarded(startMarbleRace), 650);
+    setTimeout(guarded(startPanicGame), 650);
+}
+
+// PANIC plays one of two games, on a coin flip: the horse race, or the
+// slot machines (js/slots.js). Same stakes, same takeover, same undo.
+let panicGame = 'race';
+function startPanicGame() {
+    if (Math.random() < 0.5) startSlotRace(); else startMarbleRace();
+}
+// The takeover's furniture, set for whichever game is on.
+function dressPanicGame(game, subtitle, boardTitle) {
+    panicGame = game;
+    marbleOverlay.dataset.game = game;
+    marbleSubtitle.textContent = subtitle;
+    marbleBoardTitle.textContent = boardTitle;
+    marbleRankList.innerHTML = '';
+    marbleResultEl.textContent = '';
+    marbleOverlay.classList.remove('done');
+    raceSkipped = false;
 }
 
 
@@ -518,18 +548,18 @@ function startMarbleRace() {
     const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
     const safeCount = racers.length - outCount;
 
-    openTakeover(marbleOverlay);
-    sizeMarbleCanvas(racers.length);
     raceHurdles = makeHurdles();          // before the subtitle counts them
     hurdleFlash = null;
-    marbleRankList.innerHTML = '';
-    marbleResultEl.textContent = '';
-    marbleSubtitle.textContent = `${racers.length} running · ${raceHurdles.length} hurdles · first ${safeCount} across are safe, last ${outCount} drop out`;
+    dressPanicGame('race', `${racers.length} running · ${raceHurdles.length} hurdles · first ${safeCount} across are safe, last ${outCount} drop out`,
+                   'Finish order');
+    openTakeover(marbleOverlay);
+    sizeMarbleCanvas(racers.length);
     announce(`Panic. Horse race: ${racers.length} running, first ${safeCount} are safe.`);
-    // Calm effects: no thirty-second chase. The race is still run, step for
-    // step and die for die, exactly as Skip runs it; only the show is cut.
-    raceSkipped = calmEffects();
-    marbleOverlay.classList.remove('done');
+    // Calm effects run the race at double pace rather than not at all: it
+    // is the same steps and the same dice, so the same result odds, and a
+    // race that is never seen reads as one that broke.
+    const pace = calmPace();
+    playStartBell();
 
     // Each runner advances by a scripted, always-positive amount whose "form"
     // drifts (plus random surges) — that's what creates lead changes.
@@ -544,7 +574,7 @@ function startMarbleRace() {
         finished: false, safeRank: null,
     }));
 
-    let frames = 0, lastTick = 0;
+    let frames = 0, hoof = 0, nextHoof = 0;
     const MAXF = 3900;                  // ~65s hard cap (races naturally end ~19-30s)
     // The race advances in fixed 60Hz steps whatever the screen's refresh
     // rate, so a 120Hz phone runs the same race — same odds, same stumbles —
@@ -618,11 +648,16 @@ function startMarbleRace() {
                 if (safe.length < safeCount) {                          // grabbed a safe spot
                     safe.push(r); r.safeRank = safe.length;
                     addMarbleRankRow(r, safe.length, true, safeCount);
-                    if (!quiet) playFinishPing();
+                    if (!quiet) playFinishBell(safe.length);
                 }
             }
         }
-        if (!quiet && now - lastTick > 130) { setTickSpeed(0.007); playTick(); lastTick = now; }
+        // The field's hoofbeats: a gallop is three hooves and a gap.
+        if (!quiet && now >= nextHoof) {
+            playHoofbeat(hoof === 2 ? 1 : 0.6);
+            hoof = (hoof + 1) % 3;
+            nextHoof = now + (hoof === 0 ? 200 : 72);
+        }
         return safe.length >= safeCount || frames >= MAXF;
     }
 
@@ -640,6 +675,7 @@ function startMarbleRace() {
             let todo = Math.min(Math.round((real - lastReal) / STEP), 8);
             lastReal += todo * STEP;
             if (real - lastReal > STEP * 8) lastReal = real;        // a hidden tab: don't sprint to catch up
+            todo *= pace;
             while (todo-- > 0) { if (step(simNow += STEP, false)) { drawSprint(runners, safeCount, simNow); finishRace(); return; } }
             drawSprint(runners, safeCount, simNow);
             requestAnimationFrame(frame);
@@ -649,15 +685,18 @@ function startMarbleRace() {
 }
 
 let raceSkipped = false;
-document.getElementById('marbleSkip').addEventListener('click', () => { raceSkipped = true; });
+// Calm effects: how many race steps each frame runs. Both games use it.
+function calmPace() { return calmEffects() ? 2 : 1; }
+document.getElementById('marbleSkip').addEventListener('click', () => { if (skipReady()) raceSkipped = true; });
 
 function resolveMarbleRace(safe, doomed) {
     marbleResultEl.textContent = doomed.length
         ? `${doomed.length} undrafted! ${safe.length} survive the panic.`
         : 'Everyone survived!';
+    const what = panicGame === 'slots' ? 'Slots' : 'Race';
     announce(doomed.length
-        ? `Race over. Safe: ${safe.map(p => p.name).join(', ')}. Back on the wheel: ${doomed.map(p => p.name).join(', ')}.`
-        : 'Race over. Everyone survived.');
+        ? `${what} over. Safe: ${safe.map(p => p.name).join(', ')}. Back on the wheel: ${doomed.map(p => p.name).join(', ')}.`
+        : `${what} over. Everyone survived.`);
     playFanfare(2600);
 
     setTimeout(guarded(() => {
@@ -916,7 +955,7 @@ function onSpinEnd(winnerIdx) {
     flashBulbs(c);
     announce(autoSpin ? `Pick ${pickNo}: ${name}.`
                       : `Pick ${pickNo}: ${name}.${inSlots ? ' Winner.' : ''} ${names.length - 1} left on the wheel.`, 'spin');
-    playFanfare(showMs);
+    playReveal(showMs, inSlots);
     launchConfetti(c);
     commit({ save: false });
 

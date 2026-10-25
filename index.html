@@ -31,7 +31,7 @@
 
     <script type="application/ld+json">
     {"@context":"https://schema.org","@graph":[
-      {"@type":"WebApplication","@id":"https://www.ruglad.com/#app","name":"SpinPage","url":"https://www.ruglad.com/","description":"Free online spinning wheel and random name picker that also builds a full draft order.","applicationCategory":"UtilityApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript and a modern browser","isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Random name picker","Spinning wheel with drag-to-spin","Draft order builder","Power-up slices that change the odds","Horse race elimination round","Saves your names in the browser"],"screenshot":"https://www.ruglad.com/og-image.png"},
+      {"@type":"WebApplication","@id":"https://www.ruglad.com/#app","name":"SpinPage","url":"https://www.ruglad.com/","description":"Free online spinning wheel and random name picker that also builds a full draft order.","applicationCategory":"UtilityApplication","operatingSystem":"Any","browserRequirements":"Requires JavaScript and a modern browser","isAccessibleForFree":true,"inLanguage":"en","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"featureList":["Random name picker","Spinning wheel with drag-to-spin","Draft order builder","Power-up slices that change the odds","Horse race and slot machine elimination rounds","Saves your names in the browser"],"screenshot":"https://www.ruglad.com/og-image.png"},
       {"@type":"HowTo","name":"How to pick a random name with SpinPage","description":"Add names, spin the wheel, and read the winner.","totalTime":"PT1M","step":[
         {"@type":"HowToStep","name":"Add the names","text":"Type each name into the box and press Enter. Two names is the minimum and there is no upper limit."},
         {"@type":"HowToStep","name":"Spin","text":"Press SPIN, or grab the wheel with the mouse or a finger, drag it and let go. Your flick sets the speed and the number of laps, never the winner."},
@@ -503,7 +503,7 @@
             <div class="setting">
                 <label class="set-main" for="panicToggle">
                     <span class="set-name">Panic slice</span>
-                    <span class="set-desc">Once two are drafted, a ⚠ PANIC wedge joins the wheel. Land on it and the drafted run a horse race — only the majority keep their seats.</span>
+                    <span class="set-desc">Once two are drafted, a ⚠ PANIC wedge joins the wheel. Land on it and the drafted run a horse race or play the slots — only the majority keep their seats.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="panicToggle" checked>
             </div>
@@ -528,7 +528,7 @@
             <div class="setting">
                 <label class="set-main" for="calmToggle">
                     <span class="set-name">Calm effects</span>
-                    <span class="set-desc">No confetti, fire, shaking or flashing, no gremlin or pop-off, and shorter takeovers. Starts out matching your system's reduce-motion setting.</span>
+                    <span class="set-desc">No confetti, fire, shaking or flashing, no gremlin or pop-off, and the Panic games at double speed. Starts out matching your system's reduce-motion setting.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="calmToggle">
             </div>
@@ -578,7 +578,7 @@
         <ul class="about-list">
             <li><kbd>Space</kbd> spins the wheel when you're not typing.</li>
             <li><kbd>Enter</kbd> in the name box adds a name; paste a list to add many at once.</li>
-            <li><kbd>Esc</kbd> closes any panel or dialog, and skips No One Is Safe or the Panic race to the result.</li>
+            <li><kbd>Esc</kbd> closes any panel or dialog, and skips No One Is Safe or a Panic game to the result.</li>
         </ul>
         <h3 class="about-h">Is it fair?</h3>
         <p class="about-p">The winner is drawn by your browser's random number generator the moment a spin starts, weighted by slice size. Power-ups change slice sizes and the real odds, and the new odds are shown. Hand flicks, wind-backs, the gremlin and pop-offs only change how the wheel gets there. About one spin in twenty is ruled illegal: the wheel is stamped, nobody is picked, and you spin again. The one exception is Rigged, which you have to switch on yourself.</p>
@@ -619,7 +619,7 @@
                 <h2>Extras, if you want them</h2>
                 <ul>
                     <li><strong>Power-up slices</strong> — Hot Seat, Cursed and Wildcard swell or shrink somebody's real odds, with the live percentage shown beside the wheel.</li>
-                    <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles. Only half of them survive.</li>
+                    <li><strong>Panic</strong> — a hidden wedge that throws the drafted field into a horse race over two to four hurdles, or onto the slot machines, where any 7 sticks and the first to hit 7-7-7 are safe. Only half of them survive.</li>
                     <li><strong>Wind-back</strong> — the wheel lands, settles, then gets shoved into a whole second spin the other way for a different answer.</li>
                     <li>Every extra is a switch in the options panel. Turn them all off and you have a plain, fast wheel spinner.</li>
                 </ul>
@@ -654,7 +654,7 @@
                 <p>No. SpinPage is a single web page — it runs in the browser, offline once loaded, with no sign-up and no download.</p>
 
                 <h3>Can I undo a spin?</h3>
-                <p>Yes. UNDO reverses the last thing that happened — a pick, a stolen seat or a whole PANIC race. RESTORE ALL puts every pick back on the wheel, and DELETE PICKS takes the drafted players off the table; both can be taken back from the message that pops up.</p>
+                <p>Yes. UNDO reverses the last thing that happened — a pick, a stolen seat or a whole PANIC game. RESTORE ALL puts every pick back on the wheel, and DELETE PICKS takes the drafted players off the table; both can be taken back from the message that pops up.</p>
             </div>
         </div>
 
@@ -676,13 +676,13 @@
     </div>
 </dialog>
 
-<div class="takeover marble-overlay" id="marbleOverlay" role="dialog" aria-modal="true" aria-labelledby="marbleTitle">
+<div class="takeover marble-overlay" id="marbleOverlay" role="dialog" aria-modal="true" aria-labelledby="marbleTitle" tabindex="-1">
     <div class="takeover-title" id="marbleTitle">Panic</div>
     <div class="takeover-sub" id="marbleSubtitle">Only half survive the horse race</div>
     <div class="marble-stage">
         <canvas id="marbleCanvas" width="388" height="560" aria-hidden="true"></canvas>
         <div class="marble-board">
-            <div class="marble-board-title">Finish order</div>
+            <div class="marble-board-title" id="marbleBoardTitle">Finish order</div>
             <ol class="marble-rank-list" id="marbleRankList"></ol>
         </div>
     </div>
@@ -700,6 +700,7 @@
 <script src="js/fx.js"></script>
 <script src="js/wheel.js"></script>
 <script src="js/events.js"></script>
+<script src="js/slots.js"></script>
 <script src="js/ui.js"></script>
 </body>
 </html>

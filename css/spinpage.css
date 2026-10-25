@@ -1353,6 +1353,7 @@ canvas#wheel.flip { animation: wheelFlip 0.52s cubic-bezier(.45, 0, .55, 1); }
     opacity: 0; visibility: hidden; transition: opacity 0.35s, visibility 0s linear 0.35s;
 }
 .takeover.show { opacity: 1; visibility: visible; transition: opacity 0.35s, visibility 0s; }
+.takeover:focus { outline: none; }    /* focus sits on the takeover itself, not on Skip */
 .takeover-title {
     font: 700 clamp(1.6rem, 6vw, 2.6rem)/1.1 var(--f-display); letter-spacing: 0.1em; text-transform: uppercase;
     text-align: center;

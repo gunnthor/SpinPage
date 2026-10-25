@@ -133,7 +133,7 @@ test('No One Is Safe plays on the wheel: no takeover, the drafted seats on the f
       spin: spinLabel.textContent, autoOff: autoBtn.getAttribute('aria-disabled'),
     }));
     assert.deepEqual(s, { phase: 'nois', inert: false, event: 'nois', seats: s.drafted, drafted: s.drafted,
-                          takeover: false, spin: 'Skip', autoOff: 'false' }, vp);
+                          takeover: false, spin: 'Wait', autoOff: 'false' }, vp);
     for (const id of ['autoBtn', 'spinBtn', 'wheel', 'statNext', 'statLeftNum']) assert.equal(await reachable(p, id), true, `${vp}: ${id} in reach`);
     await done(p);
   }
@@ -179,18 +179,23 @@ test('the seat wheel lands with the pointer on the seat that is lost, and the bo
   await done(p);
 });
 
-test('SPIN is Skip while the seats spin, and Esc skips too; the seat lost is the one drawn', async () => {
+test('SPIN never cuts No One Is Safe short; Esc does, and the seat lost is the one drawn', async () => {
   const drawn = [];
-  for (const how of ['none', 'click', 'esc']) {
+  for (const how of ['none', 'click', 'space', 'esc']) {
     const p = await seatsUp('d1366');
-    if (how === 'click') await p.click('#spinBtn');
+    if (how === 'click') await p.click('#spinBtn', { force: true });   // it reads Wait, and is pressed anyway
+    if (how === 'space') await p.keyboard.press('Space');
     if (how === 'esc') await p.keyboard.press('Escape');
-    await p.clock.runFor(how === 'none' ? 5000 : 200);
+    await p.clock.runFor(200);
+    const early = await p.evaluate(() => seatWheel && seatWheel.victim);
+    if (how === 'esc') assert.ok(early, 'Esc lands it at once');
+    else assert.equal(early, null, `${how}: still spinning`);
+    await p.clock.runFor(how === 'esc' ? 0 : 5000);
     drawn.push(await p.evaluate(() => seatWheel && seatWheel.victim));
     await done(p);
   }
   assert.ok(drawn[0]);
-  assert.deepEqual(drawn, [drawn[0], drawn[0], drawn[0]]);
+  assert.deepEqual(drawn, [drawn[0], drawn[0], drawn[0], drawn[0]]);
 });
 
 test('Space after clicking Undo spins; it does not undo a second pick', async () => {
@@ -353,11 +358,15 @@ test('Auto switched on mid-spin takes over from the next pick', async () => {
   await done(p);
 });
 
-test('Esc skips a takeover, and Calm effects skip the race outright', async () => {
+test('Esc skips a takeover after its first beat, and Calm effects run the race at double pace', async () => {
   const p = await open(browser, site.url, { state: table(['A', 'B', 'C'], ['X', 'Y', 'Z']) });
   await scriptRandom(p);
   await p.evaluate(() => { isBusy = true; startMarbleRace(); });
   await p.clock.runFor(300);
+  await p.keyboard.press('Escape');                   // still about the spin: ignored
+  await p.clock.runFor(100);
+  assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('done')), false, 'too soon to be a skip');
+  await p.clock.runFor(800);
   await p.keyboard.press('Escape');
   await p.clock.runFor(100);
   assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('done')), true, 'Esc ran it to the result');
@@ -366,9 +375,30 @@ test('Esc skips a takeover, and Calm effects skip the race outright', async () =
   const q = await open(browser, site.url, { state: table(['A', 'B', 'C'], ['X', 'Y', 'Z']), reducedMotion: 'reduce' });
   await scriptRandom(q);
   await q.evaluate(() => { isBusy = true; startMarbleRace(); });
-  await q.clock.runFor(200);
-  assert.equal(await q.evaluate(() => marbleOverlay.classList.contains('done')), true, 'Calm: straight to the result');
+  await q.clock.runFor(2000);
+  assert.equal(await q.evaluate(() => marbleOverlay.classList.contains('done')), false, 'Calm: the race is still run');
+  const lead = await q.evaluate(() => Math.max(...lastRunners.map(r => r.p)));
+  await q.clock.runFor(40000);
+  assert.equal(await q.evaluate(() => marbleOverlay.classList.contains('done') || !marbleOverlay.classList.contains('show')), true, 'and finishes');
+  assert.ok(lead > 0.05, 'at a visible pace');
   await done(q);
+});
+
+test('the Space or click meant for SPIN never skips a PANIC game as it opens', async () => {
+  for (const how of ['space', 'enter', 'click']) {
+    const p = await open(browser, site.url, { state: table(['A', 'B', 'C'], ['D', 'E', 'F', 'G'], { panicEnabled: true }) });
+    await scriptRandom(p, [0.9]);                     // PANIC; 0.5 after that is the horse race
+    await p.keyboard.press('Space');                  // spun from the keyboard
+    await p.clock.runFor(9000);                       // landed, and the race is opening
+    assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('show')), true, how);
+    assert.notEqual(await p.evaluate(() => document.activeElement.id), 'marbleSkip', 'Skip is not handed the focus');
+    if (how === 'space') await p.keyboard.press('Space');
+    if (how === 'enter') await p.keyboard.press('Enter');
+    if (how === 'click') await p.evaluate(() => marbleSkip.click());   // a beat too late for SPIN
+    await p.clock.runFor(1500);
+    assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('done')), false, `${how}: the race runs on`);
+    await done(p);
+  }
 });
 
 test('a name is never cut through the middle of an emoji', async () => {

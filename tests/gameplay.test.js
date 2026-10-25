@@ -197,6 +197,74 @@ test('landing on PANIC races the drafted field: the majority survive, the rest g
   await done(p);
 });
 
+// The first few draws scripted, then a seeded generator: a real-looking
+// game that plays out the same way every time.
+function seeded(p, first, seed = 7) {
+  return p.evaluate(([first, seed]) => {
+    const q = first.slice();
+    let s = seed;
+    Math.random = () => (q.length ? q.shift() : (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296);
+  }, [first, seed]);
+}
+
+test('PANIC can play the slots instead: the first to 7-7-7 keep their seats, the rest go back on the wheel', async () => {
+  const drafted = ['D', 'E', 'F', 'G', 'H', 'I'];
+  const p = await page(table(['A', 'B', 'C'], drafted, { panicEnabled: true }));
+  await p.evaluate(() => {
+    let s = 7, first = true, flipped = false;
+    Math.random = () => {
+      if (first) { first = false; return 0.9; }        // the PANIC wedge
+      if (phase !== 'panic') return 0.5;                // a plain spin to it
+      if (!flipped) { flipped = true; return 0.1; }     // the coin lands on the slots
+      return (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296;
+    };
+  });
+  await p.evaluate(() => spin());
+  await p.clock.runFor(9000);
+  assert.equal(await p.evaluate(() => panicGame), 'slots');
+  assert.equal(await p.evaluate(() => marbleOverlay.classList.contains('show')), true);
+  await p.clock.runFor(120000);
+  const s = await saved(p);
+  assert.equal(s.draftOrder.length, 4, 'six played, the first four to hit 7-7-7 are safe');
+  const out = drafted.filter(n => !picks(s).includes(n));
+  assert.equal(out.length, 2);
+  assert.deepEqual(names(s), ['A', 'B', 'C', ...out]);
+  assert.deepEqual(picks(s), drafted.filter(n => !out.includes(n)), 'the survivors keep their order');
+  assert.equal(s.history.at(-1).t, 'panic');
+  await done(p);
+});
+
+test('Skip runs the very slots game that would have been watched', async () => {
+  const result = async skip => {
+    const p = await page(table(['A', 'B'], ['D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']));
+    await seeded(p, [], 99);
+    await p.evaluate(() => { isBusy = true; startSlotRace(); });
+    if (skip) { await p.clock.runFor(1500); await p.evaluate(() => marbleSkip.click()); }
+    await p.clock.runFor(120000);
+    const r = picks(await saved(p));
+    await done(p);
+    return r;
+  };
+  const watched = await result(false), skipped = await result(true);
+  assert.equal(watched.length, 5);
+  assert.deepEqual(skipped, watched);
+});
+
+test('undo after the slots puts every player back in their own seat', async () => {
+  const drafted = ['D', 'E', 'F', 'G', 'H'];
+  const p = await page(table(['A', 'B'], drafted));
+  await seeded(p, [], 3);
+  await p.evaluate(() => { isBusy = true; startSlotRace(); });
+  await p.clock.runFor(120000);
+  assert.ok((await saved(p)).draftOrder.length < drafted.length);
+  await p.evaluate(() => undoBtn.click());
+  await p.clock.runFor(100);
+  const s = await saved(p);
+  assert.deepEqual(picks(s), drafted);
+  assert.deepEqual(names(s), ['A', 'B']);
+  await done(p);
+});
+
 test('the hurdle odds punish speed, with a floor', async () => {
   const p = await page(table(four), { clock: false });
   const o = await p.evaluate(() => [hurdleOdds(0.9, 1, 1), hurdleOdds(0.9, 2, 1), hurdleOdds(0.4, 3, 1)]);

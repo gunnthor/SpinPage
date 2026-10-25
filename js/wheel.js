@@ -316,7 +316,9 @@ function redraw() { drawWheel(); flapPointer(); }
    Spin
 ══════════════════════════════════════ */
 spinBtn.addEventListener('click', () => {
-    if (phase === 'nois') { skipSeats(); return; }      // SPIN is Skip while the seats are up
+    // Mid-event the wheel can briefly hold one name: busy comes first, so
+    // a press while No One Is Safe plays isn't reported as a problem.
+    if (isSpinning || isBusy) return;
     if (names.length < 2) { alertNow(names.length ? 'Add one more name to spin.' : 'Add at least 2 names to spin.'); return; }
     spin();
 });
@@ -356,7 +358,7 @@ function beginSpin(launch, auto) {
     commit({ save: false });
     if (pu) {
         phase = 'warping';
-        playPowerUpSound();
+        playPowerUpSound(pu.type);
         showPowerUpPopup(pu);
         if (launch) {
             // A flick is already in motion — no time for the grow/shrink
