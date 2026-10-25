@@ -4,6 +4,8 @@
 
 SpinPage turns a simple random picker into a casino-style show on a dark stage: a brass wheel with marquee bulbs, fanfare, confetti, an undoable draft board, autospin, plot twists, and a second-chance wheel where no one is ever completely safe. It is a static site with no dependencies and no build step.
 
+Made by [Gunnþór Karl Rafnsson](https://www.gunnthor.is).
+
 ![SpinPage preview](https://img.shields.io/badge/SpinPage-Spinning%20Wheel-e2b94a?style=for-the-badge)
 ![Static site](https://img.shields.io/badge/Static%20HTML-No%20build%20required-3fbf86?style=for-the-badge)
 ![Vanilla JS](https://img.shields.io/badge/Vanilla-JavaScript-c8352a?style=for-the-badge)
