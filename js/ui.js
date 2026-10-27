@@ -956,6 +956,27 @@ displaySlider.addEventListener('input', () => {
     commit();
 });
 
+// What each Chaos level does, against the odds the settings below quote.
+const CHAOS_SAY = [
+    'Twists turn up about a third as often as the odds below, and seldom twice.',
+    'Twists turn up about two-thirds as often as the odds below.',
+    'The odds as each twist below describes them.',
+    'Half as often again as the odds below, and a repeat comes round sooner.',
+    'Twice as often as the odds below, and repeats are barely held back. Drafts run longer.',
+];
+function showChaos() {
+    const name = CHAOS.levels[chaosLevel];
+    chaosSlider.value = chaosLevel;
+    chaosValEl.textContent = name;
+    chaosSlider.setAttribute('aria-valuetext', name);
+    chaosDescEl.textContent = CHAOS_SAY[chaosLevel];
+}
+chaosSlider.addEventListener('input', () => {
+    chaosLevel = parseInt(chaosSlider.value, 10);
+    showChaos();
+    commit();                             // the PANIC wedge resizes to match
+});
+
 function setSound(on) {
     soundOn = on;
     if (on) ensureAudio();
@@ -1036,6 +1057,7 @@ displayValEl.textContent = displaySlider.value + 's';
 displaySlider.setAttribute('aria-valuetext', displaySlider.value + ' seconds');
 autoDisplayToggle.checked = autoDisplay;
 displayManual.hidden      = autoDisplay;
+showChaos();
 applyCalm();
 buildBulbs();
 sizeWheelCanvas();

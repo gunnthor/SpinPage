@@ -54,6 +54,9 @@ const panicToggle    = $('panicToggle');
 const popOffToggle   = $('popOffToggle');
 const windBackToggle = $('windBackToggle');
 const goblinToggle   = $('goblinToggle');
+const chaosSlider    = $('chaosSlider');
+const chaosValEl     = $('chaosVal');
+const chaosDescEl    = $('chaosDesc');
 
 // The board's copy of the winner-slots setting, plus its stepper buttons
 const draftSlotsInput  = $('draftSlotsInput');
