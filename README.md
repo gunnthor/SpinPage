@@ -114,12 +114,14 @@ npm install            # playwright-core only; the site itself has no dependenci
 npm test
 ```
 
-84 checks in four suites:
+124 checks in six suites:
 
 - `gameplay.test.js` — every mechanic, written against the original single-file page and still passing unchanged: selection odds, illegal spins, rigged, flicks, wind-back, gremlin, pop-off, power-ups, the PANIC wedge, race and slots, No One Is Safe, autospin, undo/restore/clear/reset, copy, persistence.
 - `stats.test.js` — the scoreboard against the game state through every kind of event and reload.
 - `layout.test.js` — no scroll and nothing off screen at 14 viewports from 320x568 to 1920x1080 and phone landscape; touch targets, keyboard, dialogs, announcements, calm effects.
-- `unit.test.js` — the pure logic in Node, no browser.
+- `labels.test.js` — the names on the wheel, read back from what is drawn: every slice named, long names shortened by the rule in `wheel.js`, no two slices saying the same thing.
+- `review.test.js` — what the final review found, pinned down: the result agrees with the draw, no save loses a player, the live numbers stay whole at every width.
+- `unit.test.js` — the pure logic in Node, no browser, and a check that no two scripts declare the same global.
 
 The browser suites need a Chromium: they use one already downloaded by Playwright, or set `CHROME_PATH`, or run `npx playwright-core install chromium`.
 

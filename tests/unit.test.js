@@ -279,3 +279,19 @@ test('every jewel label reads at 4.5:1 or better on its slice', () => {
   assert.equal(run(`inkOn('#ffffff')`), '#17110a');
   assert.equal(run(`inkOn('#000000')`), '#fbf4e2');
 });
+
+test('no two scripts declare the same global: the later one would silently replace the earlier', () => {
+  // The page loads classic scripts into one global scope, so a second
+  // `function fitText` in slots.js replaced the wheel's own and every
+  // label on the wheel came out as a lone "…".
+  const dir = path.join(__dirname, '..', 'js');
+  const seen = new Map(), clashes = [];
+  for (const f of fs.readdirSync(dir).filter(f => f.endsWith('.js'))) {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    for (const m of src.matchAll(/^(?:async\s+)?(?:function\*?|const|let|var|class)\s+([A-Za-z_$][\w$]*)/gm)) {
+      if (seen.has(m[1])) clashes.push(`${m[1]}: ${seen.get(m[1])} and ${f}`);
+      else seen.set(m[1], f);
+    }
+  }
+  assert.deepEqual(clashes, []);
+});
