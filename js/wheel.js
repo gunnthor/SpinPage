@@ -61,10 +61,23 @@ function sliceArcs(weights) {
    resting geometry, so a power-up warping the slices doesn't make every
    label jump. A crowded wheel steps down to 9px before it gives up on
    type, and then only the slices too thin for it go without — a slice a
-   power-up has swollen still gets its name. Each label is cut to its own
-   slice: surname or initial first ("Gwen F." → "Gwen"), an ellipsis only
-   after that. */
+   power-up has swollen still gets its name.
+
+   A name too long for its slice takes the first of these that fits:
+     1. the whole name, on one line
+     2. the whole name over two lines, where the slice is wide enough
+        ("Jean-Baptiste / Grenouille")
+     3. first name and last initial ("Benedict C.")
+     4. first name alone ("Benedict")
+     5. as much as fits, then an ellipsis ("Rumpelst…")
+   The whole name is tried at the wheel's size first, so a roomy wheel
+   keeps one size throughout; after that each step may shrink to SHRINK of
+   it, since a name a little too long reads better a touch smaller than
+   shortened. 3 and 4 are passed over when they would leave two slices
+   saying the same thing — Ben Smith and Ben Jones are never both "Ben". */
 const LABEL_ROOM = 2.4;             // a label needs room for this many ems
+const SHRINK     = 0.8;             // a long name may shrink to this share of the wheel's size
+const LINE_GAP   = 1.05;            // two-line labels: baseline to baseline, in ems
 function labelPlan(seg) {
     const css   = canvas.offsetWidth || SIZE;
     const unit  = SIZE / css;                                    // wheel units per CSS px
@@ -77,21 +90,74 @@ function labelPlan(seg) {
     let fs = maxFs;
     while (fs > minFs && roomFor(fs, angMin) < fs * 4.5) fs -= 0.5;
     while (fs > 9 * unit && roomFor(fs, angMin) < fs * LABEL_ROOM) fs -= 0.5;
-    return { fs };
+    return { fs, floor: Math.max(fs * SHRINK, Math.min(fs, 9 * unit)) };
 }
 // Radial room for a label of size fs in a slice of angle ang: from the rim
 // inward until the slice is too narrow to hold the letters' height.
-function roomFor(fs, ang) {
-    const inner = Math.max(HUB_R + 10, fs / (0.8 * 2 * Math.sin(Math.min(ang, Math.PI) / 2)));
+function roomFor(fs, ang, lines = 1) {
+    const tall  = fs * (1 + (lines - 1) * LINE_GAP);
+    const inner = Math.max(HUB_R + 10, tall / (0.8 * 2 * Math.sin(Math.min(ang, Math.PI) / 2)));
     return Math.min(R * 0.66, LABEL_R - inner);
 }
-function fitText(c, text, room) {
-    if (c.measureText(text).width <= room) return text;
-    const first = text.split(' ')[0];
-    if (first !== text && c.measureText(first).width <= room) return first;
-    const chars = Array.from(text);           // whole characters: never half an emoji
-    while (chars.length > 1 && c.measureText(chars.join('') + '…').width > room) chars.pop();
-    return chars.length > 1 ? chars.join('') + '…' : '';
+
+// The short forms of a name: first name and last initial, first name.
+function shortForms(name) {
+    const words = name.split(' ');
+    if (words.length < 2) return [];
+    const first = words[0], initial = Array.from(words[words.length - 1])[0];
+    return /\p{L}/u.test(initial) ? [first + ' ' + initial + '.', first] : [first];
+}
+// How many slices could end up saying each thing, so a short form is
+// only used where it still names one person.
+function labelClaims(labels) {
+    const claims = new Map();
+    for (const name of labels) {
+        for (const t of new Set([name, ...shortForms(name)])) claims.set(t, (claims.get(t) || 0) + 1);
+    }
+    return claims;
+}
+// The most even break into two lines, at a space or just after a hyphen.
+function twoLines(c, name) {
+    let best = null, bestW = Infinity;
+    for (let i = 1; i < name.length - 1; i++) {
+        const ch = name[i];
+        if (ch !== ' ' && ch !== '-') continue;
+        const lines = ch === ' ' ? [name.slice(0, i), name.slice(i + 1)] : [name.slice(0, i + 1), name.slice(i + 1)];
+        const w = Math.max(c.measureText(lines[0]).width, c.measureText(lines[1]).width);
+        if (lines[0].trim() && lines[1].trim() && w < bestW) { best = lines; bestW = w; }
+    }
+    return best;
+}
+// The largest size between fs and floor at which these lines fit a slice
+// of angle ang, or 0. The font must be set at fs: widths scale with it.
+function fitSize(c, lines, fs, floor, ang) {
+    const ems = Math.max(...lines.map(l => c.measureText(l).width)) / fs;
+    for (let s = fs; s >= floor - 1e-6; s -= 0.25) {
+        if (ems * s <= roomFor(s, ang, lines.length)) return s;
+    }
+    return 0;
+}
+// Whole characters, so never half an emoji; no space left before the dots.
+function cutText(c, text, room) {
+    const chars = Array.from(text);
+    while (chars.length > 1 && c.measureText(chars.join('').trimEnd() + '…').width > room) chars.pop();
+    return chars.length > 1 ? chars.join('').trimEnd() + '…' : '';
+}
+// What to write in a slice of angle ang, and how big: { lines, fs }.
+function fitLabel(c, name, plan, ang, claims) {
+    const whole = [[name]];
+    const two = twoLines(c, name);
+    if (two) whole.push(two);
+    const short = shortForms(name).filter(t => !claims || claims.get(t) === 1).map(t => [t]);
+    const tries = [...whole.map(lines => [lines, plan.fs]),
+                   ...[...whole, ...short].map(lines => [lines, plan.floor])];
+    for (const [lines, floor] of tries) {
+        const fs = fitSize(c, lines, plan.fs, floor, ang);
+        if (fs) return { lines, fs };
+    }
+    const k = plan.floor / plan.fs;               // measured at plan.fs: scale the room instead
+    const cut = cutText(c, name, roomFor(plan.floor, ang) / k);
+    return { lines: cut ? [cut] : [], fs: plan.floor };
 }
 
 let panicStripe = null;
@@ -148,20 +214,22 @@ function paintFace(seg) {
         c.lineWidth = 0.9; c.strokeStyle = 'rgba(240,206,110,0.6)'; c.stroke();
     });
 
-    const plan = labelPlan(seg);
+    const plan   = labelPlan(seg);
+    const claims = labelClaims(seg.labels.filter((_, i) => i !== seg.panicIndex));
     arcs.forEach(({ a0, a1 }, i) => {
         const panic = i === seg.panicIndex;
-        const room  = roomFor(plan.fs, a1 - a0);
-        if (room < plan.fs * LABEL_ROOM) return;              // a sliver: colour only
+        const weight = panic ? 700 : 600;
+        if (roomFor(plan.floor, a1 - a0) < plan.floor * LABEL_ROOM) return;   // a sliver: colour only
         c.save();
         c.translate(cx, cy); c.rotate(base + (a0 + a1) / 2);
-        c.font = `${panic ? 700 : 600} ${plan.fs.toFixed(2)}px ${LABEL_FONT}`;
+        c.font = `${weight} ${plan.fs.toFixed(2)}px ${LABEL_FONT}`;
         c.textAlign = 'right'; c.textBaseline = 'middle';
-        const text = fitText(c, panic ? PANIC.label : seg.labels[i], room);
-        if (text) {
+        const { lines, fs } = fitLabel(c, panic ? PANIC.label : seg.labels[i], plan, a1 - a0, panic ? null : claims);
+        if (lines.length) {
+            c.font = `${weight} ${fs.toFixed(2)}px ${LABEL_FONT}`;
             if (panic) { c.shadowColor = 'rgba(255,61,139,0.75)'; c.shadowBlur = 6; }
             c.fillStyle = panic ? PANIC.textColor : inkOn(seg.colors[i]);
-            c.fillText(text, LABEL_R, plan.fs * 0.04);
+            lines.forEach((line, k) => c.fillText(line, LABEL_R, fs * 0.04 + (k - (lines.length - 1) / 2) * fs * LINE_GAP));
         }
         c.restore();
     });

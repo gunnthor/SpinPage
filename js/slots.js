@@ -247,7 +247,7 @@ function drawSlots(machines, now) {
     });
 }
 
-function fitText(text, maxW) {
+function fitPlate(text, maxW) {
     if (mctx.measureText(text).width <= maxW) return text;
     let chars = Array.from(text);
     while (chars.length > 1 && mctx.measureText(chars.join('') + '…').width > maxW) chars.pop();
@@ -290,7 +290,7 @@ function drawMachine(m, R, now) {
     mctx.font = `600 ${Math.max(9, Math.round(plateH * 0.62))}px ${LABEL_FONT}`;
     mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
     mctx.fillStyle = inkOn(m.color);
-    mctx.fillText(fitText(m.pick.name, cabW - 2 * px - 10 * k), x + cabW / 2, y + py + plateH / 2 + 1);
+    mctx.fillText(fitPlate(m.pick.name, cabW - 2 * px - 10 * k), x + cabW / 2, y + py + plateH / 2 + 1);
 
     // The reels, behind glass, with the payline across them.
     const wy = y + py + plateH + h * 0.04, wh = h * 0.44;
