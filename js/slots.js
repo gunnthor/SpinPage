@@ -85,7 +85,7 @@ function startSlotRace() {
     const players = draftOrder.slice();
     if (players.length < 2) { endMarbleRace(); return; }
     // The same quota as the race: the majority always survives.
-    const outCount  = Math.max(1, Math.ceil(players.length / 2) - 1);
+    const outCount  = panicOut(players.length);
     const safeCount = players.length - outCount;
 
     dressPanicGame('slots', `${players.length} at the slots · 7s stick · first ${safeCount} to hit 7-7-7 are safe, last ${outCount} drop out`,

@@ -448,7 +448,8 @@ function beginSpin(launch, auto) {
 
 /* ── Power-ups ── */
 function rollPowerUp() {
-    if (!powerUpsEnabled || names.length < 3 || Math.random() >= 0.35) return null;
+    if (!powerUpsEnabled || names.length < 3 || Math.random() >= chaosOdds('powerup')) return null;
+    noteChaos('powerup');
     const pick = POWERUPS[Math.floor(Math.random() * POWERUPS.length)];
     if (pick.type === 'wildcard') {
         const weights = names.map(() => 0.35 + Math.random() * 2.65);
@@ -544,18 +545,21 @@ function startSpin(spinWeights, launch) {
     const targetNorm   = ((TAU - winnerOffset % TAU) + TAU) % TAU;
     const currentNorm  = ((rotation % TAU) + TAU) % TAU;
 
-    const isIllegal = Math.random() < 0.05;
+    const isIllegal = Math.random() < chaosOdds('illegal');
     const manual    = launch || null;
     // The reverse-twist choreography assumes a forward, machine-paced spin,
     // so it sits out backwards flicks, hard flicks and pop-offs.
     const stuntOk = !isIllegal &&
                     !(manual && (manual.popOff || manual.power >= 0.6 || manual.dir < 0));
-    const windBack = stuntOk && windBackEnabled && Math.random() < 0.20;
+    const windBack = stuntOk && windBackEnabled && Math.random() < chaosOdds('windback');
     // The gremlin wants that same kind of spin, and enough names either side
     // of the landing that the creep genuinely changes hands a few times.
     const goblin   = stuntOk && !windBack && goblinEnabled &&
                      !prefersReducedMotion() && seg.labels.length >= 3 &&
-                     goblinFires(names.length, goblinSeen);
+                     goblinFires(names.length, goblinSeen, chaos('gremlin'));
+    if (isIllegal) noteChaos('illegal');
+    if (windBack)  noteChaos('windback');
+    if (goblin)    noteChaos('gremlin');
 
     const dir = (manual && !windBack && !goblin) ? manual.dir : 1;
 
@@ -679,8 +683,11 @@ function startSpin(spinWeights, launch) {
             // clears, or the race opens). Power-up sizes and the PANIC wedge
             // change back only after that, so the pointer never sits on a
             // different name from the one announced.
+            const panicked = !isIllegal && winnerIdx === seg.panicIndex;
+            if (panicked) noteChaos('panic', panicHeat(draftOrder.length));
+            chaosLog.spins++;                     // saved by whichever of these comes next
             if (isIllegal) { showIllegalStamp(); }
-            else if (winnerIdx === seg.panicIndex) { onPanicLanded(); }
+            else if (panicked) { onPanicLanded(); }
             else { onSpinEnd(winnerIdx); }
         }
       } catch (err) { recoverFromError(err); }
@@ -857,7 +864,8 @@ function releaseDrag(e) {
     // Only a genuinely violent flick can tear the wheel loose, and even then
     // it's close to a coin flip - so it stays a surprise, not a routine.
     const pop = popOffEnabled && !prefersReducedMotion() && power >= FLICK.popPower &&
-                Math.random() < 0.35 + (power - FLICK.popPower) * 4;
+                Math.random() < chaosOdds('popoff', 0.35 + (power - FLICK.popPower) * 4);
+    if (pop) noteChaos('popoff');
 
     beginSpin({
         vel:    Math.max(speed, FLICK.minVel),

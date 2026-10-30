@@ -50,9 +50,36 @@ let pendingPick         = null;
 // What has happened since the draft began. Undo does not un-spin, so spins
 // only ever count up until the draft is restored, cleared or reset.
 let spinLog             = freshSpinLog();
+// The Chaos slider (an index into CHAOS.levels), and what the twists have
+// been doing this draft so the odds can lean away from repeats (core.js).
+let chaosLevel          = CHAOS.normal;
+let chaosLog            = freshChaosLog();
 
 function freshSpinLog() { return { spins: 0, illegal: 0, panics: 0, steals: 0, undos: 0 }; }
-function newDraftLog()  { spinLog = freshSpinLog(); lastPick = ''; draftHistory = []; }
+// spins counts landings; each event is the twist, the landing count when
+// it happened, and how much it counts for. drafted: someone has had a seat.
+function freshChaosLog() { return { spins: 0, drafted: false, events: [] }; }
+function newDraftLog()  { spinLog = freshSpinLog(); chaosLog = freshChaosLog(); lastPick = ''; draftHistory = []; }
+
+/* A draft that has gone back to nobody seated has started over, however it
+   got there — Restore, Delete picks, Reset or undoing every pick — so
+   nothing from the last one leans on its odds. Checked whenever the log
+   is read or written, so no path back to an empty board can miss it. */
+function chaosCycle() {
+    if (draftOrder.length || pendingPick) chaosLog.drafted = true;
+    else if (chaosLog.drafted) chaosLog = freshChaosLog();
+}
+function chaos(kind) {
+    chaosCycle();
+    return chaosFactor(kind, chaosLog, chaosLevel, totalEntrants());
+}
+// A twist's odds this spin, from its ordinary odds.
+function chaosOdds(kind, base = CHAOS.base[kind]) { return Math.min(CHAOS.max, base * chaos(kind)); }
+function noteChaos(kind, weight = 1) {
+    chaosCycle();
+    chaosLog.events.push({ k: kind, t: chaosLog.spins, w: weight });
+    if (chaosLog.events.length > 200) chaosLog.events.shift();
+}
 
 function totalEntrants() {
     return names.length + draftOrder.length + (pendingPick ? 1 : 0);
@@ -99,8 +126,15 @@ const POWERUPS = [
 
 // The PANIC wedge is a non-player slice: landing on it starts the horse race
 // instead of picking a winner. It only appears once 2+ players are drafted.
-const PANIC = { label: 'PANIC', color: '#170812', textColor: '#ff3d8b', weight: 0.8 };
-function panicSliceActive() { return panicEnabled && draftOrder.length >= 2 && !panicCooldown; }
+// Its size is its odds, so Chaos shows: it shrinks each time it hits, and
+// below minWeight (about a 1% chance on a ten-name wheel) it is gone.
+const PANIC = { label: 'PANIC', color: '#170812', textColor: '#ff3d8b', weight: 0.8, minWeight: 0.1 };
+function panicWeight() {
+    if (!panicEnabled || draftOrder.length < 2 || panicCooldown) return 0;
+    const w = PANIC.weight * chaos('panic');
+    return w >= PANIC.minWeight ? w : 0;
+}
+function panicSliceActive() { return panicWeight() > 0; }
 
 // The wheel's drawable slices = players (+ the PANIC wedge when active).
 // baseWeights is a players-length array (equal, or the current power-up sizing).
@@ -109,14 +143,15 @@ function buildSegments(baseWeights) {
     const colors  = names.map(n => colorOf(n));
     const weights = baseWeights.slice();
     let panicIndex = -1;
-    if (panicSliceActive()) {
+    const panicW = panicWeight();
+    if (panicW) {
         // Cap so the PANIC wedge is never more than 1/4 of the whole wheel:
         // panicW / (playerSum + panicW) <= 0.25  ⇒  panicW <= playerSum / 3.
         const playerSum = weights.reduce((a, b) => a + b, 0) || 1;
         panicIndex = labels.length;
         labels.push(PANIC.label);
         colors.push(PANIC.color);
-        weights.push(Math.min(PANIC.weight, playerSum / 3));
+        weights.push(Math.min(panicW, playerSum / 3));
     }
     return { labels, colors, weights, panicIndex };
 }
@@ -271,11 +306,11 @@ function latestFromHistory() {
 // Snapshot and restore the whole table, for the undo toast after Restore,
 // Clear and Reset.
 function snapshotTable() {
-    return JSON.stringify({ names, draftOrder, history: draftHistory, spinLog, lastPick, nameColors, winnerSlots, panicCooldown });
+    return JSON.stringify({ names, draftOrder, history: draftHistory, spinLog, chaosLog, lastPick, nameColors, winnerSlots, panicCooldown });
 }
 function restoreTable(json) {
     const s = JSON.parse(json);
-    names = s.names; draftOrder = s.draftOrder; draftHistory = s.history; spinLog = s.spinLog;
+    names = s.names; draftOrder = s.draftOrder; draftHistory = s.history; spinLog = s.spinLog; chaosLog = s.chaosLog;
     lastPick = s.lastPick; nameColors = s.nameColors; winnerSlots = s.winnerSlots; panicCooldown = s.panicCooldown;
 }
 
@@ -433,6 +468,7 @@ function saveState() {
             noisEnabled, powerUpsEnabled, panicEnabled, windBackEnabled, goblinEnabled, popOffEnabled,
             displayDuration, autoDisplay, riggedValue,
             soundOn, calmPref, lastPick, spinLog, history: draftHistory, panicCooldown, goblinSeen,
+            chaosLevel, chaosLog,
         }));
         return true;
     } catch (e) { return false; }
@@ -448,6 +484,7 @@ function loadState() {
     displayDuration = s.displayDuration; autoDisplay = s.autoDisplay; riggedValue = s.riggedValue;
     soundOn = s.soundOn; calmPref = s.calmPref; lastPick = s.lastPick; spinLog = s.spinLog;
     draftHistory = s.history; panicCooldown = s.panicCooldown; goblinSeen = s.goblinSeen;
+    chaosLevel = s.chaosLevel; chaosLog = s.chaosLog;
     // Re-sync stable colors: current wheel names first, then drafted picks,
     // so old/positional pick colors are migrated to the consistent scheme.
     names.forEach(colorOf);
@@ -463,7 +500,7 @@ function migrate(raw) {
         windBackEnabled: true, goblinEnabled: true, popOffEnabled: true,
         displayDuration: 2800, autoDisplay: true, riggedValue: '',
         soundOn: true, calmPref: null, lastPick: '', spinLog: freshSpinLog(), history: [], panicCooldown: false,
-        goblinSeen: false,
+        goblinSeen: false, chaosLevel: CHAOS.normal, chaosLog: freshChaosLog(),
     };
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return out;
 
@@ -505,6 +542,16 @@ function migrate(raw) {
         }
     }
     if (Array.isArray(raw.history)) out.history = raw.history.filter(validEvent);
+    if (Number.isInteger(raw.chaosLevel) && raw.chaosLevel >= 0 && raw.chaosLevel < CHAOS.levels.length) out.chaosLevel = raw.chaosLevel;
+    const cl = raw.chaosLog;
+    if (cl && typeof cl === 'object' && Number.isInteger(cl.spins) && cl.spins >= 0 && Array.isArray(cl.events)) {
+        out.chaosLog = {
+            spins: cl.spins, drafted: cl.drafted === true,
+            events: cl.events.filter(e => e && Object.hasOwn(CHAOS.halfLife, e.k) && Number.isInteger(e.t) &&
+                                          e.t >= 0 && e.t <= cl.spins && Number.isFinite(e.w) && e.w > 0)
+                             .map(e => ({ k: e.k, t: e.t, w: e.w })).slice(-200),
+        };
+    }
     return out;
 }
 

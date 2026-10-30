@@ -468,18 +468,33 @@
         </section>
 
         <section class="set-group">
+            <h3 class="set-title">Chaos <span class="set-tag">how often everything below turns up</span></h3>
+            <div class="setting stack">
+                <label class="set-main" for="chaosSlider">
+                    <span class="set-name" id="chaosName">Chaos level</span>
+                    <span class="set-desc" id="chaosDesc">The odds as each twist below describes them.</span>
+                </label>
+                <div class="range-row">
+                    <input type="range" id="chaosSlider" min="0" max="4" step="1" value="2" aria-labelledby="chaosName" aria-describedby="chaosDesc chaosNote">
+                    <output class="range-val" id="chaosVal" for="chaosSlider">Normal</output>
+                </div>
+                <p class="set-desc" id="chaosNote">At every level, a twist that has just happened gets rarer for a while — the more often, the rarer — and the ones that undo picks ease off once a draft runs long. A fresh draft starts with a clean slate.</p>
+            </div>
+        </section>
+
+        <section class="set-group">
             <h3 class="set-title">Plot twists <span class="set-tag">change the show, never the winner</span></h3>
             <div class="setting">
                 <label class="set-main" for="windBackToggle">
                     <span class="set-name">Wind-back</span>
-                    <span class="set-desc">About one spin in five settles on a slice — then gets shoved into a whole spin the other way.</span>
+                    <span class="set-desc">About one spin in five at Normal settles on a slice — then gets shoved into a whole spin the other way.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="windBackToggle" checked>
             </div>
             <div class="setting">
                 <label class="set-main" for="goblinToggle">
                     <span class="set-name">Gremlin</span>
-                    <span class="set-desc">Something climbs onto the rim as the wheel dies and fakes the stop, over and over. Rare at a full table; up to about one spin in four with three names left, and a little likelier until you have met him once.</span>
+                    <span class="set-desc">Something climbs onto the rim as the wheel dies and fakes the stop, over and over. At Normal he is rare at a full table, up to about one spin in four with three names left, and a little likelier until you have met him once.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="goblinToggle" checked>
             </div>
@@ -497,21 +512,21 @@
             <div class="setting">
                 <label class="set-main" for="powerUpToggle">
                     <span class="set-name">Power-ups</span>
-                    <span class="set-desc">35% of spins, a slice swells or shrinks first — and the real odds move with it. The new odds are shown above the wheel.</span>
+                    <span class="set-desc">About a third of spins at Normal, a slice swells or shrinks first — and the real odds move with it. The new odds are shown above the wheel.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="powerUpToggle" checked>
             </div>
             <div class="setting">
                 <label class="set-main" for="panicToggle">
                     <span class="set-name">Panic slice</span>
-                    <span class="set-desc">Once two are drafted, a ⚠ PANIC wedge joins the wheel. Land on it and the drafted run a horse race or play the slots — only the majority keep their seats.</span>
+                    <span class="set-desc">Once two are drafted, a ⚠ PANIC wedge joins the wheel. Land on it and the drafted run a horse race or play the slots — only the majority keep their seats. The wedge shrinks every time it hits, the more so the more seats it cost.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="panicToggle" checked>
             </div>
             <div class="setting">
                 <label class="set-main" for="noisToggle">
                     <span class="set-name">No One Is Safe</span>
-                    <span class="set-desc">15% of picks turn the wheel over to the drafted seats and steal one. Whoever loses it goes back on the wheel.</span>
+                    <span class="set-desc">About one pick in seven at Normal turns the wheel over to the drafted seats and steals one. Whoever loses it goes back on the wheel.</span>
                 </label>
                 <input type="checkbox" class="switch" role="switch" id="noisToggle" checked>
             </div>

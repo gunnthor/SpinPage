@@ -31,6 +31,7 @@ The **scoreboard** always shows the next pick, how many are left on the wheel, t
 - **Autospin** for hands-free draft generation. Auto can be switched on or off at any moment — mid-spin, mid-event, even from inside a PANIC game — and takes over from the next pick. The phone stays awake while it runs.
 - **Undo** reverses whatever happened last: a pick, a stolen seat or a whole PANIC game. **Restore all**, **Delete picks** and **Reset table** act at once and offer an Undo for ten seconds.
 - **Paste a list**: a column copied from a spreadsheet or a notes app becomes one player per line.
+- **Chaos**: one slider in Settings, from Tame through Normal to Mayhem, sets how often every twist below turns up. At any level the odds lean away from repeats: a twist that has just happened gets rarer for a while (the more often, the rarer), the PANIC wedge visibly shrinks each time it hits (further the more seats it cost), and once a draft has taken more spins than it has names, the twists that undo picks ease off. Nothing is forced and nothing switches off; the odds only lean. A draft back to nobody seated starts with a clean slate. At Normal a twenty-name draft takes about 30 spins and almost never more than 45, where it used to average 58 and could run past 300.
 - **Wind-back**: the wheel runs an ordinary spin, creeps to a stop on a slice — and then gets dragged backwards, held, and thrown forward again onto the real winner.
 - **The Gremlin**: as the wheel crawls through its last degree, something climbs onto the rim, creeps it round by hand, fakes the stop, looks innocently away — and grabs it again. A slow burn from ten seconds to a minute and a half; rare at a full table, up to about one spin in four with three names left. Until he has turned up once on a device he is a little likelier (10% of spins at a full table, 40% near the end, against 5% and 30% after), so a new table gets to meet him.
 - **Power-up slices** (Hot Seat, Cursed, Wildcard) swell or shrink a slice before a spin and genuinely shift the odds; the status line spells out the change (`14% → 33%`) for the whole spin, on every screen.
@@ -68,7 +69,7 @@ python -m http.server 8000
 4. Watch the winner take the next seat on the board. **Auto** keeps spinning until the wheel is empty.
 5. Copy the finished draft order from the board, or from the results card at the end.
 
-Settings has every twist as a switch: wind-back, gremlin, pop-off, power-ups, the Panic slice and No One Is Safe, plus winner display timing, sound, calm effects and the Rigged house rule. Turn them all off and you have a plain, fast wheel spinner.
+Settings has a Chaos slider for how often the twists turn up, and every twist as a switch: wind-back, gremlin, pop-off, power-ups, the Panic slice and No One Is Safe, plus winner display timing, sound, calm effects and the Rigged house rule. Turn them all off and you have a plain, fast wheel spinner.
 
 **Is it fair?** Every spin draws its winner, weighted by slice size, before the wheel has moved a degree. Power-ups change slice sizes and the real odds, and say so. Hand flicks, wind-backs, the gremlin and pop-offs only change the *route* the wheel takes to get there. The one exception is **Rigged**, which you have to switch on yourself and which switches itself off when you reload.
 
@@ -79,7 +80,7 @@ SpinPage/
 ├── index.html            # Markup, SEO metadata and the About/FAQ copy
 ├── css/spinpage.css      # The whole design system and all four layouts
 ├── js/                   # Classic scripts, loaded in this order:
-│   ├── core.js           #   pure game maths: selection, easings, gremlin, hurdles
+│   ├── core.js           #   pure game maths: selection, chaos odds, easings, gremlin, hurdles
 │   ├── dom.js            #   element references
 │   ├── state.js          #   game state, derived stats, undo history, save/migrate, commit()
 │   ├── audio.js          #   Web Audio synthesis
@@ -114,7 +115,7 @@ npm install            # playwright-core only; the site itself has no dependenci
 npm test
 ```
 
-124 checks in six suites:
+135 checks in seven suites:
 
 - `gameplay.test.js` — every mechanic, written against the original single-file page and still passing unchanged: selection odds, illegal spins, rigged, flicks, wind-back, gremlin, pop-off, power-ups, the PANIC wedge, race and slots, No One Is Safe, autospin, undo/restore/clear/reset, copy, persistence.
 - `stats.test.js` — the scoreboard against the game state through every kind of event and reload.
@@ -122,6 +123,7 @@ npm test
 - `labels.test.js` — the names on the wheel, read back from what is drawn: every slice named, long names shortened by the rule in `wheel.js`, no two slices saying the same thing.
 - `review.test.js` — what the final review found, pinned down: the result agrees with the draw, no save loses a player, the live numbers stay whole at every width.
 - `unit.test.js` — the pure logic in Node, no browser, and a check that no two scripts declare the same global.
+- `balance.test.js` — thousands of whole drafts played through the game's own odds in Node: how long a draft runs at each Chaos level, and that the twists still turn up. `node tests/balance.test.js --table` prints the lot.
 
 The browser suites need a Chromium: they use one already downloaded by Playwright, or set `CHROME_PATH`, or run `npx playwright-core install chromium`.
 

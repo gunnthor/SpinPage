@@ -545,7 +545,7 @@ function startMarbleRace() {
     const racers = draftOrder.slice();
     if (racers.length < 2) { endMarbleRace(); return; }
     // Majority always survives: only ceil(n/2)-1 (min 1) are at risk of dropping.
-    const outCount  = Math.max(1, Math.ceil(racers.length / 2) - 1);
+    const outCount  = panicOut(racers.length);
     const safeCount = racers.length - outCount;
 
     raceHurdles = makeHurdles();          // before the subtitle counts them
@@ -967,10 +967,12 @@ function onSpinEnd(winnerIdx) {
             landed = null;
             isSpinning=false;
             const hasNames=names.length>0;
-            // 15% chance of "No one is safe" — needs an existing drafted seat to replace
-            const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < 0.15;
+            // "No one is safe" (15% of picks at Normal chaos) — needs an
+            // existing drafted seat to replace
+            const triggerNois = noisEnabled && hasNames && draftOrder.length >= 1 && Math.random() < chaosOdds('nois');
 
             if (triggerNois) {
+                noteChaos('nois');
                 isBusy = true;
                 phase = 'nois';
                 // Off the wheel, not yet in a seat: any save from here on

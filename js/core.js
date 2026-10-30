@@ -154,8 +154,10 @@ function goblinFirstChance(namesLeft) {
     return GOBLIN.firstNear + (GOBLIN.firstFar - GOBLIN.firstNear) * t;
 }
 // seen: has he turned up on this device before? One draw either way.
-function goblinFires(namesLeft, seen) {
-    return Math.random() < (seen ? goblinChance(namesLeft) : goblinFirstChance(namesLeft));
+// chaos: what the Chaos level and his recent visits make of those odds.
+function goblinFires(namesLeft, seen, chaos = 1) {
+    const odds = seen ? goblinChance(namesLeft) : goblinFirstChance(namesLeft);
+    return Math.random() < Math.min(CHAOS.max, odds * chaos);
 }
 
 function goblinRounds() {
@@ -333,6 +335,64 @@ function goblinCreepArc(segW, totalW, winnerOffset, rounds) {
     if      (at.frac < 0.20) arc += (0.34 - at.frac) * at.arc;
     else if (at.frac > 0.80) arc -= (at.frac - 0.66) * at.arc;
     return arc;
+}
+
+/* ══════════════════════════════════════
+   Chaos
+   ─────────────────────────────────────
+   Every twist has its ordinary odds (CHAOS.base, the gremlin's own curve,
+   the PANIC wedge's size), and three things move them:
+
+     the level    — the Chaos slider in Settings scales them all, Tame to
+                    Mayhem
+     the heat     — whatever has just happened is less likely to happen
+                    again for a while: a repeat or two in quick succession
+                    knocks it well down, and the memory halves every few
+                    spins. A PANIC counts for more the more seats it cost.
+     the overtime — once a draft has taken more spins than it has names,
+                    the setbacks (PANIC, No One Is Safe, illegal spins) ease
+                    off, the further over the more so.
+
+   Nothing is ever forced and nothing ever switches off: the odds only lean.
+   Tuned by playing whole drafts in tests/balance.test.js — at Normal a
+   twenty-name draft averages about 30 spins and almost never passes 45,
+   where it used to average 58 and could run past 300.
+══════════════════════════════════════ */
+const CHAOS = {
+    levels:  ['Tame', 'Mild', 'Normal', 'Wild', 'Mayhem'],
+    normal:  2,
+    scale:   [0.35, 0.65, 1, 1.45, 2],          // every twist's odds, times this
+    repeat:  [0.35, 0.45, 0.55, 0.65, 0.75],    // ...and what one fresh repeat leaves of them
+    // Spins for the memory of one to halve. PANIC's is the table size, so
+    // at a big table it is remembered for most of the draft.
+    halfLife: { powerup: 3, windback: 4, popoff: 6, gremlin: 8, illegal: 10, nois: 10, panic: 8 },
+    base:    { powerup: 0.35, windback: 0.20, illegal: 0.05, nois: 0.15 },
+    setbacks: ['panic', 'nois', 'illegal'],     // the twists that cost the draft progress
+    overtime: 3,                                // how hard a long draft leans on those
+    max:     0.95,
+};
+
+// How many seats a PANIC sends back: the majority always keeps theirs.
+function panicOut(drafted) { return Math.max(1, Math.ceil(drafted / 2) - 1); }
+// ...and how much it counts for in the heat: a big one is worth several.
+function panicHeat(drafted) { return Math.max(1, panicOut(drafted) / 3); }
+
+// How much this kind of twist has been going on lately: each time it
+// happened counts its weight, halving every halfLife spins since.
+function chaosHeat(log, kind, entrants) {
+    const life = kind === 'panic' ? Math.max(CHAOS.halfLife.panic, entrants) : CHAOS.halfLife[kind];
+    return log.events.reduce((h, e) => e.k === kind ? h + e.w * Math.pow(0.5, (log.spins - e.t) / life) : h, 0);
+}
+
+// What to multiply a twist's ordinary odds by, at this level, for this draft.
+function chaosFactor(kind, log, level, entrants) {
+    const heat = chaosHeat(log, kind, entrants);
+    let f = CHAOS.scale[level] * Math.pow(CHAOS.repeat[level], Math.pow(heat, 1.5));
+    if (CHAOS.setbacks.includes(kind)) {
+        const ideal = Math.max(1, entrants - 1);
+        f /= 1 + CHAOS.overtime * Math.max(0, (log.spins - ideal) / ideal);
+    }
+    return f;
 }
 
 /* ══════════════════════════════════════

@@ -295,3 +295,80 @@ test('no two scripts declare the same global: the later one would silently repla
   }
   assert.deepEqual(clashes, []);
 });
+
+// ── Chaos: the odds lean away from repeats, scale with the slider, and a
+// fresh draft starts clean. (Whole drafts are played in balance.test.js.)
+const FRESH = `names = ['A','B','C','D','E','F','G','H','I','J']; draftOrder = []; pendingPick = null;
+               panicCooldown = false; panicEnabled = true; chaosLevel = 2; newDraftLog();`;
+
+test('chaos: a fresh draft at Normal keeps the old odds, and the slider scales every one of them', () => {
+  const run = load();
+  run(FRESH);
+  const kinds = `['powerup','windback','illegal','nois'].map(k => +chaosOdds(k).toFixed(4))`;
+  assert.deepEqual(run(kinds), [0.35, 0.2, 0.05, 0.15]);
+  assert.deepEqual(run(`chaosLevel = 0; ${kinds}`), [0.1225, 0.07, 0.0175, 0.0525]);
+  assert.deepEqual(run(`chaosLevel = 4; ${kinds}`), [0.7, 0.4, 0.1, 0.3]);
+  assert.equal(run(`chaosLevel = 4; chaosOdds('popoff', 0.9)`), 0.95, 'never a certainty');
+  assert.equal(run(`chaosLevel = 2; draftOrder = [seat('X'), seat('Y')]; buildSegments(names.map(() => 1)).weights.pop()`), 0.8);
+});
+
+test('chaos: a twist that has just happened is rarer, rarer still twice running, and comes back as the spins go by', () => {
+  const run = load();
+  run(FRESH);
+  const once  = run(`noteChaos('windback'); chaosLog.spins++; chaosOdds('windback')`);
+  const twice = run(`noteChaos('windback'); chaosLog.spins++; chaosOdds('windback')`);
+  assert.ok(once < 0.2 * 0.7, `once: ${once}`);
+  assert.ok(twice < 0.2 * 0.35, `twice running: ${twice}`);
+  assert.equal(run(`chaosOdds('powerup')`), 0.35, 'only its own odds move');
+  const later = run(`chaosLog.spins += 20; chaosOdds('windback')`);
+  assert.ok(later > 0.2 * 0.95, `twenty spins on: ${later}`);
+  // At Mayhem a repeat is held back less than at Tame.
+  const after = level => run(`${FRESH} chaosLevel = ${level}; noteChaos('nois'); chaosLog.spins++; chaos('nois') / CHAOS.scale[${level}]`);
+  assert.ok(after(4) > after(2) && after(2) > after(0));
+});
+
+test('chaos: the PANIC wedge shrinks after it hits, the more so the more seats it cost, and goes below a sliver', () => {
+  const run = load();
+  const wedge = drafted => run(`${FRESH}
+    draftOrder = names.splice(0, ${drafted}).map(seat); names.push(...'KLMNOPQRSTUVWXYZ'.split('').slice(0, ${drafted}));
+    noteChaos('panic', panicHeat(draftOrder.length)); chaosLog.spins += 2;
+    (seg => seg.panicIndex < 0 ? 0 : seg.weights[seg.panicIndex])(buildSegments(names.map(() => 1)))`);
+  const small = wedge(2), big = wedge(9);
+  assert.ok(small < 0.8 * 0.7, `after a PANIC that cost one seat: ${small}`);
+  assert.ok(big < small, `after one that cost four: ${big}`);
+  assert.equal(run(`panicHeat(4)`), 1);
+  assert.equal(run(`panicHeat(18)`), 8 / 3);
+  // A wedge too thin to matter is not drawn at all, and the peg ring agrees.
+  assert.deepEqual(run(`${FRESH} draftOrder = [seat('X'), seat('Y')]; noteChaos('panic', 6); [buildSegments(names.map(() => 1)).panicIndex, panicSliceActive()]`), [-1, false]);
+});
+
+test('chaos: a draft that runs past its names eases the setbacks, not the show', () => {
+  const run = load();
+  run(`${FRESH} draftOrder = [seat('X'), seat('Y')];`);              // 12 entrants: 11 spins is on time
+  assert.equal(run(`chaosLog.spins = 11; chaosOdds('nois')`), 0.15);
+  const late = run(`chaosLog.spins = 22; [chaosOdds('nois'), chaosOdds('illegal'), chaosOdds('windback'), chaosOdds('powerup')]`);
+  assert.deepEqual(late.map(v => +v.toFixed(4)), [0.0375, 0.0125, 0.2, 0.35]);
+});
+
+test('chaos: a board back to nobody seated starts over, but the spins before the first pick count', () => {
+  const run = load();
+  run(FRESH);
+  assert.ok(run(`noteChaos('illegal'); chaosLog.spins++; chaosOdds('illegal')`) < 0.05, 'before anyone is drafted');
+  assert.ok(run(`draftOrder = [seat('A')]; names.shift(); chaosOdds('illegal')`) < 0.05, 'the first pick keeps it');
+  // Undo the only pick: nobody seated, so the next draft is a fresh one.
+  assert.equal(run(`names.push(draftOrder.pop().name); chaosOdds('illegal')`), 0.05);
+  assert.deepEqual(run(`chaosLog`), { spins: 0, drafted: false, events: [] });
+  // Restore, Delete picks and Reset all go through newDraftLog.
+  assert.deepEqual(run(`draftOrder = [seat('A')]; noteChaos('nois'); newDraftLog(); chaosLog`), { spins: 0, drafted: false, events: [] });
+});
+
+test('chaos: the level and the memory survive a reload, and a bad save cannot poison them', () => {
+  const run = load();
+  assert.deepEqual(run(`[migrate({}).chaosLevel, migrate({ chaosLevel: 4 }).chaosLevel, migrate({ chaosLevel: 9 }).chaosLevel, migrate({ chaosLevel: '1' }).chaosLevel]`), [2, 4, 2, 2]);
+  const log = run(`migrate({ chaosLog: { spins: 5, drafted: true, events: [
+    { k: 'panic', t: 3, w: 2 }, { k: 'nope', t: 1, w: 1 }, { k: 'nois', t: 9, w: 1 }, { k: 'illegal', t: 2, w: -1 }, null, { k: 'gremlin', t: 4, w: 1, x: 1 } ] } }).chaosLog`);
+  assert.deepEqual(log, { spins: 5, drafted: true, events: [{ k: 'panic', t: 3, w: 2 }, { k: 'gremlin', t: 4, w: 1 }] });
+  assert.deepEqual(run(`migrate({ chaosLog: { spins: -1, events: [] } }).chaosLog`), { spins: 0, drafted: false, events: [] });
+  // Undo's snapshot carries it too, so putting a reset back puts the memory back.
+  assert.deepEqual(run(`${FRESH} draftOrder = [seat('X')]; noteChaos('nois'); (snap => { newDraftLog(); restoreTable(snap); })(snapshotTable()); chaosLog.events.length`), 1);
+});
