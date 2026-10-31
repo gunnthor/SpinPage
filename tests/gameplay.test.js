@@ -143,6 +143,53 @@ test('a pop-off flies the wheel and re-seats it on the drawn winner', async () =
   await done(p);
 });
 
+test('a strobe runs backwards on screen, then shows the real wheel and the drawn winner', async () => {
+  const p = await page(table(four, [], { popOffEnabled: true }));
+  await p.evaluate(() => {
+    window.__pop = 0; const real = startPopOff;
+    window.startPopOff = function () { window.__pop++; return real.apply(this, arguments); };
+  });
+  await scriptRandom(p);
+  await p.evaluate(() => {
+    window.__seen = { back: 0, mix: 0 }; let last = null;
+    const real = stepStrobe;
+    window.stepStrobe = function () {
+      real.apply(this, arguments);
+      const shown = rotation + strobe.off;
+      if (last !== null && shown < last - 1e-6) window.__seen.back++;
+      last = shown;
+      window.__seen.mix = Math.max(window.__seen.mix, strobe.mix);
+    };
+    beginSpin({ vel: 0.03, dir: 1, power: 1, popOff: true, stunt: 'strobe' });
+  });
+  await p.clock.runFor(20000);
+  const seen = await p.evaluate(() => ({ ...window.__seen, pop: window.__pop, off: strobe.off }));
+  assert.equal(seen.pop, 0, 'stays on its hub');
+  assert.equal(seen.mix, 1, 'strobes at full strength');
+  assert.ok(seen.back > 20, 'the picture runs backwards for a while: ' + seen.back);
+  assert.equal(seen.off, 0);
+  assert.deepEqual(picks(await saved(p)), ['Ben']);
+  await done(p);
+});
+
+test('the strobe ends a whole number of turns from the real wheel', async () => {
+  const p = await page(table(four), { clock: false });
+  const r = await p.evaluate(() => {
+    const out = [];
+    for (const [rot, dur, slope, dir] of [[120, 7500, 1.9, 1], [-100, 7000, 1.8, -1], [140, 7800, 2.4, 1]]) {
+      const run = planStrobe(rot, dur, decayEase(slope), dir);
+      const end = run.lag[run.lag.length - 1] / (2 * Math.PI);
+      out.push(Math.abs(end - Math.round(end)));
+    }
+    // A flick too slow to strobe for long pops off instead.
+    out.push(planStrobe(20, 2600, decayEase(1.75), 1));
+    return out;
+  });
+  r.slice(0, 3).forEach(e => assert.ok(e < 1e-9, 'off by ' + e + ' turns'));
+  assert.equal(r[3], null);
+  await done(p);
+});
+
 test('the gremlin is likelier as the wheel empties', async () => {
   const p = await page(table(four), { clock: false });
   const c = await p.evaluate(() => [goblinChance(3), goblinChance(7), goblinChance(12), goblinChance(50)]);

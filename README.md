@@ -25,7 +25,7 @@ The **scoreboard** always shows the next pick, how many are left on the wheel, t
 
 - **Spinning wheel picker** drawn at your screen's real resolution, with rim pegs you can see and hear and a flapper pointer that kicks on every peg.
 - **Grab-to-spin**: drag the wheel with a mouse or finger and let go. Your flick sets the speed, the lap count and the drama — never the winner, which is drawn after your hand leaves the wheel. Only the wheel itself is grabbable; a second finger or a resting finger does nothing.
-- **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the screen or drops to the floor and rolls away, then hops back onto the hub to finish the very same spin.
+- **Pop-off**: a violent enough hand-flick can rip the wheel off its hub. It either ricochets around the screen or drops to the floor and rolls away, then hops back onto the hub to finish the very same spin. Half the time it stays on instead and spins so fast it strobes like a car wheel on film: it seems to stop, crawl backwards and surge forwards again while the pegs scream, then catches up with the real wheel exactly.
 - **The winner's moment**: the winning slice lights up, the rest dim, and a nameplate rises over the wheel with the pick number. Nothing blacks out the board or the scoreboard.
 - **Draft board**: every seat from first to last — the picks so far, the one on the clock, the empty ones still to come — with the winner cut drawn where it falls.
 - **Autospin** for hands-free draft generation. Auto can be switched on or off at any moment — mid-spin, mid-event, even from inside a PANIC game — and takes over from the next pick. The phone stays awake while it runs.
@@ -85,7 +85,7 @@ SpinPage/
 │   ├── state.js          #   game state, derived stats, undo history, save/migrate, commit()
 │   ├── audio.js          #   Web Audio synthesis
 │   ├── fx.js             #   confetti, sparks, fire, flash, shake
-│   ├── wheel.js          #   rendering, spin flow, grab-to-spin, pop-off
+│   ├── wheel.js          #   rendering, spin flow, grab-to-spin, pop-off, strobe
 │   ├── events.js         #   illegal spins, No One Is Safe, PANIC race, gremlin, the winner's moment, autospin
 │   ├── slots.js          #   PANIC's other game: the slot machines
 │   └── ui.js             #   render(), panels, sheets, dialogs, keyboard, settings, boot

@@ -836,6 +836,46 @@ function stopRumble() {
     } catch (err) {}
 }
 
+/* -- Strobe: the whine of a wheel going far too fast --
+   The pitch tells the truth: it tracks the real speed and falls as the
+   wheel slows. The resonant filter goes along with the lie, opening up
+   each time the wheel seems to run backwards, so every reversal you see
+   is also a wah you hear. */
+function startWhine() {
+    if (!sfx() || strobe.whine) return;
+    const now = audioCtx.currentTime;
+    const lp = audioCtx.createBiquadFilter();
+    lp.type = 'lowpass'; lp.frequency.value = 900; lp.Q.value = 7;
+    const g = audioCtx.createGain();
+    g.gain.setValueAtTime(0, now);
+    const oscs = [[1, 'sawtooth'], [1.007, 'sawtooth'], [0.5, 'sine']].map(([mult, type]) => {
+        const o = audioCtx.createOscillator();
+        o.type = type; o.frequency.value = 300 * mult;
+        o.connect(lp); o.start(now);
+        return { o, mult };
+    });
+    lp.connect(g); g.connect(audioCtx.destination);
+    strobe.whine = { oscs, lp, g };
+}
+
+function setWhine(speed, mix, swing) {
+    if (!strobe.whine) return;
+    const now = audioCtx.currentTime, f = 60 + speed * 9000;
+    strobe.whine.oscs.forEach(({ o, mult }) => o.frequency.setTargetAtTime(f * mult, now, 0.03));
+    strobe.whine.lp.frequency.setTargetAtTime(700 + 1700 * (1 - swing) / 2, now, 0.05);
+    strobe.whine.g.gain.setTargetAtTime(0.11 * mix, now, 0.05);
+}
+
+function stopWhine() {
+    if (!strobe.whine) return;
+    const { oscs, g } = strobe.whine;
+    strobe.whine = null;
+    try {
+        g.gain.setTargetAtTime(0, audioCtx.currentTime, 0.08);
+        oscs.forEach(({ o }) => o.stop(audioCtx.currentTime + 0.6));
+    } catch (err) {}
+}
+
 function playReseatSound() {
     if (!sfx()) return;
     const now = audioCtx.currentTime;

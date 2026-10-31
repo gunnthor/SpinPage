@@ -346,9 +346,20 @@ function drawWheel() {
     if (lightKey !== lk) { paintLight(blank, seats); lightKey = lk; }
 
     const W = canvas.width;
+    const turn = blank ? 0 : rotation + strobe.off;
     ctx.translate(W / 2, W / 2);
-    ctx.rotate(blank ? 0 : rotation);
+    ctx.rotate(turn);
     ctx.drawImage(faceCanvas, -W / 2, -W / 2);
+    // Strobing: faint extra exposures smeared the way the wheel is really
+    // going, however it seems to be turning.
+    if (strobe.mix > 0) {
+        ctx.globalAlpha = STROBE.ghostAlpha * strobe.mix;
+        for (let i = 1; i <= STROBE.ghosts; i++) {
+            ctx.rotate(-strobe.dir * STROBE.smear * strobe.mix);
+            ctx.drawImage(faceCanvas, -W / 2, -W / 2);
+        }
+        ctx.globalAlpha = 1;
+    }
     ctx.setTransform(wheelScale, 0, 0, wheelScale, 0, 0);
     if (!blank && wheelHighlight) paintHighlight(seg);
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -634,7 +645,11 @@ function startSpin(spinWeights, launch) {
 
     // Whole wheel torn off its hub — bounces around the viewport, drops back
     // on and finishes the very same spin, landing exactly where it would have.
-    if (manual && manual.popOff) startPopOff(duration, { stunt: manual.stunt, dir });
+    // Or it stays on and strobes; a flick that can't hold the speed long
+    // enough to strobe pops off instead.
+    const strobeRun = manual && manual.popOff && manual.stunt === 'strobe'
+        ? planStrobe(totalRot, duration, ease, dir) : null;
+    if (manual && manual.popOff && !strobeRun) startPopOff(duration, { stunt: manual.stunt, dir });
     commit({ save: false });
 
     function frame(now) {
@@ -645,6 +660,7 @@ function startSpin(spinWeights, launch) {
         lastNow = now;
         const t = Math.min((now-startTime)/duration, 1);
         rotation = startRot + (endRot-startRot) * ease(t);
+        if (strobeRun) stepStrobe(strobeRun, t);
         redraw();
         chaseBulbs();
         showUnderPointer(seg);
@@ -676,6 +692,7 @@ function startSpin(spinWeights, launch) {
             requestAnimationFrame(frame);
         } else {
             if (popOff.active) endPopOff();       // safety: never finish mid-flight
+            if (strobeRun) endStrobe();           // ...or still strobing
             if (goblinRun) hideGoblin();          // ...and never leave him on the rim
             rotation = endRot; redraw();
             // spinSeg stays: the landing is shown on the very slices it was
@@ -703,7 +720,7 @@ function startSpin(spinWeights, launch) {
 function recoverFromError(err) {
     console.error(err);
     spinSeg = null; wheelHighlight = null; landed = null; plateHold = null;
-    try { if (popOff.active) endPopOff(); hideGoblin(); hideWinCallout(); } catch (e) {}
+    try { if (popOff.active) endPopOff(); endStrobe(); hideGoblin(); hideWinCallout(); } catch (e) {}
     try { if (marbleOverlay.classList.contains('show')) closeTakeover(marbleOverlay); } catch (e) {}
     try { endSeatStage(); canvas.classList.remove('flip'); } catch (e) {}
     if (pendingPick) {
@@ -737,7 +754,7 @@ function chaseBulbs() {
 let readoutAt = -1;
 function underPointer(seg) {
     const TAU = 2 * Math.PI;
-    const off = ((-rotation % TAU) + TAU) % TAU;
+    const off = ((-(rotation + strobe.off) % TAU) + TAU) % TAU;   // the slice you can see there
     const arcs = sliceArcs(seg.weights);
     for (let i = 0; i < arcs.length; i++) if (off < arcs[i].a1) return i;
     return arcs.length - 1;
@@ -867,12 +884,13 @@ function releaseDrag(e) {
                 Math.random() < chaosOdds('popoff', 0.35 + (power - FLICK.popPower) * 4);
     if (pop) noteChaos('popoff');
 
+    const roll = Math.random();
     beginSpin({
         vel:    Math.max(speed, FLICK.minVel),
         dir:    vel < 0 ? -1 : 1,
         power,
         popOff: pop,
-        stunt:  Math.random() < 0.5 ? 'roll' : 'bounce'
+        stunt:  roll < 0.5 ? 'strobe' : roll < 0.75 ? 'roll' : 'bounce'
     });
 }
 
@@ -1103,4 +1121,88 @@ function endPopOff() {
     playReseatSound();
     shakeWheel();
     redraw();                                  // the pointer comes back
+}
+
+/* ══════════════════════════════════════
+   Strobe - too fast to see straight
+   ─────────────────────────────────────
+   The other way a monster flick can go: the wheel stays on its hub and
+   turns so fast it strobes, like a car wheel on film. It seems to slow,
+   stop, crawl backwards and surge forwards again, while the pegs scream,
+   the bulbs race and a whine tells you how fast it is really going.
+
+   Only the picture lies. `rotation` runs the same curve underneath, and
+   the picture's lag behind it is solved up front to come out a whole
+   number of turns, so the moment the strobe lets go the wheel you see is
+   exactly the wheel that was drawn. Like a real strobe, how often it seems
+   to change direction follows how fast the real wheel is slowing.
+══════════════════════════════════════ */
+const STROBE = {
+    delay:      280,     // ms of honest flat-out spin before the eye loses it
+    rampIn:     450,     // ms from a blur to the strobe
+    rampOut:    600,     // ms for the eye to catch the real wheel again
+    letGo:      0.012,   // rad/ms - slower than this and it can't strobe (~2 turns a second)
+    minHold:    1600,    // ms - a flick that can't strobe this long pops off instead
+    drift:      0.0045,  // rad/ms - how fast it seems to crawl, either way (~0.7 turns a second)
+    cycles:     [3, 4],  // forward-back-forward swings: one of these, at random
+    ghosts:     3,       // extra exposures smeared along the real direction
+    smear:      0.035,   // rad between exposures
+    ghostAlpha: 0.2,
+    step:       4        // ms - resolution of the solved picture
+};
+const strobe = { off: 0, mix: 0, dir: 1, whine: null };
+
+// The picture for a whole spin, or null if this flick can't hold the
+// speed long enough to strobe.
+function planStrobe(totalRot, duration, ease, dir) {
+    const TAU  = 2 * Math.PI, h = 1e-4;
+    const real = ms => {                                       // signed rad/ms at ms
+        const t = Math.min(Math.max(ms / duration, h), 1 - h);
+        return totalRot * (ease(t + h) - ease(t - h)) / (2 * h) / duration;
+    };
+    const holdAt = STROBE.delay + STROBE.rampIn;
+    let letGoAt = holdAt;
+    while (letGoAt < duration && Math.abs(real(letGoAt)) > STROBE.letGo) letGoAt += STROBE.step;
+    letGoAt = Math.min(letGoAt, duration - STROBE.rampOut - 900);
+    if (letGoAt - holdAt < STROBE.minHold) return null;
+
+    const fast = Math.abs(real(holdAt)), slow = Math.abs(real(letGoAt));
+    const cycles = STROBE.cycles[Math.floor(Math.random() * STROBE.cycles.length)];
+    const endAt  = letGoAt + STROBE.rampOut;
+    const smooth = u => { u = Math.min(Math.max(u, 0), 1); return u * u * (3 - 2 * u); };
+    const mixAt  = ms => smooth((ms - STROBE.delay) / STROBE.rampIn) * (1 - smooth((ms - letGoAt) / STROBE.rampOut));
+    // The swing is keyed to the real speed, not the clock: forwards at the
+    // start and the finish, and through every stop and reversal between.
+    const swing  = ms => Math.cos(2 * Math.PI * cycles * (fast - Math.abs(real(ms))) / (fast - slow));
+
+    // March the picture's lag behind the real wheel across the strobe...
+    const n = Math.ceil(endAt / STROBE.step) + 1;
+    const lag = new Float64Array(n), weight = new Float64Array(n), sw = new Float64Array(n);
+    for (let i = 1; i < n; i++) {
+        const mid = (i - 0.5) * STROBE.step, m = mixAt(mid);
+        lag[i]    = lag[i - 1] + m * (dir * STROBE.drift * swing(mid) - real(mid)) * STROBE.step;
+        weight[i] = weight[i - 1] + m * STROBE.step;
+        sw[i]     = swing(i * STROBE.step);
+    }
+    // ...then lean on it, a hair at a time, until it ends on whole turns.
+    const fix = (Math.round(lag[n - 1] / TAU) * TAU - lag[n - 1]) / weight[n - 1];
+    for (let i = 0; i < n; i++) lag[i] += fix * weight[i];
+
+    return { duration, endAt, dir, lag, sw, mixAt, real, started: false };
+}
+
+function stepStrobe(run, t) {
+    const ms = t * run.duration;
+    if (ms >= run.endAt) { endStrobe(); return; }
+    const u = ms / STROBE.step, i = Math.floor(u), k = u - i;
+    strobe.off = run.lag[i] + (run.lag[i + 1] - run.lag[i]) * k;
+    strobe.mix = run.mixAt(ms);
+    strobe.dir = run.dir;
+    if (!run.started && strobe.mix > 0) { run.started = true; startWhine(); }
+    setWhine(Math.abs(run.real(ms)), strobe.mix, run.sw[i]);
+}
+
+function endStrobe() {
+    strobe.off = 0; strobe.mix = 0;
+    stopWhine();
 }
